@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import type { DocumentInfo, FormData, Stipulation } from '../../types';
+import type { AuthUser, DocumentInfo, FormData, Stipulation } from '../../types';
 import { Card } from '../ui/Card';
 import { DocumentUpload } from '../DocumentUpload';
 import { APPLICATION_STATUS_CONFIG, getStatusIndex, getStatusThemeClasses } from './shared/applicationStatus';
@@ -7,12 +7,13 @@ import { DocumentsPanel } from './shared/DocumentsPanel';
 import { api } from '../../src/lib/api-client';
 
 interface MerchantDashboardProps { 
+    currentUser: AuthUser;
     submission: FormData, 
     onExit: () => void,
     onUpdateOffer: (offerId: string, status: 'Accepted' | 'Rejected') => void 
 }
 
-export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ submission, onExit, onUpdateOffer }) => {
+export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUser, submission, onExit, onUpdateOffer }) => {
     const currentStatusIndex = getStatusIndex(submission.status);
     const [stipulations, setStipulations] = useState<Stipulation[]>([]);
     const [refreshDocuments, setRefreshDocuments] = useState(0);
@@ -34,9 +35,9 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ submission
                 <div className="flex justify-between items-center mb-6">
                     <div>
                         <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">My Application Dashboard</h1>
-                        <p className="text-slate-500 dark:text-slate-400">Welcome, {submission.owners[0]?.name || 'Valued Client'}</p>
+                        <p className="text-slate-500 dark:text-slate-400">Welcome, {currentUser.full_name ?? currentUser.name ?? submission.owners[0]?.name ?? 'Valued Client'}</p>
                     </div>
-                    <button onClick={onExit} className="text-sm font-medium text-theme-teal hover:text-theme-teal/80">Exit Dashboard &rarr;</button>
+                    <button onClick={onExit} className="text-sm font-medium text-theme-teal hover:text-theme-teal/80">Logout &rarr;</button>
                 </div>
 
                 <Card className="mb-6">

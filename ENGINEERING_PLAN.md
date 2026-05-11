@@ -412,29 +412,44 @@ Kamba Pipeline
 - [ ] Admin assign-to-rep dropdown
 - [ ] Convert button → confirms → creates merchant → redirects to new merchant record
 
-### Phase 3 — Documents & Storage (3–4 days)
-- [ ] Wire document upload UI to Supabase Storage
-- [ ] Store metadata in `documents` table
-- [ ] Generate signed URLs for secure lender viewing
-- [ ] Build stipulations flow (lender requests → merchant sees upload prompt)
+### Phase 3 — Documents & Storage ✅ COMPLETE
+- [x] Wire document upload UI to Supabase Storage
+- [x] Store metadata in `documents` table
+- [x] Generate signed URLs for secure lender viewing
+- [x] Build stipulations flow (lender requests → merchant sees upload prompt)
 
-### Phase 4 — Matching Engine (2–3 days)
-- [ ] Move matching logic to API route
+### Phase 4 — Real Auth UI (2–3 days)
+Replace the profile selector mockup with real login and registration screens backed by Better Auth. Every role gets a real session after this phase.
+
+- [ ] Login page — email + password form, calls `POST /api/auth/login`, stores session cookie
+- [ ] Register page — for merchants and lenders to self-register. Admin and sales_rep accounts created by admin only
+- [ ] Session persistence — on app load, call `GET /api/auth/me` to restore session. If no session, redirect to login
+- [ ] Logout button in all dashboard shells — calls `POST /api/auth/logout`, clears session, redirects to login
+- [ ] Remove profile selector mockup and demo-header bridge from `DashboardController.tsx`
+- [ ] `DashboardController` routes to correct dashboard based on `user.role` from real session
+- [ ] Protected route wrapper — any dashboard route without a valid session redirects to login
+- [ ] Admin-only user management — admin can create sales_rep accounts from the admin dashboard
+
+### Phase 5 — Matching Engine (2–3 days)
+- [ ] Move matching logic to server route
 - [ ] Auto-match runs when merchant hits status `sent to lender`
 - [ ] Manual override UI for sales rep / admin
 - [ ] Results write to `lender_matches`
 
-### Phase 5 — Email Automation (2–3 days)
+### Phase 6 — Email Automation (2–3 days)
 - [ ] Set up Resend account + domain
 - [ ] Build email templates for each trigger (see table above)
 - [ ] Wire lender notification to send merchant package PDF
 - [ ] Wire all other status-change triggers
 
-### Phase 6 — Demo Polish (2–3 days)
+### Phase 7 — Demo Polish + Deploy (2–3 days)
+- [ ] Fix `index.css` build warning (carried over from Phase 0)
 - [ ] Seed database with realistic demo data
 - [ ] Create demo accounts for each role (admin, rep, merchant, lender)
+- [ ] Convert Vite API bridge routes to Vercel serverless functions
+- [ ] Deploy to Vercel, set all env vars in Vercel dashboard
+- [ ] Smoke test every role end-to-end on the live URL
 - [ ] Write a short demo walkthrough script
-- [ ] Deploy to Vercel, confirm all env vars set
 
 ---
 

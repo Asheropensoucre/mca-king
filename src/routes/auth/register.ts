@@ -1,10 +1,16 @@
-import { auth } from '../../lib/auth'
+import { hashPassword } from '@better-auth/utils/password'
+import type { UserRole } from '../../../types'
+import { createUserWithCredential, findUserByEmail } from '../../lib/session-auth'
 
 type RegisterBody = {
   email?: string
   password?: string
   role?: string
   full_name?: string
+}
+
+function isUserRole(value: string | undefined): value is UserRole {
+  return value === 'admin' || value === 'sales_rep' || value === 'merchant' || value === 'lender'
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -15,18 +21,24 @@ export async function POST(req: Request): Promise<Response> {
       return new Response('Email and password are required', { status: 400 })
     }
 
-    const result = await auth.api.signUpEmail({
-      body: {
-        email,
-        password,
-        name: full_name ?? email,
-        role,
-        full_name,
-      },
+    if (password.length < 8) {
+      return new Response('Password must be at least 8 characters', { status: 400 })
+    }
+
+    const normalizedEmail = email.toLowerCase().trim()
+    const existing = await findUserByEmail(normalizedEmail)
+    if (existing) return new Response('Email already exists', { status: 400 })
+
+    const user = await createUserWithCredential({
+      email: normalizedEmail,
+      passwordHash: await hashPassword(password),
+      role: isUserRole(role) ? role : 'merchant',
+      fullName: full_name?.trim() || normalizedEmail,
     })
 
-    return Response.json(result)
-  } catch {
+    return Response.json({ user })
+  } catch (error) {
+    console.error('Registration failed', error)
     return new Response('Registration failed', { status: 400 })
   }
 }

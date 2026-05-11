@@ -98,6 +98,16 @@ export interface LenderInfo {
   trucking: 'Yes' | 'No' | '';
 }
 
+export type UserRole = 'admin' | 'sales_rep' | 'merchant' | 'lender';
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  role: UserRole;
+  full_name?: string | null;
+  name?: string | null;
+}
+
 export interface SalesRepresentative {
   id: string;
   name: string;

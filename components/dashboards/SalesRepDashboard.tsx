@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { FormData, LenderInfo, SalesRepresentative } from '../../types';
+import type { AuthUser, FormData, LenderInfo, SalesRepresentative } from '../../types';
 import { Card } from '../ui/Card';
 import { MerchantDetailView } from './shared/MerchantDetailView';
 import { DashboardShell } from './shared/DashboardShell';
@@ -7,6 +7,7 @@ import { KanbanPipelineView } from './shared/KanbanPipelineView';
 import { LeadManager } from './LeadManager';
 
 interface SalesRepDashboardProps { 
+    currentUser: AuthUser;
     deals: FormData[], 
     rep: SalesRepresentative | undefined, 
     onExit: () => void,
@@ -18,7 +19,7 @@ interface SalesRepDashboardProps {
 
 type SalesRepSection = 'leads' | 'deals' | 'pipeline';
 
-export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ deals, rep, onExit, onPrint, lenders, onUpdateMerchant, salesReps }) => {
+export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUser, deals, rep, onExit, onPrint, lenders, onUpdateMerchant, salesReps }) => {
     const [selectedDeal, setSelectedDeal] = useState<FormData | null>(null);
     const [activeSection, setActiveSection] = useState<SalesRepSection>('leads');
     
@@ -27,7 +28,7 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ deals, rep
     return (
         <DashboardShell<SalesRepSection>
             title="Sales Rep Dashboard"
-            subtitle={rep ? `Welcome, ${rep.name}` : undefined}
+            subtitle={`Welcome, ${rep?.name ?? currentUser.full_name ?? currentUser.name ?? currentUser.email}`}
             sections={[
                 { id: 'leads', label: 'Leads' },
                 { id: 'deals', label: 'My Deals' },

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { FormData, LenderInfo, ApplicationStatus, SalesRepresentative } from '../../types';
+import type { AuthUser, FormData, LenderInfo, ApplicationStatus, SalesRepresentative } from '../../types';
 import { Card } from '../ui/Card';
 import { MerchantDetailView } from './shared/MerchantDetailView';
 import { LenderDetailView } from './shared/LenderDetailView';
@@ -11,22 +11,26 @@ import { APPLICATION_STATUSES } from './shared/applicationStatus';
 import { LeadManager } from './LeadManager';
 
 interface AdminDashboardProps { 
+    currentUser: AuthUser;
     merchants: FormData[], 
     lenders: LenderInfo[], 
     onExit: () => void,
     onUpdateMerchant: (updatedMerchant: FormData) => FormData;
     onUpdateLenderInfo: (data: LenderInfo) => LenderInfo;
     salesReps: SalesRepresentative[],
+    onSalesRepCreated: (rep: SalesRepresentative) => void;
     onPrint?: (submission: FormData) => void;
 }
 
 type AdminSection = 'leads' | 'merchants' | 'lenders' | 'pipeline';
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ merchants, lenders, onExit, onUpdateMerchant, onUpdateLenderInfo, salesReps, onPrint }) => {
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, merchants, lenders, onExit, onUpdateMerchant, onUpdateLenderInfo, salesReps, onSalesRepCreated, onPrint }) => {
     const [activeSection, setActiveSection] = useState<AdminSection>('leads');
     const [selectedItem, setSelectedItem] = useState<FormData | LenderInfo | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [isMatching, setIsMatching] = useState(false);
+    const [isCreatingRep, setIsCreatingRep] = useState(false);
+    const [repError, setRepError] = useState<string | null>(null);
 
     const handleSelectItem = (item: FormData | LenderInfo) => {
         setSelectedItem(item);
@@ -43,6 +47,39 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ merchants, lende
         const updatedData = onUpdateLenderInfo(data);
         setSelectedItem(updatedData);
         setIsEditing(false);
+    };
+
+    const handleCreateSalesRep = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setRepError(null);
+        const form = new globalThis.FormData(event.currentTarget);
+        const full_name = String(form.get('full_name') ?? '').trim();
+        const email = String(form.get('email') ?? '').trim();
+        const password = String(form.get('password') ?? '');
+
+        if (password.length < 8) {
+            setRepError('Password must be at least 8 characters.');
+            return;
+        }
+
+        const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ full_name, email, password, role: 'sales_rep' }),
+        });
+
+        if (!res.ok) {
+            setRepError('Could not create sales rep. Email may already be in use.');
+            return;
+        }
+
+        const body = await res.json() as { user: AuthUser };
+        onSalesRepCreated({
+            id: body.user.id,
+            email: body.user.email,
+            name: body.user.full_name ?? body.user.name ?? body.user.email,
+        });
+        setIsCreatingRep(false);
     };
     
     const getMatchedLenders = (merchant: FormData) => {
@@ -186,6 +223,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ merchants, lende
         </Card>
     );
 
+    const renderCreateSalesRepModal = () => (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <Card className="w-full max-w-md">
+                <form onSubmit={handleCreateSalesRep}>
+                    <div className="p-6">
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Create Sales Rep</h3>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Create a real login account for a sales representative.</p>
+                        <div className="mt-4 space-y-4">
+                            <label className="block">
+                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Full Name</span>
+                                <input name="full_name" type="text" required className="mt-1 block w-full rounded-md border-0 px-3 py-2 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-theme-yellow dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600" />
+                            </label>
+                            <label className="block">
+                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Email</span>
+                                <input name="email" type="email" required className="mt-1 block w-full rounded-md border-0 px-3 py-2 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-theme-yellow dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600" />
+                            </label>
+                            <label className="block">
+                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Password</span>
+                                <input name="password" type="password" required minLength={8} className="mt-1 block w-full rounded-md border-0 px-3 py-2 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-theme-yellow dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600" />
+                            </label>
+                            {repError && <p className="text-sm text-red-600 dark:text-red-300">{repError}</p>}
+                        </div>
+                    </div>
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t flex justify-end space-x-2">
+                        <button type="button" onClick={() => setIsCreatingRep(false)} className="px-4 py-2 text-sm rounded-md bg-white border dark:bg-slate-600 dark:border-slate-500 dark:text-slate-200">Cancel</button>
+                        <button type="submit" className="px-4 py-2 text-sm rounded-md bg-theme-yellow text-black font-semibold">Create Sales Rep</button>
+                    </div>
+                </form>
+            </Card>
+        </div>
+    );
+
     const renderLenders = () => (
         <Card>
             <div className="overflow-x-auto">
@@ -209,6 +278,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ merchants, lende
     );
 
     return (
+        <>
         <DashboardShell<AdminSection>
             title="Admin Dashboard"
             sections={[
@@ -220,10 +290,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ merchants, lende
             activeSection={activeSection}
             onSectionChange={(section) => { setActiveSection(section); setSelectedItem(null); setIsEditing(false); }}
             onExit={onExit}
-            exitLabel="Exit Admin View"
+            exitLabel="Logout"
         >
             {selectedItem ? renderSelectedItem() : (
                 <div className={activeSection === 'pipeline' ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}>
+                    <div className="mb-4 flex justify-between items-center gap-3">
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Signed in as {currentUser.full_name ?? currentUser.name ?? currentUser.email}</p>
+                        <button onClick={() => setIsCreatingRep(true)} className="px-4 py-2 rounded-md text-sm font-semibold text-theme-black bg-theme-yellow hover:bg-theme-yellow/90">Create Sales Rep</button>
+                    </div>
                     {activeSection === 'leads' && <LeadManager isAdmin={true} salesReps={salesReps} />}
                     {activeSection === 'merchants' && renderMerchants()}
                     {activeSection === 'lenders' && renderLenders()}
@@ -233,5 +307,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ merchants, lende
                 </div>
             )}
         </DashboardShell>
+        {isCreatingRep && renderCreateSalesRepModal()}
+        </>
     );
 };

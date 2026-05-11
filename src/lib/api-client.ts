@@ -1,57 +1,14 @@
 import type { LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation } from '../../types'
 
-export type DemoRole = 'admin' | 'sales_rep' | 'merchant' | 'lender'
-
-export type DemoIdentity = {
-  role: DemoRole
-  userId: string
-  email?: string
-  name?: string
-}
-
-const defaultIdentity: DemoIdentity = {
-  role: 'admin',
-  userId: '00000000-0000-4000-8000-000000000001',
-  email: 'admin@demo.local',
-  name: 'Demo Admin',
-}
-
-export const DEMO_SALES_REPS: SalesRepresentative[] = [
-  { id: '00000000-0000-4000-8000-000000000101', name: 'Alex Johnson', email: 'alex.j@mcaking.com' },
-  { id: '00000000-0000-4000-8000-000000000102', name: 'Brenda Chen', email: 'brenda.c@mcaking.com' },
-  { id: '00000000-0000-4000-8000-000000000103', name: 'Carlos Diaz', email: 'carlos.d@mcaking.com' },
-]
-
-let currentIdentity = defaultIdentity
-
-export function setDemoIdentity(identity: DemoIdentity): void {
-  currentIdentity = identity
-}
-
-export function getDemoIdentity(): DemoIdentity {
-  return currentIdentity
-}
-
-function authHeaders(): HeadersInit {
-  return {
-    'x-demo-role': currentIdentity.role,
-    'x-demo-user-id': currentIdentity.userId,
-    'x-demo-email': currentIdentity.email ?? `${currentIdentity.userId}@demo.local`,
-    'x-demo-name': currentIdentity.name ?? currentIdentity.userId,
-  }
-}
-
 function headers(extra?: HeadersInit): HeadersInit {
   return {
     'Content-Type': 'application/json',
-    ...authHeaders(),
     ...extra,
   }
 }
 
-
 async function uploadRequest<T>(url: string, body: globalThis.FormData): Promise<T> {
-  const res = await fetch(url, { method: 'POST', headers: authHeaders(), body })
+  const res = await fetch(url, { method: 'POST', body })
   if (!res.ok) throw new Error(await res.text())
   return await res.json() as T
 }
@@ -64,6 +21,9 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  users: {
+    salesReps: () => request<SalesRepresentative[]>('/api/users/sales-reps'),
+  },
   merchants: {
     list: () => request<FormData[]>('/api/merchants'),
     create: (merchant: FormData) => request<FormData>('/api/merchants', { method: 'POST', body: JSON.stringify(merchant) }),

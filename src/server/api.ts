@@ -12,6 +12,11 @@ import { POST as uploadDocument } from '../routes/documents/upload'
 import { GET as getDocuments } from '../routes/documents/index'
 import { DELETE as deleteDocument } from '../routes/documents/[id]'
 import { GET as getStipulations, POST as postStipulations } from '../routes/stipulations/index'
+import { POST as registerAuth } from '../routes/auth/register'
+import { POST as loginAuth } from '../routes/auth/login'
+import { POST as logoutAuth } from '../routes/auth/logout'
+import { GET as meAuth } from '../routes/auth/me'
+import { GET as getSalesReps } from '../routes/users/sales-reps'
 import type { RouteContext } from '../lib/route-utils'
 
 type Handler = (req: Request, context?: RouteContext) => Promise<Response> | Response
@@ -22,6 +27,26 @@ type RouteMatch = {
 }
 
 function matchRoute(method: string, pathname: string): RouteMatch | null {
+  if (pathname === '/api/auth/register') {
+    if (method === 'POST') return { handler: registerAuth }
+  }
+
+  if (pathname === '/api/auth/login') {
+    if (method === 'POST') return { handler: loginAuth }
+  }
+
+  if (pathname === '/api/auth/logout') {
+    if (method === 'POST') return { handler: logoutAuth }
+  }
+
+  if (pathname === '/api/auth/me') {
+    if (method === 'GET') return { handler: meAuth }
+  }
+
+  if (pathname === '/api/users/sales-reps') {
+    if (method === 'GET') return { handler: getSalesReps }
+  }
+
   if (pathname === '/api/merchants') {
     if (method === 'GET') return { handler: getMerchants }
     if (method === 'POST') return { handler: postMerchants }

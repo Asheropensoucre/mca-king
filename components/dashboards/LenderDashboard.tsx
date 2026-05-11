@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { FormData, LenderInfo, Offer } from '../../types';
+import type { AuthUser, FormData, LenderInfo, Offer } from '../../types';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
@@ -7,13 +7,14 @@ import { MerchantDetailView } from './shared/MerchantDetailView';
 import { api } from '../../src/lib/api-client';
 
 interface LenderDashboardProps { 
+    currentUser: AuthUser;
     profile: LenderInfo, 
     merchants: FormData[], 
     onExit: () => void,
     onUpdateMerchant: (updatedMerchant: FormData) => FormData;
 }
 
-export const LenderDashboard: React.FC<LenderDashboardProps> = ({ profile, merchants, onExit, onUpdateMerchant }) => {
+export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, profile, merchants, onExit, onUpdateMerchant }) => {
     const [selectedDeal, setSelectedDeal] = useState<FormData | null>(null);
     const [isCreatingOffer, setIsCreatingOffer] = useState(false);
     const [isRequestingDoc, setIsRequestingDoc] = useState(false);
@@ -129,9 +130,9 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ profile, merch
                  <div className="flex justify-between items-center mb-6">
                     <div>
                         <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Lender Dashboard</h1>
-                        <p className="text-slate-500 dark:text-slate-400">Welcome, {profile.lenderName}</p>
+                        <p className="text-slate-500 dark:text-slate-400">Welcome, {currentUser.full_name ?? currentUser.name ?? profile.lenderName}</p>
                     </div>
-                    <button onClick={onExit} className="text-sm font-medium text-theme-teal hover:text-theme-teal/80">Exit Dashboard &rarr;</button>
+                    <button onClick={onExit} className="text-sm font-medium text-theme-teal hover:text-theme-teal/80">Logout &rarr;</button>
                 </div>
                 <Card>
                     <div className="p-6">
