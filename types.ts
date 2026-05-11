@@ -114,6 +114,22 @@ export interface SalesRepresentative {
   email: string;
 }
 
+export interface LenderMatch {
+  id: string;
+  merchant_id: string;
+  lender_id: string;
+  match_type: 'auto' | 'manual';
+  matched_by: string | null;
+  notified_at: string | null;
+  created_at: string;
+  lender?: {
+    id: string;
+    company_name: string;
+    contact_name: string | null;
+    contact_email: string;
+  } | null;
+}
+
 export type LeadStatus = 'new' | 'contacted' | 'docs_requested' | 'converted' | 'dead';
 
 export interface LeadNote {

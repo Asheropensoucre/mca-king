@@ -1,5 +1,6 @@
 import type { ApplicationStatus, Stipulation } from '../../../types'
 import { rowToMerchant, type MerchantRow } from '../../lib/data-shapes'
+import { triggerStipulationRequested } from '../../lib/email-triggers'
 import { requireAuth } from '../../lib/requireAuth'
 import { badRequest, forbidden, json } from '../../lib/route-utils'
 import { supabaseAdmin } from '../../lib/supabase-server'
@@ -72,6 +73,8 @@ export async function POST(req: Request): Promise<Response> {
     })
     if (historyError) return badRequest(historyError.message)
   }
+
+  triggerStipulationRequested(data.id)
 
   return json(data, { status: 201 })
 }

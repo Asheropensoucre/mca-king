@@ -24,7 +24,7 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
     const [stipDescription, setStipDescription] = useState('');
     const [message, setMessage] = useState<string | null>(null);
 
-    const assignedMerchants = merchants.filter(merchant => merchant.matchedLenderIds?.includes(profile.id));
+    const assignedMerchants = merchants;
 
     const handleCreateOffer = (e: React.FormEvent) => {
         e.preventDefault();

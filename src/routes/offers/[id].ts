@@ -1,5 +1,6 @@
 import type { FormData, Offer } from '../../../types'
 import { normalizeOfferStatus, rowToMerchant, type MerchantRow, type OfferRow } from '../../lib/data-shapes'
+import { triggerOfferAccepted } from '../../lib/email-triggers'
 import { requireAuth } from '../../lib/requireAuth'
 import { badRequest, forbidden, getId, json, notFound, type RouteContext } from '../../lib/route-utils'
 import { supabaseAdmin } from '../../lib/supabase-server'
@@ -94,6 +95,10 @@ export async function PATCH(req: Request, context?: RouteContext): Promise<Respo
       note: `Offer ${updatedOffer.status.toLowerCase()}`,
     })
     if (historyError) return badRequest(historyError.message)
+  }
+
+  if (updatedOffer.status === 'Accepted') {
+    triggerOfferAccepted(savedOffer.id)
   }
 
   const result: Offer = savedOffer.payload ? { ...savedOffer.payload, id: savedOffer.id } : updatedOffer

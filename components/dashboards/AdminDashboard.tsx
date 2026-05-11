@@ -29,7 +29,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
     const [activeSection, setActiveSection] = useState<AdminSection>('leads');
     const [selectedItem, setSelectedItem] = useState<FormData | LenderInfo | null>(null);
     const [isEditing, setIsEditing] = useState(false);
-    const [isMatching, setIsMatching] = useState(false);
     const [isCreatingRep, setIsCreatingRep] = useState(false);
     const [repError, setRepError] = useState<string | null>(null);
 
@@ -83,48 +82,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
         setIsCreatingRep(false);
     };
     
-    const getMatchedLenders = (merchant: FormData) => {
-        if (!merchant) return [];
-        const merchantState = merchant.businessInfo.address.split(',').pop()?.trim().toUpperCase();
-        const highestCreditScore = Math.max(...merchant.owners.map(o => parseInt(o.creditScore, 10)).filter(Boolean));
-
-        return lenders.filter(lender => {
-            const meetsRevenue = parseInt(merchant.businessInfo.monthlyRevenue, 10) >= parseInt(lender.minRevenue, 10);
-            const meetsCredit = highestCreditScore >= parseInt(lender.minCreditScore, 10);
-            const meetsNSFs = parseInt(merchant.businessInfo.recentNSFs, 10) <= parseInt(lender.nsfs, 10);
-            const meetsFundingAmount = parseInt(merchant.requestedAmount, 10) <= parseInt(lender.maxFundingAmount, 10);
-            const notStateRestricted = !lender.stateRestrictions.toUpperCase().split(',').map(s => s.trim()).includes(merchantState || '');
-            const notIndustryRestricted = !lender.industryRestrictions.toLowerCase().includes(merchant.businessInfo.industryType.toLowerCase());
-            
-            return meetsRevenue && meetsCredit && meetsNSFs && meetsFundingAmount && notStateRestricted && notIndustryRestricted;
-        });
-    };
-
-    const handleNotifyLender = (lenderId: string) => {
-        if (!selectedItem || !('businessInfo' in selectedItem)) return;
-
-        const currentMatchedIds = selectedItem.matchedLenderIds || [];
-        if (currentMatchedIds.includes(lenderId)) {
-            setIsMatching(false);
-            return;
-        }
-
-        const updatedMerchant: FormData = {
-            ...selectedItem,
-            matchedLenderIds: [...currentMatchedIds, lenderId],
-            status: 'sent to lender',
-        };
-
-        const result = onUpdateMerchant(updatedMerchant);
-        setSelectedItem(result);
-        setIsMatching(false);
-    };
-
     const renderSelectedItem = () => {
         if (!selectedItem) return null;
         const isMerchant = 'businessInfo' in selectedItem;
-        const matchedLenders = isMerchant ? getMatchedLenders(selectedItem as FormData) : [];
-
         return (
             <>
                 <div className="max-w-5xl mx-auto">
@@ -132,7 +92,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                         <button onClick={() => setSelectedItem(null)} className="text-sm font-medium text-theme-teal hover:text-theme-teal/80 text-left">&larr; Back to {activeSection === 'pipeline' ? 'Kamba Pipeline' : 'Directory'}</button>
                         {!isEditing && (
                             <div className="flex items-center gap-2 flex-wrap">
-                                {isMerchant && <button onClick={() => setIsMatching(true)} className="px-4 py-2 rounded-md text-sm font-medium text-white bg-theme-maroon hover:bg-theme-maroon/90">Find Matches</button>}
                                 {isMerchant && onPrint && (
                                     <button onClick={() => onPrint(selectedItem as FormData)} className="px-4 py-2 rounded-md text-sm font-medium text-theme-black bg-theme-yellow hover:bg-theme-yellow/90">Download PDF</button>
                                 )}
@@ -148,39 +107,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                         )
                     ) : (
                         isMerchant ? (
-                            <MerchantDetailView item={selectedItem as FormData} lenders={lenders} canDeleteDocuments={true} />
+                            <MerchantDetailView item={selectedItem as FormData} lenders={lenders} canDeleteDocuments={true} canManageMatches={true} canRemoveMatches={true} />
                         ) : (
                             <LenderDetailView item={selectedItem as LenderInfo} />
                         )
                     )}
                 </div>
-                {isMatching && isMerchant && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                        <Card className="w-full max-w-2xl max-h-[90vh] flex flex-col">
-                            <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-                                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Matched Lenders for {(selectedItem as FormData).businessInfo.legalName}</h3>
-                                <p className="text-sm text-slate-500">Found {matchedLenders.length} potential matches.</p>
-                            </div>
-                            <div className="p-6 overflow-y-auto space-y-3">
-                                {matchedLenders.length > 0 ? matchedLenders.map(lender => (
-                                    <div key={lender.id} className="p-3 border rounded-lg flex justify-between items-center dark:border-slate-700">
-                                        <p className="font-semibold text-slate-800 dark:text-slate-100">{lender.lenderName}</p>
-                                        <button 
-                                            onClick={() => handleNotifyLender(lender.id)} 
-                                            className="px-3 py-1 text-sm rounded-md bg-theme-yellow text-black disabled:bg-slate-300 dark:disabled:bg-slate-600 disabled:text-slate-500"
-                                            disabled={(selectedItem as FormData).matchedLenderIds?.includes(lender.id)}
-                                        >
-                                            {(selectedItem as FormData).matchedLenderIds?.includes(lender.id) ? 'Notified' : 'Notify Lender'}
-                                        </button>
-                                    </div>
-                                )) : <p className="text-slate-600 dark:text-slate-300">No lenders match the criteria.</p>}
-                            </div>
-                            <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t flex justify-end">
-                                <button onClick={() => setIsMatching(false)} className="px-4 py-2 text-sm rounded-md bg-white border dark:bg-slate-600 dark:border-slate-500 dark:text-slate-200">Close</button>
-                            </div>
-                        </Card>
-                    </div>
-                )}
             </>
         );
     };

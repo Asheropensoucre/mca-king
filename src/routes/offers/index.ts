@@ -1,5 +1,6 @@
 import type { FormData, Offer } from '../../../types'
 import { normalizeOfferStatus, rowToMerchant, type MerchantRow, type OfferRow } from '../../lib/data-shapes'
+import { triggerOfferReceived } from '../../lib/email-triggers'
 import { requireAuth } from '../../lib/requireAuth'
 import { assertRole, badRequest, forbidden, json } from '../../lib/route-utils'
 import { supabaseAdmin } from '../../lib/supabase-server'
@@ -134,6 +135,8 @@ export async function POST(req: Request): Promise<Response> {
 
   const merchantUpdateError = await updateMerchantOffers(merchantId, offer, user.id)
   if (merchantUpdateError) return merchantUpdateError
+
+  triggerOfferReceived(data.id)
 
   return json(rowToOffer(data), { status: 201 })
 }

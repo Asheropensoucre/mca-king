@@ -1,4 +1,4 @@
-import type { LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation } from '../../types'
+import type { LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch } from '../../types'
 
 function headers(extra?: HeadersInit): HeadersInit {
   return {
@@ -62,5 +62,12 @@ export const api = {
   stipulations: {
     list: (merchantId: string) => request<Stipulation[]>(`/api/stipulations?merchant_id=${encodeURIComponent(merchantId)}`),
     create: (merchantId: string, lenderId: string, description: string) => request<Stipulation>('/api/stipulations', { method: 'POST', body: JSON.stringify({ merchant_id: merchantId, lender_id: lenderId, description }) }),
+  },
+  matching: {
+    list: (merchantId: string) => request<LenderMatch[]>(`/api/matching?merchant_id=${encodeURIComponent(merchantId)}`),
+    run: (merchantId: string) => request<{ matched: number; matches: LenderMatch[] }>('/api/matching/run', { method: 'POST', body: JSON.stringify({ merchant_id: merchantId }) }),
+    addManual: (merchantId: string, lenderId: string) => request<LenderMatch>('/api/matching/manual', { method: 'POST', body: JSON.stringify({ merchant_id: merchantId, lender_id: lenderId }) }),
+    removeManual: (merchantId: string, lenderId: string) => request<{ success: boolean }>('/api/matching/manual', { method: 'DELETE', body: JSON.stringify({ merchant_id: merchantId, lender_id: lenderId }) }),
+    notify: (merchantId: string) => request<{ notified: number; notified_at: string }>('/api/matching/notify', { method: 'POST', body: JSON.stringify({ merchant_id: merchantId }) }),
   },
 }

@@ -17,6 +17,10 @@ import { POST as loginAuth } from '../routes/auth/login'
 import { POST as logoutAuth } from '../routes/auth/logout'
 import { GET as meAuth } from '../routes/auth/me'
 import { GET as getSalesReps } from '../routes/users/sales-reps'
+import { GET as getMatching } from '../routes/matching/index'
+import { POST as runMatching } from '../routes/matching/run'
+import { POST as postManualMatching, DELETE as deleteManualMatching } from '../routes/matching/manual'
+import { POST as notifyMatching } from '../routes/matching/notify'
 import type { RouteContext } from '../lib/route-utils'
 
 type Handler = (req: Request, context?: RouteContext) => Promise<Response> | Response
@@ -45,6 +49,23 @@ function matchRoute(method: string, pathname: string): RouteMatch | null {
 
   if (pathname === '/api/users/sales-reps') {
     if (method === 'GET') return { handler: getSalesReps }
+  }
+
+  if (pathname === '/api/matching') {
+    if (method === 'GET') return { handler: getMatching }
+  }
+
+  if (pathname === '/api/matching/run') {
+    if (method === 'POST') return { handler: runMatching }
+  }
+
+  if (pathname === '/api/matching/manual') {
+    if (method === 'POST') return { handler: postManualMatching }
+    if (method === 'DELETE') return { handler: deleteManualMatching }
+  }
+
+  if (pathname === '/api/matching/notify') {
+    if (method === 'POST') return { handler: notifyMatching }
   }
 
   if (pathname === '/api/merchants') {

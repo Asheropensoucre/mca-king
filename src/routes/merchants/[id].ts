@@ -1,6 +1,8 @@
 import type { FormData } from '../../../types'
 import { merchantToUpdate, rowToMerchant, type MerchantRow } from '../../lib/data-shapes'
+import { triggerMerchantStatusEmail } from '../../lib/email-triggers'
 import { requireAuth } from '../../lib/requireAuth'
+import { runAutoMatch } from '../../lib/matching'
 import { assertRole, badRequest, forbidden, getId, json, notFound, type RouteContext } from '../../lib/route-utils'
 import { supabaseAdmin } from '../../lib/supabase-server'
 
@@ -71,6 +73,18 @@ export async function PATCH(req: Request, context?: RouteContext): Promise<Respo
       new_status: patch.status,
     })
     if (history.error) return badRequest(history.error.message)
+
+    if (patch.status === 'sent to lender') {
+      try {
+        await runAutoMatch(id, user.id)
+      } catch (matchError) {
+        return badRequest(matchError instanceof Error ? matchError.message : 'Could not run auto-match')
+      }
+    }
+
+    if (patch.status === 'contract sent' || patch.status === 'FUNDED') {
+      triggerMerchantStatusEmail(id, patch.status)
+    }
   }
 
   return json(rowToMerchant(data))

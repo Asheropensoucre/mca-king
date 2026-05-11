@@ -18,7 +18,8 @@
     "better-auth": "^1.6.10",
     "lucide-react": "^0.468.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "resend": "^6.12.3"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

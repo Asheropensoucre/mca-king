@@ -54,7 +54,7 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
                             </button>
                         )}
                     </div>
-                    <MerchantDetailView item={selectedDealCurrent} lenders={lenders} />
+                    <MerchantDetailView item={selectedDealCurrent} lenders={lenders} canManageMatches={true} />
                 </div>
             ) : (
                 <div className={activeSection === 'pipeline' ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}>
