@@ -178,6 +178,35 @@ fulfilled_at    timestamptz
 created_at      timestamptz default now()
 ```
 
+### `leads`
+Lightweight prospect records that live before a full merchant application exists. Created by admins or sales reps. Admin assigns to reps. Stays in the system after conversion with a pointer to the merchant record it became.
+
+```sql
+id                uuid primary key default gen_random_uuid()
+created_by        uuid references users(id)
+assigned_rep_id   uuid references users(id)   -- null until admin assigns
+business_name     text not null
+owner_name        text
+phone             text
+email             text
+state             text
+status            text not null default 'new'  -- 'new' | 'contacted' | 'docs_requested' | 'converted' | 'dead'
+converted_to      uuid references merchants(id) -- null until converted
+created_at        timestamptz default now()
+updated_at        timestamptz default now()
+```
+
+### `lead_notes`
+Timestamped call log / activity feed per lead. Every entry records who wrote it and when. Never edited — only appended.
+
+```sql
+id            uuid primary key default gen_random_uuid()
+lead_id       uuid references leads(id) on delete cascade
+written_by    uuid references users(id)
+body          text not null
+created_at    timestamptz default now()
+```
+
 ---
 
 ## Auth Design (Better Auth)
@@ -212,10 +241,24 @@ export async function GET(req: Request) {
 
 | Role | Data Access |
 |---|---|
-| `admin` | Everything — all merchants, all lenders, all offers |
-| `sales_rep` | Only merchants where `assigned_rep_id = user.id` |
+| `admin` | Everything — all merchants, all lenders, all offers, all leads (assigned and unassigned) |
+| `sales_rep` | Only merchants where `assigned_rep_id = user.id` — only leads they created OR were assigned by admin. Cannot see or claim unassigned leads. |
 | `merchant` | Only their own row + their own offers/docs |
 | `lender` | Only merchants matched to them via `lender_matches` |
+
+### Lead access rules in SQL terms
+
+```sql
+-- Admin: no filter, sees everything including unassigned
+SELECT * FROM leads;
+
+-- Sales rep: only leads they created or were assigned by admin
+SELECT * FROM leads
+WHERE assigned_rep_id = user.id OR created_by = user.id;
+
+-- Unassigned leads (assigned_rep_id IS NULL) are admin-only
+-- Reps cannot claim from the pool — admin hands them out
+```
 
 ---
 
@@ -326,6 +369,48 @@ When admin/rep clicks "Notify Lenders":
 - [ ] Replace offer localStorage reads/writes with API calls
 - [ ] Status changes write to both `merchants.status` and `status_history`
 - [ ] Kamba drag-and-drop calls API instead of writing to localStorage
+
+### Phase 2.5 — Leads System (3–4 days)
+This slots in alongside Phase 2 since it's all new UI — nothing to migrate from localStorage.
+
+**Dashboard nav after this phase:**
+
+```
+Admin left nav:          Sales Rep left nav:
+─────────────────        ─────────────────
+Leads (all + unassigned) Leads (mine only)
+Merchant Directory       My Deals
+Lender Directory         Kamba Pipeline
+Kamba Pipeline
+```
+
+**Lead card preview shows:**
+- Business name
+- Owner name
+- Phone + email (click-to-call / click-to-email)
+- State
+- Current status badge (New / Contacted / Docs Requested / Converted / Dead)
+- Latest note snippet + who wrote it
+
+**Lead detail view (on click) shows:**
+- All card fields
+- Full timestamped note log (call log style — newest first)
+- Add note input
+- Status change dropdown
+- Convert to Merchant button (admin + rep) — disabled if already converted
+- Assign to Rep dropdown (admin only)
+
+**Build checklist:**
+- [ ] Create `leads` and `lead_notes` tables in Supabase
+- [ ] `/api/leads` GET — admin gets all, rep gets assigned + own
+- [ ] `/api/leads` POST — create lead (admin + rep)
+- [ ] `/api/leads/[id]` PATCH — update status, assign rep (admin only for assign)
+- [ ] `/api/leads/[id]/notes` POST — append a note
+- [ ] `/api/leads/[id]/convert` POST — creates merchant record, sets `converted_to`, flips status to `converted`
+- [ ] Lead list UI with card previews
+- [ ] Lead detail drawer/modal with note log
+- [ ] Admin assign-to-rep dropdown
+- [ ] Convert button → confirms → creates merchant → redirects to new merchant record
 
 ### Phase 3 — Documents & Storage (3–4 days)
 - [ ] Wire document upload UI to Supabase Storage
