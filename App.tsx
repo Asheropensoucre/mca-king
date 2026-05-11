@@ -12,6 +12,7 @@ import { ThemeToggle } from './components/ThemeToggle';
 import { PrintView } from './components/PrintView';
 import { Chatbot } from './components/Chatbot';
 import { DEFAULT_APPLICATION_STATUS } from './components/dashboards/shared/applicationStatus';
+import { api, DEMO_SALES_REPS, setDemoIdentity } from './src/lib/api-client';
 
 const STEPS = [
     { name: 'Business Info', description: 'Tell us about your company.' },
@@ -22,11 +23,7 @@ const STEPS = [
 ];
 
 // Mock data for sales reps
-const MOCK_SALES_REPS: SalesRepresentative[] = [
-    { id: 'rep1', name: 'Alex Johnson', email: 'alex.j@mcaking.com' },
-    { id: 'rep2', name: 'Brenda Chen', email: 'brenda.c@mcaking.com' },
-    { id: 'rep3', name: 'Carlos Diaz', email: 'carlos.d@mcaking.com' },
-];
+const MOCK_SALES_REPS: SalesRepresentative[] = DEMO_SALES_REPS;
 
 
 const initialFormData: Omit<FormData, 'id'> = {
@@ -66,6 +63,36 @@ const initialLenderData: LenderInfo = {
 export type Theme = 'light' | 'dark';
 export type View = 'merchant' | 'admin' | 'lender' | 'main' | 'merchant_dashboard' | 'lender_dashboard' | 'sales_rep_login' | 'sales_rep_dashboard' | 'lender_login' | 'merchant_login';
 
+
+interface ProfilePickerProps<T> {
+  title: string;
+  load: () => Promise<T[]>;
+  getLabel: (item: T) => string;
+  empty: string;
+  onBack: () => void;
+  onSelect: (item: T) => void;
+}
+
+function ProfilePicker<T>({ title, load, getLabel, empty, onBack, onSelect }: ProfilePickerProps<T>) {
+  const [items, setItems] = useState<T[]>([]);
+  useEffect(() => { void load().then(setItems).catch(() => setItems([])); }, [load]);
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-dark-card rounded-lg shadow-lg text-center p-8 max-w-md w-full">
+        <img src="/logo.png" alt="MCA King Logo" className="mx-auto mb-6 h-20 w-auto" />
+        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-4">{title}</h2>
+        <p className="text-slate-600 dark:text-slate-400 mt-2">Choose your profile to access your dashboard.</p>
+        <div className="mt-6 space-y-3">
+          {items.length > 0 ? items.map((item, index) => (
+            <button key={index} onClick={() => onSelect(item)} className="w-full px-6 py-3 rounded-md text-lg font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 dark:text-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 transition-colors truncate">{getLabel(item)}</button>
+          )) : <p className="text-slate-500 dark:text-slate-400">{empty}</p>}
+        </div>
+        <div className="text-center mt-6"><button onClick={onBack} className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-theme-teal transition-colors">&larr; Back to Main</button></div>
+      </div>
+    </div>
+  );
+}
+
 const App: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<Omit<FormData, 'id'>>(initialFormData);
@@ -95,170 +122,7 @@ const App: React.FC = () => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // Seed mock data for demo purposes
-  useEffect(() => {
-    if (!localStorage.getItem('mcaSubmissions')) {
-      const mockMerchants: FormData[] = [
-        {
-          id: 'mock-merchant-1',
-          businessInfo: {
-            legalName: 'Acme Corp',
-            dbaName: 'Acme Superstore',
-            address: '123 Fake St, Springfield IL',
-            monthlyRevenue: '50000',
-            phone: '555-123-4567',
-            taxId: '12-3456789',
-            startDate: '2010-01-01',
-            industryType: 'Retail',
-            entityType: 'LLC',
-            recentNSFs: '0',
-          },
-          owners: [
-            {
-              id: 'mock-owner-1',
-              name: 'John Doe',
-              homeAddress: '456 Elm St, Springfield IL',
-              signature: 'JD',
-              ownership: '100',
-              title: 'CEO',
-              cellPhone: '555-987-6543',
-              dateOfBirth: '1980-01-01',
-              ssn: '000-00-0000',
-              email: 'john.doe@example.com',
-              creditScore: '720',
-            }
-          ],
-          agreements: {
-              creditAuth: true,
-              signatureDataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
-              ipAddress: '192.168.1.1',
-              geolocation: { latitude: 40.7128, longitude: -74.0060 },
-          },
-          documents: [
-            { name: 'statement.pdf', type: 'Bank Statement', size: 0 }
-          ],
-          status: "one or more lender's sent offer",
-          offers: [
-            {
-              id: 'mock-offer-1',
-              lenderId: 'mock-lender-1',
-              lenderName: 'Capital Funding Partners',
-              amount: '100000',
-              rate: '1.25',
-              term: '12 months',
-              status: 'Pending',
-              notes: 'Pre-approved based on revenue'
-            }
-          ],
-          requestedAmount: '100000',
-          matchedLenderIds: ['mock-lender-1'],
-          salesRepId: 'rep1',
-        },
-        {
-          id: 'mock-merchant-2',
-          businessInfo: {
-            legalName: 'Tech Innovators LLC',
-            dbaName: 'Tech Innovators',
-            address: '456 Innovation Way, San Francisco CA',
-            monthlyRevenue: '120000',
-            phone: '555-987-6543',
-            taxId: '98-7654321',
-            startDate: '2018-05-15',
-            industryType: 'Software',
-            entityType: 'LLC',
-            recentNSFs: '0',
-          },
-          owners: [
-            {
-              id: 'mock-owner-2',
-              name: 'Jane Smith',
-              homeAddress: '789 Tech Blvd, San Francisco CA',
-              signature: 'JS',
-              ownership: '100',
-              title: 'Founder',
-              cellPhone: '555-345-6789',
-              dateOfBirth: '1985-06-15',
-              ssn: '000-00-1111',
-              email: 'jane.smith@techinnovators.com',
-              creditScore: '750',
-            }
-          ],
-          agreements: {
-              creditAuth: true,
-              signatureDataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
-              ipAddress: '192.168.1.2',
-              geolocation: { latitude: 37.7749, longitude: -122.4194 },
-          },
-          documents: [
-            { name: 'return.pdf', type: 'Tax Return', size: 0 }
-          ],
-          status: 'FUNDED',
-          offers: [
-            {
-              id: 'mock-offer-2',
-              lenderId: 'mock-lender-2',
-              lenderName: 'Swift Capital',
-              amount: '150000',
-              rate: '1.15',
-              term: '18 months',
-              status: 'Accepted',
-              notes: 'Best rate available'
-            }
-          ],
-          requestedAmount: '150000',
-          matchedLenderIds: ['mock-lender-1', 'mock-lender-2'],
-          salesRepId: 'rep2',
-        }
-      ];
-      localStorage.setItem('mcaSubmissions', JSON.stringify(mockMerchants));
-    }
 
-    if (!localStorage.getItem('lenderSubmissions')) {
-      const mockLenders: LenderInfo[] = [
-        {
-          id: 'mock-lender-1',
-          lenderName: 'Capital Funding Partners',
-          positions: '1st, 2nd, 3rd',
-          longestTerm: '12 months',
-          maxFundingAmount: '500000',
-          minRevenue: '10000',
-          minCreditScore: '600',
-          industryRestrictions: 'None',
-          nsfs: 'Max 5 per month',
-          timeInBusiness: '6 months',
-          stateRestrictions: 'CA, NY, FL only',
-          isoRep: 'Jane Smith',
-          cell: '555-222-3333',
-          email: 'jane@capitalfunding.com',
-          notes: 'Fast funding turnaround.',
-          buyRate: '1.25',
-          fees: 'Standard origination',
-          trucking: 'Yes',
-        },
-        {
-          id: 'mock-lender-2',
-          lenderName: 'Swift Capital',
-          positions: '1st, 2nd',
-          longestTerm: '24 months',
-          maxFundingAmount: '1000000',
-          minRevenue: '25000',
-          minCreditScore: '650',
-          industryRestrictions: 'Real Estate, Construction',
-          nsfs: 'Max 2 per month',
-          timeInBusiness: '12 months',
-          stateRestrictions: 'None',
-          isoRep: 'Michael Brown',
-          cell: '555-333-4444',
-          email: 'michael@swiftcapital.com',
-          notes: 'Focus on established businesses.',
-          buyRate: '1.15',
-          fees: 'Low fees',
-          trucking: 'No',
-        }
-      ];
-      localStorage.setItem('lenderSubmissions', JSON.stringify(mockLenders));
-    }
-  }, []);
 
 
   const updateBusinessInfo = useCallback((data: Partial<BusinessInfo>) => {
@@ -316,7 +180,7 @@ const App: React.FC = () => {
     }
   }
 
-  const handleMerchantSubmit = (e: React.FormEvent) => {
+  const handleMerchantSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.documents.length === 0) {
         alert("Please upload the required bank statements before submitting.");
@@ -328,28 +192,32 @@ const App: React.FC = () => {
     const assignedRepId = MOCK_SALES_REPS[randomRepIndex].id;
 
     const newSubmission: FormData = { ...formData, id: crypto.randomUUID(), salesRepId: assignedRepId };
-    const storedSubmissions = localStorage.getItem('mcaSubmissions');
-    const submissions = storedSubmissions ? JSON.parse(storedSubmissions) : [];
-    submissions.push(newSubmission);
-    localStorage.setItem('mcaSubmissions', JSON.stringify(submissions));
-    
-    setCurrentSubmissionId(newSubmission.id);
-    setIsSubmitted('merchant');
+    try {
+      setDemoIdentity({ role: 'merchant', userId: '00000000-0000-4000-8000-000000000201', email: 'merchant@demo.local', name: newSubmission.owners[0]?.name || 'Demo Merchant' });
+      const created = await api.merchants.create(newSubmission);
+      setCurrentSubmissionId(created.id);
+      setIsSubmitted('merchant');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not submit application.');
+    }
   };
   
-  const handleLenderSubmit = (e: React.FormEvent) => {
+  const handleLenderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newLenderData = { ...lenderData, id: crypto.randomUUID() };
-    const storedSubmissions = localStorage.getItem('lenderSubmissions');
-    const submissions = storedSubmissions ? JSON.parse(storedSubmissions) : [];
-    submissions.push(newLenderData);
-    localStorage.setItem('lenderSubmissions', JSON.stringify(submissions));
-    
-    setCurrentSubmissionId(newLenderData.id);
-    setIsSubmitted('lender');
+    try {
+      setDemoIdentity({ role: 'lender', userId: '00000000-0000-4000-8000-000000000301', email: newLenderData.email || 'lender@demo.local', name: newLenderData.lenderName || 'Demo Lender' });
+      const created = await api.lenders.create(newLenderData);
+      setCurrentSubmissionId(created.id);
+      setIsSubmitted('lender');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not submit lender profile.');
+    }
   };
 
   const handleSelectRep = (repId: string) => {
+    const rep = MOCK_SALES_REPS.find(item => item.id === repId);
+    setDemoIdentity({ role: 'sales_rep', userId: repId, email: rep?.email, name: rep?.name });
     setCurrentSalesRepId(repId);
     setView('sales_rep_dashboard');
   };
@@ -390,14 +258,12 @@ const App: React.FC = () => {
   if (isSubmitted) {
     const isMerchant = isSubmitted === 'merchant';
     
-    const handleDownloadPdf = () => {
+    const handleDownloadPdf = async () => {
         if (!currentSubmissionId) return;
-        const storedSubmissions = localStorage.getItem('mcaSubmissions');
-        const submissions = storedSubmissions ? JSON.parse(storedSubmissions) as FormData[] : [];
-        const submission = submissions.find(s => s.id === currentSubmissionId);
-        if (submission) {
+        try {
+            const submission = await api.merchants.get(currentSubmissionId);
             setPrintingSubmission(submission);
-        } else {
+        } catch {
             alert("Error: Could not find submission data to generate PDF.");
         }
     };
@@ -451,6 +317,7 @@ const App: React.FC = () => {
   }
 
   if (view === 'admin') {
+      setDemoIdentity({ role: 'admin', userId: '00000000-0000-4000-8000-000000000001', email: 'admin@demo.local', name: 'Demo Admin' });
       return (
         <>
             <DashboardController view="admin" onExit={() => setView('main')} currentId={null} salesReps={MOCK_SALES_REPS} onPrint={setPrintingSubmission} />
@@ -520,74 +387,14 @@ const App: React.FC = () => {
   }
 
   if (view === 'merchant_login') {
-      const storedMerchants = localStorage.getItem('mcaSubmissions');
-      const merchants = storedMerchants ? JSON.parse(storedMerchants) as FormData[] : [];
-
-      return (
-        <div className="min-h-screen flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-dark-card rounded-lg shadow-lg text-center p-8 max-w-md w-full">
-                <img src="/logo.png" alt="MCA King Logo" className="mx-auto mb-6 h-20 w-auto" />
-                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-4">Select Merchant Profile</h2>
-                <p className="text-slate-600 dark:text-slate-400 mt-2">Choose your profile to access your dashboard.</p>
-                <div className="mt-6 space-y-3">
-                    {merchants.length > 0 ? merchants.map(merchant => (
-                        <button 
-                            key={merchant.id}
-                            onClick={() => {
-                                setCurrentSubmissionId(merchant.id);
-                                setView('merchant_dashboard');
-                            }}
-                            className="w-full px-6 py-3 rounded-md text-lg font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 dark:text-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 transition-colors truncate"
-                        >
-                            {merchant.businessInfo.legalName || 'Unnamed Business'}
-                        </button>
-                    )) : (
-                        <p className="text-slate-500 dark:text-slate-400">No applications submitted yet. Please submit a merchant application first.</p>
-                    )}
-                </div>
-                 <div className="text-center mt-6">
-                    <button onClick={() => setView('main')} className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-theme-teal transition-colors">&larr; Back to Main</button>
-                </div>
-            </div>
-             <Chatbot context={chatContext} />
-        </div>
-      );
+      return <ProfilePicker title="Select Merchant Profile" load={api.merchants.list} getLabel={(merchant: FormData) => merchant.businessInfo.legalName || 'Unnamed Business'} empty="No applications submitted yet. Please submit a merchant application first." onBack={() => setView('main')} onSelect={(merchant: FormData) => { setDemoIdentity({ role: 'merchant', userId: '00000000-0000-4000-8000-000000000201', email: merchant.owners[0]?.email, name: merchant.owners[0]?.name }); setCurrentSubmissionId(merchant.id); setView('merchant_dashboard'); }} />;
   }
+
 
   if (view === 'lender_login') {
-      const storedLenders = localStorage.getItem('lenderSubmissions');
-      const lenders = storedLenders ? JSON.parse(storedLenders) as LenderInfo[] : [];
-
-      return (
-        <div className="min-h-screen flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-dark-card rounded-lg shadow-lg text-center p-8 max-w-md w-full">
-                <img src="/logo.png" alt="MCA King Logo" className="mx-auto mb-6 h-20 w-auto" />
-                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-4">Select Lender Profile</h2>
-                <p className="text-slate-600 dark:text-slate-400 mt-2">Choose your profile to access your dashboard.</p>
-                <div className="mt-6 space-y-3">
-                    {lenders.length > 0 ? lenders.map(lender => (
-                        <button 
-                            key={lender.id}
-                            onClick={() => {
-                                setCurrentSubmissionId(lender.id);
-                                setView('lender_dashboard');
-                            }}
-                            className="w-full px-6 py-3 rounded-md text-lg font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 dark:text-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 transition-colors truncate"
-                        >
-                            {lender.lenderName || 'Unnamed Lender'}
-                        </button>
-                    )) : (
-                        <p className="text-slate-500 dark:text-slate-400">No lenders registered yet. Please submit a lender application first.</p>
-                    )}
-                </div>
-                 <div className="text-center mt-6">
-                    <button onClick={() => setView('main')} className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-theme-teal transition-colors">&larr; Back to Main</button>
-                </div>
-            </div>
-             <Chatbot context={chatContext} />
-        </div>
-      );
+      return <ProfilePicker title="Select Lender Profile" load={api.lenders.list} getLabel={(lender: LenderInfo) => lender.lenderName || 'Unnamed Lender'} empty="No lenders registered yet. Please submit a lender application first." onBack={() => setView('main')} onSelect={(lender: LenderInfo) => { setDemoIdentity({ role: 'lender', userId: '00000000-0000-4000-8000-000000000301', email: lender.email, name: lender.lenderName }); setCurrentSubmissionId(lender.id); setView('lender_dashboard'); }} />;
   }
+
 
   if (view === 'main') {
     return (

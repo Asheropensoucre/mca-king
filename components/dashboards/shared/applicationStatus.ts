@@ -1,4 +1,4 @@
-import type { ApplicationStatus, FormData } from '../../../types';
+import type { ApplicationStatus } from '../../../types';
 
 export type StatusTheme = 'default' | 'error' | 'warning' | 'success';
 
@@ -25,14 +25,6 @@ export const APPLICATION_STATUS_CONFIG: ApplicationStatusConfig[] = [
 
 export const APPLICATION_STATUSES = APPLICATION_STATUS_CONFIG.map(status => status.label);
 
-const LEGACY_STATUS_MAP: Record<string, ApplicationStatus> = {
-  Submitted: 'application & 3 months bank statements in',
-  'Under Review': 'sent to lender',
-  'Needs More Info': 'more docs requested',
-  'Offers Received': "one or more lender's sent offer",
-  Funded: 'FUNDED',
-  Declined: 'all lenders decline',
-};
 
 export const DEFAULT_APPLICATION_STATUS: ApplicationStatus = APPLICATION_STATUS_CONFIG[0].label;
 
@@ -42,21 +34,8 @@ export const isApplicationStatus = (value: unknown): value is ApplicationStatus 
 
 export const normalizeApplicationStatus = (status: unknown): ApplicationStatus => {
   if (isApplicationStatus(status)) return status;
-  if (typeof status === 'string' && LEGACY_STATUS_MAP[status]) return LEGACY_STATUS_MAP[status];
   return DEFAULT_APPLICATION_STATUS;
 };
-
-export const migrateMerchantStatus = (merchant: FormData): FormData => ({
-  ...merchant,
-  status: normalizeApplicationStatus(merchant.status),
-  offers: (merchant.offers || []).map(offer => {
-    const rawStatus = String(offer.status).toLowerCase();
-    return {
-      ...offer,
-      status: rawStatus === 'accepted' ? 'Accepted' : rawStatus === 'rejected' ? 'Rejected' : rawStatus === 'pending' ? 'Pending' : offer.status,
-    };
-  }),
-});
 
 export const getStatusIndex = (status: ApplicationStatus) => (
   APPLICATION_STATUSES.indexOf(normalizeApplicationStatus(status))

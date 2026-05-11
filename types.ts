@@ -103,3 +103,31 @@ export interface SalesRepresentative {
   name: string;
   email: string;
 }
+
+export type LeadStatus = 'new' | 'contacted' | 'docs_requested' | 'converted' | 'dead';
+
+export interface LeadNote {
+  id: string;
+  lead_id: string;
+  written_by: string;
+  body: string;
+  created_at: string;
+  author_name?: string;
+}
+
+export interface Lead {
+  id: string;
+  created_by: string;
+  assigned_rep_id: string | null;
+  business_name: string;
+  owner_name: string | null;
+  phone: string | null;
+  email: string | null;
+  state: string | null;
+  status: LeadStatus;
+  converted_to: string | null;
+  created_at: string;
+  updated_at: string;
+  latest_note?: LeadNote | null;
+  notes?: LeadNote[];
+}

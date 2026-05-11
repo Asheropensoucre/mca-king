@@ -40,6 +40,7 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ profile, merch
             status: "one or more lender's sent offer",
         };
 
+        void import('../../src/lib/api-client').then(({ api }) => api.offers.create(selectedDeal.id, newOffer)).catch(() => undefined);
         const result = onUpdateMerchant(updatedMerchant);
         setSelectedDeal(result);
         setIsCreatingOffer(false);

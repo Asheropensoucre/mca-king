@@ -8,6 +8,7 @@ import { EditLenderForm } from './shared/EditLenderForm';
 import { DashboardShell } from './shared/DashboardShell';
 import { KanbanPipelineView } from './shared/KanbanPipelineView';
 import { APPLICATION_STATUSES } from './shared/applicationStatus';
+import { LeadManager } from './LeadManager';
 
 interface AdminDashboardProps { 
     merchants: FormData[], 
@@ -19,10 +20,10 @@ interface AdminDashboardProps {
     onPrint?: (submission: FormData) => void;
 }
 
-type AdminSection = 'merchants' | 'lenders' | 'pipeline';
+type AdminSection = 'leads' | 'merchants' | 'lenders' | 'pipeline';
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ merchants, lenders, onExit, onUpdateMerchant, onUpdateLenderInfo, salesReps, onPrint }) => {
-    const [activeSection, setActiveSection] = useState<AdminSection>('merchants');
+    const [activeSection, setActiveSection] = useState<AdminSection>('leads');
     const [selectedItem, setSelectedItem] = useState<FormData | LenderInfo | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [isMatching, setIsMatching] = useState(false);
@@ -211,6 +212,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ merchants, lende
         <DashboardShell<AdminSection>
             title="Admin Dashboard"
             sections={[
+                { id: 'leads', label: 'Leads' },
                 { id: 'merchants', label: 'Merchant Directory' },
                 { id: 'lenders', label: 'Lender Directory' },
                 { id: 'pipeline', label: 'Kamba Pipeline' },
@@ -222,6 +224,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ merchants, lende
         >
             {selectedItem ? renderSelectedItem() : (
                 <div className={activeSection === 'pipeline' ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}>
+                    {activeSection === 'leads' && <LeadManager isAdmin={true} salesReps={salesReps} />}
                     {activeSection === 'merchants' && renderMerchants()}
                     {activeSection === 'lenders' && renderLenders()}
                     {activeSection === 'pipeline' && (

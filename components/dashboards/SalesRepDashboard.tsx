@@ -4,6 +4,7 @@ import { Card } from '../ui/Card';
 import { MerchantDetailView } from './shared/MerchantDetailView';
 import { DashboardShell } from './shared/DashboardShell';
 import { KanbanPipelineView } from './shared/KanbanPipelineView';
+import { LeadManager } from './LeadManager';
 
 interface SalesRepDashboardProps { 
     deals: FormData[], 
@@ -12,13 +13,14 @@ interface SalesRepDashboardProps {
     onPrint?: (submission: FormData) => void;
     lenders: LenderInfo[];
     onUpdateMerchant: (updatedMerchant: FormData) => FormData;
+    salesReps: SalesRepresentative[];
 }
 
-type SalesRepSection = 'deals' | 'pipeline';
+type SalesRepSection = 'leads' | 'deals' | 'pipeline';
 
-export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ deals, rep, onExit, onPrint, lenders, onUpdateMerchant }) => {
+export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ deals, rep, onExit, onPrint, lenders, onUpdateMerchant, salesReps }) => {
     const [selectedDeal, setSelectedDeal] = useState<FormData | null>(null);
-    const [activeSection, setActiveSection] = useState<SalesRepSection>('deals');
+    const [activeSection, setActiveSection] = useState<SalesRepSection>('leads');
     
     const selectedDealCurrent = selectedDeal ? deals.find(deal => deal.id === selectedDeal.id) || selectedDeal : null;
 
@@ -27,6 +29,7 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ deals, rep
             title="Sales Rep Dashboard"
             subtitle={rep ? `Welcome, ${rep.name}` : undefined}
             sections={[
+                { id: 'leads', label: 'Leads' },
                 { id: 'deals', label: 'My Deals' },
                 { id: 'pipeline', label: 'Kamba Pipeline' },
             ]}
@@ -52,6 +55,7 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ deals, rep
                 </div>
             ) : (
                 <div className={activeSection === 'pipeline' ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}>
+                    {activeSection === 'leads' && <LeadManager isAdmin={false} salesReps={salesReps} />}
                     {activeSection === 'deals' && (
                         <Card>
                             <div className="overflow-x-auto">
