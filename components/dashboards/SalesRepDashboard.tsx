@@ -1,0 +1,98 @@
+import React, { useState } from 'react';
+import type { FormData, LenderInfo, SalesRepresentative } from '../../types';
+import { Card } from '../ui/Card';
+import { MerchantDetailView } from './shared/MerchantDetailView';
+import { DashboardShell } from './shared/DashboardShell';
+import { KanbanPipelineView } from './shared/KanbanPipelineView';
+
+interface SalesRepDashboardProps { 
+    deals: FormData[], 
+    rep: SalesRepresentative | undefined, 
+    onExit: () => void,
+    onPrint?: (submission: FormData) => void;
+    lenders: LenderInfo[];
+    onUpdateMerchant: (updatedMerchant: FormData) => FormData;
+}
+
+type SalesRepSection = 'deals' | 'pipeline';
+
+export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ deals, rep, onExit, onPrint, lenders, onUpdateMerchant }) => {
+    const [selectedDeal, setSelectedDeal] = useState<FormData | null>(null);
+    const [activeSection, setActiveSection] = useState<SalesRepSection>('deals');
+    
+    const selectedDealCurrent = selectedDeal ? deals.find(deal => deal.id === selectedDeal.id) || selectedDeal : null;
+
+    return (
+        <DashboardShell<SalesRepSection>
+            title="Sales Rep Dashboard"
+            subtitle={rep ? `Welcome, ${rep.name}` : undefined}
+            sections={[
+                { id: 'deals', label: 'My Deals' },
+                { id: 'pipeline', label: 'Kamba Pipeline' },
+            ]}
+            activeSection={activeSection}
+            onSectionChange={(section) => { setActiveSection(section); setSelectedDeal(null); }}
+            onExit={onExit}
+        >
+            {selectedDealCurrent ? (
+                <div className="max-w-4xl mx-auto">
+                    <button onClick={() => setSelectedDeal(null)} className="mb-4 text-sm font-medium text-theme-teal hover:text-theme-teal/80">&larr; Back to {activeSection === 'pipeline' ? 'Kamba Pipeline' : 'My Deals'}</button>
+                    <div className="flex justify-between items-center mb-4 gap-3">
+                        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{selectedDealCurrent.businessInfo.legalName}</h2>
+                        {onPrint && (
+                            <button
+                                onClick={() => onPrint(selectedDealCurrent)}
+                                className="px-4 py-2 rounded-md text-sm font-medium text-theme-black bg-theme-yellow hover:bg-theme-yellow/90"
+                            >
+                                Download PDF
+                            </button>
+                        )}
+                    </div>
+                    <MerchantDetailView item={selectedDealCurrent} lenders={lenders} />
+                </div>
+            ) : (
+                <div className={activeSection === 'pipeline' ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}>
+                    {activeSection === 'deals' && (
+                        <Card>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                                    <thead className="bg-slate-50 dark:bg-slate-800">
+                                        <tr className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                            <th>Business Name</th>
+                                            <th>Primary Contact</th>
+                                            <th>Contact Info</th>
+                                            <th>Status</th>
+                                            <th className="relative"><span className="sr-only">View</span></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-slate-200 dark:bg-dark-card dark:divide-slate-700">
+                                        {deals.length > 0 ? deals.map((deal) => {
+                                            const primaryOwner = deal.owners[0];
+                                            return (
+                                                <tr key={deal.id}>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-100">{deal.businessInfo.legalName}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{primaryOwner?.name || 'N/A'}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                                                        {primaryOwner?.cellPhone && <a href={`tel:${primaryOwner.cellPhone}`} className="text-theme-teal hover:text-theme-teal/80 block">Call</a>}
+                                                        {primaryOwner?.email && <a href={`mailto:${primaryOwner.email}`} className="text-theme-teal hover:text-theme-teal/80 block mt-1">Email</a>}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{deal.status}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onClick={() => setSelectedDeal(deal)} className="text-theme-teal hover:text-theme-teal/80">View Details</button></td>
+                                                </tr>
+                                            );
+                                        }) : (
+                                            <tr><td colSpan={5} className="px-6 py-12 text-center text-sm text-slate-500 dark:text-slate-400">You have not been assigned any deals yet.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </Card>
+                    )}
+                    {activeSection === 'pipeline' && (
+                        <KanbanPipelineView merchants={deals} lenders={lenders} onUpdateMerchant={onUpdateMerchant} onSelectMerchant={setSelectedDeal} />
+                    )}
+                </div>
+            )}
+        </DashboardShell>
+    );
+};

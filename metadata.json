@@ -1,0 +1,8 @@
+{
+  "name": "MCA Application Form",
+  "description": "A multi-step form for Merchant Cash Advance applications, designed to collect business and owner information with a clean, professional user interface.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": []
+}

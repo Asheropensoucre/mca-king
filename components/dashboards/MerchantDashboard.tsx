@@ -1,0 +1,99 @@
+import React from 'react';
+import type { FormData } from '../../types';
+import { Card } from '../ui/Card';
+import { APPLICATION_STATUS_CONFIG, getStatusIndex, getStatusThemeClasses } from './shared/applicationStatus';
+
+interface MerchantDashboardProps { 
+    submission: FormData, 
+    onExit: () => void,
+    onUpdateOffer: (offerId: string, status: 'Accepted' | 'Rejected') => void 
+}
+
+export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ submission, onExit, onUpdateOffer }) => {
+    const currentStatusIndex = getStatusIndex(submission.status);
+
+    return (
+        <div className="p-4 sm:p-6 lg:p-8">
+            <div className="max-w-5xl mx-auto">
+                <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">My Application Dashboard</h1>
+                        <p className="text-slate-500 dark:text-slate-400">Welcome, {submission.owners[0]?.name || 'Valued Client'}</p>
+                    </div>
+                    <button onClick={onExit} className="text-sm font-medium text-theme-teal hover:text-theme-teal/80">Exit Dashboard &rarr;</button>
+                </div>
+
+                <Card className="mb-6">
+                    <div className="p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                            <div>
+                                <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-200">Application Status</h2>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">Current step: <span className="font-semibold text-slate-700 dark:text-slate-200">{submission.status}</span></p>
+                            </div>
+                            <span className="inline-flex self-start sm:self-auto rounded-full bg-theme-yellow px-3 py-1 text-xs font-bold text-theme-black">
+                                Step {currentStatusIndex + 1} of {APPLICATION_STATUS_CONFIG.length}
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {APPLICATION_STATUS_CONFIG.map((statusConfig, statusIdx) => {
+                                const themeClasses = getStatusThemeClasses(statusConfig.theme);
+                                const isCurrent = statusIdx === currentStatusIndex;
+                                const isComplete = statusIdx < currentStatusIndex;
+                                return (
+                                    <div
+                                        key={statusConfig.label}
+                                        className={`rounded-lg border p-3 text-xs transition-colors ${
+                                            isCurrent
+                                                ? 'border-theme-yellow bg-theme-yellow/20 text-slate-900 dark:text-slate-100'
+                                                : isComplete
+                                                    ? 'border-theme-teal/40 bg-theme-teal/10 text-slate-700 dark:text-slate-200'
+                                                    : 'border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-400'
+                                        }`}
+                                    >
+                                        <div className="flex gap-2 items-start">
+                                            <span className={`shrink-0 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${isCurrent ? 'bg-theme-yellow text-black' : isComplete ? 'bg-theme-teal text-black' : themeClasses.badge}`}>
+                                                {statusIdx + 1}
+                                            </span>
+                                            <span className="font-semibold leading-snug">{statusConfig.label}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </Card>
+
+                <Card>
+                    <div className="p-6">
+                        <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-4">Offers</h2>
+                        {submission.offers && submission.offers.length > 0 ? (
+                            <div className="space-y-4">
+                                {submission.offers.map(offer => (
+                                    <div key={offer.id || offer.lenderId} className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                                        <div>
+                                            <p className="font-semibold text-slate-800 dark:text-slate-200">{offer.lenderName}</p>
+                                            <p className="text-slate-600 dark:text-slate-400">Amount: <span className="font-medium">${Number(offer.amount).toLocaleString()}</span></p>
+                                            <p className="text-slate-600 dark:text-slate-400">Term: <span className="font-medium">{offer.term} Days</span></p>
+                                        </div>
+                                        <div className="mt-4 sm:mt-0 flex space-x-2">
+                                            {offer.status === 'Pending' ? (
+                                                <>
+                                                    <button onClick={() => onUpdateOffer(offer.lenderId, 'Rejected')} className="px-3 py-1.5 text-xs font-medium rounded-md bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 dark:bg-slate-600 dark:text-slate-200 dark:border-slate-500 dark:hover:bg-slate-500">Reject</button>
+                                                    <button onClick={() => onUpdateOffer(offer.lenderId, 'Accepted')} className="px-3 py-1.5 text-xs font-medium rounded-md text-theme-black bg-theme-teal hover:bg-theme-teal/90">Accept</button>
+                                                </>
+                                            ) : (
+                                                <span className={`px-3 py-1.5 text-xs font-medium rounded-full ${offer.status === 'Accepted' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200'}`}>{offer.status}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                           <p className="text-sm text-slate-500 dark:text-slate-400">No offers have been made yet. You will be notified when an offer is available.</p>
+                        )}
+                    </div>
+                </Card>
+            </div>
+        </div>
+    );
+};
