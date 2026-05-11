@@ -15,6 +15,7 @@ interface AdminDashboardProps {
     merchants: FormData[], 
     lenders: LenderInfo[], 
     onExit: () => void,
+    themeToggle?: React.ReactNode;
     onUpdateMerchant: (updatedMerchant: FormData) => FormData;
     onUpdateLenderInfo: (data: LenderInfo) => LenderInfo;
     salesReps: SalesRepresentative[],
@@ -24,7 +25,7 @@ interface AdminDashboardProps {
 
 type AdminSection = 'leads' | 'merchants' | 'lenders' | 'pipeline';
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, merchants, lenders, onExit, onUpdateMerchant, onUpdateLenderInfo, salesReps, onSalesRepCreated, onPrint }) => {
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, merchants, lenders, onExit, themeToggle, onUpdateMerchant, onUpdateLenderInfo, salesReps, onSalesRepCreated, onPrint }) => {
     const [activeSection, setActiveSection] = useState<AdminSection>('leads');
     const [selectedItem, setSelectedItem] = useState<FormData | LenderInfo | null>(null);
     const [isEditing, setIsEditing] = useState(false);
@@ -291,6 +292,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
             onSectionChange={(section) => { setActiveSection(section); setSelectedItem(null); setIsEditing(false); }}
             onExit={onExit}
             exitLabel="Logout"
+            themeToggle={themeToggle}
         >
             {selectedItem ? renderSelectedItem() : (
                 <div className={activeSection === 'pipeline' ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}>

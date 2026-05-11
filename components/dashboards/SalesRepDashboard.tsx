@@ -11,6 +11,7 @@ interface SalesRepDashboardProps {
     deals: FormData[], 
     rep: SalesRepresentative | undefined, 
     onExit: () => void,
+    themeToggle?: React.ReactNode;
     onPrint?: (submission: FormData) => void;
     lenders: LenderInfo[];
     onUpdateMerchant: (updatedMerchant: FormData) => FormData;
@@ -19,7 +20,7 @@ interface SalesRepDashboardProps {
 
 type SalesRepSection = 'leads' | 'deals' | 'pipeline';
 
-export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUser, deals, rep, onExit, onPrint, lenders, onUpdateMerchant, salesReps }) => {
+export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUser, deals, rep, onExit, themeToggle, onPrint, lenders, onUpdateMerchant, salesReps }) => {
     const [selectedDeal, setSelectedDeal] = useState<FormData | null>(null);
     const [activeSection, setActiveSection] = useState<SalesRepSection>('leads');
     
@@ -37,6 +38,7 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
             activeSection={activeSection}
             onSectionChange={(section) => { setActiveSection(section); setSelectedDeal(null); }}
             onExit={onExit}
+            themeToggle={themeToggle}
         >
             {selectedDealCurrent ? (
                 <div className="max-w-4xl mx-auto">

@@ -9,10 +9,11 @@ import { api } from '../../src/lib/api-client';
 interface DashboardControllerProps {
     currentUser: AuthUser;
     onLogout: () => void;
+    themeToggle?: React.ReactNode;
     onPrint?: (submission: FormData) => void;
 }
 
-export const DashboardController: React.FC<DashboardControllerProps> = ({ currentUser, onLogout, onPrint }) => {
+export const DashboardController: React.FC<DashboardControllerProps> = ({ currentUser, onLogout, themeToggle, onPrint }) => {
     const [merchantSubmissions, setMerchantSubmissions] = useState<FormData[]>([]);
     const [lenderSubmissions, setLenderSubmissions] = useState<LenderInfo[]>([]);
     const [salesReps, setSalesReps] = useState<SalesRepresentative[]>([]);
@@ -86,6 +87,7 @@ export const DashboardController: React.FC<DashboardControllerProps> = ({ curren
             merchants={merchantSubmissions} 
             lenders={lenderSubmissions} 
             onExit={onLogout}
+            themeToggle={themeToggle}
             onUpdateMerchant={handleUpdateMerchant}
             onUpdateLenderInfo={handleUpdateLenderInfo}
             salesReps={salesReps}
@@ -97,7 +99,7 @@ export const DashboardController: React.FC<DashboardControllerProps> = ({ curren
     if (currentUser.role === 'merchant') {
         const submission = merchantSubmissions[0];
         if (submission) {
-            return <MerchantDashboard currentUser={currentUser} submission={submission} onExit={onLogout} onUpdateOffer={(offerId, status) => handleUpdateOffer(submission.id, offerId, status)} />;
+            return <MerchantDashboard currentUser={currentUser} submission={submission} onExit={onLogout} themeToggle={themeToggle} onUpdateOffer={(offerId, status) => handleUpdateOffer(submission.id, offerId, status)} />;
         }
     }
     
@@ -105,7 +107,7 @@ export const DashboardController: React.FC<DashboardControllerProps> = ({ curren
         const profile = lenderSubmissions[0];
         if (profile) {
             const [merchants] = merchantSubmissions.length > 0 ? [merchantSubmissions] : [[]];
-            return <LenderDashboard currentUser={currentUser} profile={profile} merchants={merchants} onExit={onLogout} onUpdateMerchant={handleUpdateMerchant} />;
+            return <LenderDashboard currentUser={currentUser} profile={profile} merchants={merchants} onExit={onLogout} themeToggle={themeToggle} onUpdateMerchant={handleUpdateMerchant} />;
         }
     }
 
@@ -116,7 +118,7 @@ export const DashboardController: React.FC<DashboardControllerProps> = ({ curren
             name: currentUser.full_name ?? currentUser.name ?? currentUser.email,
             email: currentUser.email,
         };
-        return <SalesRepDashboard currentUser={currentUser} deals={repDeals} rep={currentRep} onExit={onLogout} onPrint={onPrint} lenders={lenderSubmissions} onUpdateMerchant={handleUpdateMerchant} salesReps={salesReps} />;
+        return <SalesRepDashboard currentUser={currentUser} deals={repDeals} rep={currentRep} onExit={onLogout} themeToggle={themeToggle} onPrint={onPrint} lenders={lenderSubmissions} onUpdateMerchant={handleUpdateMerchant} salesReps={salesReps} />;
     }
 
     return (

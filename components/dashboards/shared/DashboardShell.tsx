@@ -13,6 +13,7 @@ interface DashboardShellProps<T extends string> {
   onSectionChange: (section: T) => void;
   onExit: () => void;
   exitLabel?: string;
+  themeToggle?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -24,6 +25,7 @@ export const DashboardShell = <T extends string>({
   onSectionChange,
   onExit,
   exitLabel = 'Logout',
+  themeToggle,
   children,
 }: DashboardShellProps<T>) => {
   return (
@@ -53,7 +55,8 @@ export const DashboardShell = <T extends string>({
               </button>
             ))}
           </nav>
-          <div className="p-4 border-t border-slate-200 dark:border-slate-700">
+          <div className="space-y-3 p-4 border-t border-slate-200 dark:border-slate-700">
+            {themeToggle && <div className="flex justify-center">{themeToggle}</div>}
             <button onClick={onExit} className="w-full rounded-lg bg-slate-100 px-4 py-2 text-left text-sm font-semibold text-theme-teal hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600">
               {exitLabel} &rarr;
             </button>
@@ -70,7 +73,10 @@ export const DashboardShell = <T extends string>({
                   {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{subtitle}</p>}
                 </div>
               </div>
-              <button onClick={onExit} className="shrink-0 rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-theme-teal hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600">Logout</button>
+              <div className="flex shrink-0 items-center gap-2">
+                {themeToggle}
+                <button onClick={onExit} className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-theme-teal hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600">Logout</button>
+              </div>
             </div>
             <div className="flex gap-2 overflow-x-auto pb-1">
               {sections.map(section => (

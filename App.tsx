@@ -8,7 +8,7 @@ import { StepIndicator } from './components/StepIndicator';
 import { DashboardController } from './components/dashboards/DashboardController';
 import { LenderForm } from './components/LenderForm';
 import { DocumentUploadStep } from './components/DocumentUploadStep';
-import { ThemeToggle } from './components/ThemeToggle';
+import { ThemeToggle, type Theme } from './components/ThemeToggle';
 import { PrintView } from './components/PrintView';
 import { Chatbot } from './components/Chatbot';
 import { DEFAULT_APPLICATION_STATUS } from './components/dashboards/shared/applicationStatus';
@@ -57,7 +57,6 @@ const initialLenderData: LenderInfo = {
     fees: '', trucking: '',
 };
 
-export type Theme = 'light' | 'dark';
 type AuthMode = 'login' | 'register';
 type SetupView = 'dashboard' | 'merchant_form' | 'lender_form';
 
@@ -173,7 +172,9 @@ const App: React.FC = () => {
   }
 
   if (!currentUser) {
-    return authMode === 'login' ? <LoginPage onLogin={setCurrentUser} onModeChange={setAuthMode} /> : <RegisterPage onRegister={setCurrentUser} onModeChange={setAuthMode} />;
+    return authMode === 'login'
+      ? <LoginPage onLogin={setCurrentUser} onModeChange={setAuthMode} theme={theme} setTheme={setTheme} />
+      : <RegisterPage onRegister={setCurrentUser} onModeChange={setAuthMode} theme={theme} setTheme={setTheme} />;
   }
 
   if (printingSubmission) return <PrintView formData={printingSubmission} onClose={() => setPrintingSubmission(null)} />;
@@ -207,7 +208,7 @@ const App: React.FC = () => {
       <div className="min-h-screen flex flex-col justify-center items-center p-8 sm:p-12">
         <img src="/logo.png" alt="MCA King Logo" className="mb-8 h-24 w-auto" />
         <div className="w-full max-w-6xl relative">
-          <div className="absolute top-4 right-4 z-10"><ThemeToggle theme={theme} setTheme={setTheme} /></div>
+          <div className="mb-4 flex justify-end"><ThemeToggle theme={theme} setTheme={setTheme} /></div>
           <div className="bg-white dark:bg-dark-card rounded-xl shadow-lg grid md:grid-cols-3">
             <div className="p-12 border-r border-slate-200 dark:border-theme-maroon/50 hidden md:block"><StepIndicator steps={STEPS.map(s => s.name)} descriptions={STEPS.map(s => s.description)} currentStep={currentStep} /></div>
             <div className="md:col-span-2 p-12">
@@ -229,12 +230,11 @@ const App: React.FC = () => {
   }
 
   if (setupView === 'lender_form') {
-    return <><LenderForm data={lenderData} updateData={updateLenderInfo} onSubmit={handleLenderSubmit} onExit={() => setSetupView('dashboard')} /><Chatbot context={chatContext} /></>;
+    return <><LenderForm data={lenderData} updateData={updateLenderInfo} onSubmit={handleLenderSubmit} onExit={() => setSetupView('dashboard')} headerAction={<ThemeToggle theme={theme} setTheme={setTheme} />} /><Chatbot context={chatContext} /></>;
   }
 
   return (
     <>
-      <div className="absolute top-4 right-4 z-50"><ThemeToggle theme={theme} setTheme={setTheme} /></div>
       {(currentUser.role === 'merchant' || currentUser.role === 'lender') && (
         <div className="fixed bottom-4 right-4 z-50">
           <button onClick={() => setSetupView(currentUser.role === 'merchant' ? 'merchant_form' : 'lender_form')} className="rounded-full bg-theme-yellow px-5 py-3 text-sm font-bold text-theme-black shadow-lg hover:bg-theme-yellow/90">
@@ -242,7 +242,7 @@ const App: React.FC = () => {
           </button>
         </div>
       )}
-      <DashboardController currentUser={currentUser} onLogout={handleLogout} onPrint={setPrintingSubmission} />
+      <DashboardController currentUser={currentUser} onLogout={handleLogout} themeToggle={<ThemeToggle theme={theme} setTheme={setTheme} />} onPrint={setPrintingSubmission} />
       <Chatbot context={chatContext} />
     </>
   );

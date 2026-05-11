@@ -10,9 +10,10 @@ interface LenderFormProps {
     updateData: (data: Partial<LenderInfo>) => void;
     onSubmit: (e: React.FormEvent) => void;
     onExit: () => void;
+    headerAction?: React.ReactNode;
 }
 
-export const LenderForm: React.FC<LenderFormProps> = ({ data, updateData, onSubmit, onExit }) => {
+export const LenderForm: React.FC<LenderFormProps> = ({ data, updateData, onSubmit, onExit, headerAction }) => {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         updateData({ [e.target.name]: e.target.value } as Partial<LenderInfo>);
     };
@@ -20,12 +21,15 @@ export const LenderForm: React.FC<LenderFormProps> = ({ data, updateData, onSubm
     return (
         <div className="min-h-screen p-4 sm:p-6 lg:p-8">
             <div className="max-w-4xl mx-auto">
-                 <div className="flex justify-between items-center mb-6">
+                 <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-6">
                     <div className="flex items-center space-x-4">
                         <img src="/logo.png" alt="MCA King Logo" className="h-12 w-auto" />
                         <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Lender Criteria Submission</h1>
                     </div>
-                    <button onClick={onExit} className="text-sm font-medium text-theme-teal hover:text-theme-teal/80">Exit Form &rarr;</button>
+                    <div className="flex items-center gap-3 self-start sm:self-auto">
+                        {headerAction}
+                        <button onClick={onExit} className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-theme-teal hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600">Exit Form</button>
+                    </div>
                 </div>
                 <form onSubmit={onSubmit}>
                     <Card>
