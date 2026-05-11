@@ -110,7 +110,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ merchants, lende
                         )
                     ) : (
                         isMerchant ? (
-                            <MerchantDetailView item={selectedItem as FormData} lenders={lenders} />
+                            <MerchantDetailView item={selectedItem as FormData} lenders={lenders} canDeleteDocuments={true} />
                         ) : (
                             <LenderDetailView item={selectedItem as LenderInfo} />
                         )

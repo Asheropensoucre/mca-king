@@ -1,18 +1,26 @@
 import React, { useState, useCallback } from 'react';
-import type { DocumentInfo } from '../types';
+import type { DocType, DocumentInfo } from '../types';
+import { api } from '../src/lib/api-client';
 
 interface DocumentUploadProps {
     onDocumentsChange: (documents: DocumentInfo[]) => void;
     accept?: string;
+    merchantId?: string;
+    docType?: DocType;
+    stipulationId?: string;
+    onUploaded?: () => void;
 }
 
-export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onDocumentsChange, accept }) => {
+export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onDocumentsChange, accept, merchantId, docType, stipulationId, onUploaded }) => {
     const [files, setFiles] = useState<File[]>([]);
+    const [uploading, setUploading] = useState(false);
+    const [message, setMessage] = useState<string | null>(null);
     
-    const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-        const selectedFiles = Array.from(event.target.files || []);
+    const handleFileChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFiles: File[] = Array.from(event.target.files ?? []);
         const newFiles = [...files, ...selectedFiles];
         setFiles(newFiles);
+        setMessage(null);
         
         const documentInfos: DocumentInfo[] = newFiles.map(file => ({
             name: file.name,
@@ -20,7 +28,22 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onDocumentsChang
             size: file.size,
         }));
         onDocumentsChange(documentInfos);
-    }, [files, onDocumentsChange]);
+
+        if (merchantId && selectedFiles.length > 0) {
+            const targetMerchantId = merchantId;
+            const targetDocType: DocType = docType ?? 'bank_statement';
+            setUploading(true);
+            try {
+                await Promise.all(selectedFiles.map(file => api.documents.upload(targetMerchantId, targetDocType, file, stipulationId)));
+                setMessage('Upload complete.');
+                onUploaded?.();
+            } catch (err) {
+                setMessage(err instanceof Error ? err.message : 'Upload failed.');
+            } finally {
+                setUploading(false);
+            }
+        }
+    }, [docType, files, merchantId, onDocumentsChange, onUploaded, stipulationId]);
 
     const removeFile = (indexToRemove: number) => {
         const newFiles = files.filter((_, index) => index !== indexToRemove);
@@ -47,10 +70,11 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onDocumentsChang
         <div className="space-y-4">
              <div>
                 <label htmlFor="file-upload" className="relative cursor-pointer rounded-md font-semibold text-theme-teal focus-within:outline-none focus-within:ring-2 focus-within:ring-theme-teal focus-within:ring-offset-2 hover:text-theme-teal/80">
-                    <span>Upload required documents</span>
-                    <input id="file-upload" name="file-upload" type="file" className="sr-only" multiple onChange={handleFileChange} accept={accept} />
+                    <span>{uploading ? 'Uploading...' : 'Upload required documents'}</span>
+                    <input id="file-upload" name="file-upload" type="file" className="sr-only" multiple onChange={handleFileChange} accept={accept} disabled={uploading} />
                 </label>
                 <p className="text-xs text-slate-500 dark:text-slate-400">e.g., Bank Statements, Photo ID. PNG, JPG, PDF up to 10MB.</p>
+                {message && <p className={`text-xs mt-1 ${message.toLowerCase().includes('failed') || message.toLowerCase().includes('error') ? 'text-theme-red' : 'text-theme-teal'}`}>{message}</p>}
             </div>
             {files.length > 0 && (
                 <div className="border border-slate-200 dark:border-slate-600 rounded-md p-3">

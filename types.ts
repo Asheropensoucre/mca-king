@@ -131,3 +131,26 @@ export interface Lead {
   latest_note?: LeadNote | null;
   notes?: LeadNote[];
 }
+export type DocType = 'bank_statement' | 'contract' | 'stipulation' | 'id' | 'other';
+
+export interface Document {
+  id: string;
+  merchant_id: string;
+  uploaded_by: string;
+  doc_type: DocType;
+  file_name: string;
+  storage_path: string;
+  uploaded_at: string;
+  signed_url?: string;
+}
+
+export interface Stipulation {
+  id: string;
+  merchant_id: string;
+  lender_id: string;
+  requested_by: string;
+  description: string;
+  is_fulfilled: boolean;
+  fulfilled_at: string | null;
+  created_at: string;
+}

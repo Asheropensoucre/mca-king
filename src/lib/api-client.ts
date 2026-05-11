@@ -1,4 +1,4 @@
-import type { LenderInfo, FormData, Lead, LeadNote, SalesRepresentative } from '../../types'
+import type { LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation } from '../../types'
 
 export type DemoRole = 'admin' | 'sales_rep' | 'merchant' | 'lender'
 
@@ -32,15 +32,28 @@ export function getDemoIdentity(): DemoIdentity {
   return currentIdentity
 }
 
-function headers(extra?: HeadersInit): HeadersInit {
+function authHeaders(): HeadersInit {
   return {
-    'Content-Type': 'application/json',
     'x-demo-role': currentIdentity.role,
     'x-demo-user-id': currentIdentity.userId,
     'x-demo-email': currentIdentity.email ?? `${currentIdentity.userId}@demo.local`,
     'x-demo-name': currentIdentity.name ?? currentIdentity.userId,
+  }
+}
+
+function headers(extra?: HeadersInit): HeadersInit {
+  return {
+    'Content-Type': 'application/json',
+    ...authHeaders(),
     ...extra,
   }
+}
+
+
+async function uploadRequest<T>(url: string, body: globalThis.FormData): Promise<T> {
+  const res = await fetch(url, { method: 'POST', headers: authHeaders(), body })
+  if (!res.ok) throw new Error(await res.text())
+  return await res.json() as T
 }
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
@@ -73,5 +86,21 @@ export const api = {
     update: (lead: Partial<Lead> & { id: string }) => request<Lead>(`/api/leads/${lead.id}`, { method: 'PATCH', body: JSON.stringify(lead) }),
     addNote: (leadId: string, body: string) => request<LeadNote>(`/api/leads/${leadId}/notes`, { method: 'POST', body: JSON.stringify({ body }) }),
     convert: (leadId: string) => request<{ merchant_id: string }>(`/api/leads/${leadId}/convert`, { method: 'POST' }),
+  },
+  documents: {
+    list: (merchantId: string) => request<Document[]>(`/api/documents?merchant_id=${encodeURIComponent(merchantId)}`),
+    upload: (merchantId: string, docType: DocType, file: File, stipulationId?: string) => {
+      const body = new globalThis.FormData()
+      body.append('file', file)
+      body.append('merchant_id', merchantId)
+      body.append('doc_type', docType)
+      if (stipulationId) body.append('stipulation_id', stipulationId)
+      return uploadRequest<Document>('/api/documents/upload', body)
+    },
+    delete: (id: string) => request<{ success: boolean }>(`/api/documents/${id}`, { method: 'DELETE' }),
+  },
+  stipulations: {
+    list: (merchantId: string) => request<Stipulation[]>(`/api/stipulations?merchant_id=${encodeURIComponent(merchantId)}`),
+    create: (merchantId: string, lenderId: string, description: string) => request<Stipulation>('/api/stipulations', { method: 'POST', body: JSON.stringify({ merchant_id: merchantId, lender_id: lenderId, description }) }),
   },
 }

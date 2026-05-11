@@ -15,7 +15,9 @@ interface DashboardControllerProps {
     onPrint?: (submission: FormData) => void;
 }
 
-export const DashboardController: React.FC<DashboardControllerProps> = ({ onExit, view, currentId, currentSalesRepId, salesReps = [], onPrint }) => {
+const EMPTY_SALES_REPS: SalesRepresentative[] = [];
+
+export const DashboardController: React.FC<DashboardControllerProps> = ({ onExit, view, currentId, currentSalesRepId, salesReps = EMPTY_SALES_REPS, onPrint }) => {
     const [merchantSubmissions, setMerchantSubmissions] = useState<FormData[]>([]);
     const [lenderSubmissions, setLenderSubmissions] = useState<LenderInfo[]>([]);
     const [loading, setLoading] = useState(true);

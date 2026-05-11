@@ -1,7 +1,10 @@
-import React from 'react';
-import type { FormData } from '../../types';
+import React, { useEffect, useState } from 'react';
+import type { DocumentInfo, FormData, Stipulation } from '../../types';
 import { Card } from '../ui/Card';
+import { DocumentUpload } from '../DocumentUpload';
 import { APPLICATION_STATUS_CONFIG, getStatusIndex, getStatusThemeClasses } from './shared/applicationStatus';
+import { DocumentsPanel } from './shared/DocumentsPanel';
+import { api } from '../../src/lib/api-client';
 
 interface MerchantDashboardProps { 
     submission: FormData, 
@@ -11,6 +14,19 @@ interface MerchantDashboardProps {
 
 export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ submission, onExit, onUpdateOffer }) => {
     const currentStatusIndex = getStatusIndex(submission.status);
+    const [stipulations, setStipulations] = useState<Stipulation[]>([]);
+    const [refreshDocuments, setRefreshDocuments] = useState(0);
+
+    const loadStipulations = async () => {
+        setStipulations(await api.stipulations.list(submission.id));
+    };
+
+    useEffect(() => { void loadStipulations().catch(() => undefined); }, [submission.id]);
+
+    const handleStipUpload = async () => {
+        await loadStipulations();
+        setRefreshDocuments(value => value + 1);
+    };
 
     return (
         <div className="p-4 sm:p-6 lg:p-8">
@@ -40,26 +56,42 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ submission
                                 const isCurrent = statusIdx === currentStatusIndex;
                                 const isComplete = statusIdx < currentStatusIndex;
                                 return (
-                                    <div
-                                        key={statusConfig.label}
-                                        className={`rounded-lg border p-3 text-xs transition-colors ${
-                                            isCurrent
-                                                ? 'border-theme-yellow bg-theme-yellow/20 text-slate-900 dark:text-slate-100'
-                                                : isComplete
-                                                    ? 'border-theme-teal/40 bg-theme-teal/10 text-slate-700 dark:text-slate-200'
-                                                    : 'border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-400'
-                                        }`}
-                                    >
+                                    <div key={statusConfig.label} className={`rounded-lg border p-3 text-xs transition-colors ${isCurrent ? 'border-theme-yellow bg-theme-yellow/20 text-slate-900 dark:text-slate-100' : isComplete ? 'border-theme-teal/40 bg-theme-teal/10 text-slate-700 dark:text-slate-200' : 'border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-400'}`}>
                                         <div className="flex gap-2 items-start">
-                                            <span className={`shrink-0 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${isCurrent ? 'bg-theme-yellow text-black' : isComplete ? 'bg-theme-teal text-black' : themeClasses.badge}`}>
-                                                {statusIdx + 1}
-                                            </span>
+                                            <span className={`shrink-0 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${isCurrent ? 'bg-theme-yellow text-black' : isComplete ? 'bg-theme-teal text-black' : themeClasses.badge}`}>{statusIdx + 1}</span>
                                             <span className="font-semibold leading-snug">{statusConfig.label}</span>
                                         </div>
                                     </div>
                                 );
                             })}
                         </div>
+                    </div>
+                </Card>
+
+                <div className="mb-6">
+                    <DocumentsPanel key={refreshDocuments} merchantId={submission.id} canUpload={true} title="My Documents" />
+                </div>
+
+                <Card className="mb-6">
+                    <div className="p-6">
+                        <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-4">Stipulations</h2>
+                        {stipulations.length > 0 ? (
+                            <div className="space-y-4">
+                                {stipulations.map(stip => (
+                                    <div key={stip.id} className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg">
+                                        <div className="flex justify-between gap-3">
+                                            <p className="font-medium text-slate-800 dark:text-slate-200">{stip.description}</p>
+                                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${stip.is_fulfilled ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200'}`}>{stip.is_fulfilled ? 'Complete' : 'Needed'}</span>
+                                        </div>
+                                        {!stip.is_fulfilled && (
+                                            <div className="mt-3">
+                                                <DocumentUpload onDocumentsChange={(_: DocumentInfo[]) => undefined} merchantId={submission.id} docType="stipulation" stipulationId={stip.id} onUploaded={() => void handleStipUpload()} />
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : <p className="text-sm text-slate-500 dark:text-slate-400">No additional documents have been requested.</p>}
                     </div>
                 </Card>
 
@@ -78,8 +110,8 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ submission
                                         <div className="mt-4 sm:mt-0 flex space-x-2">
                                             {offer.status === 'Pending' ? (
                                                 <>
-                                                    <button onClick={() => onUpdateOffer(offer.lenderId, 'Rejected')} className="px-3 py-1.5 text-xs font-medium rounded-md bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 dark:bg-slate-600 dark:text-slate-200 dark:border-slate-500 dark:hover:bg-slate-500">Reject</button>
-                                                    <button onClick={() => onUpdateOffer(offer.lenderId, 'Accepted')} className="px-3 py-1.5 text-xs font-medium rounded-md text-theme-black bg-theme-teal hover:bg-theme-teal/90">Accept</button>
+                                                    <button onClick={() => onUpdateOffer(offer.id || offer.lenderId, 'Rejected')} className="px-3 py-1.5 text-xs font-medium rounded-md bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 dark:bg-slate-600 dark:text-slate-200 dark:border-slate-500 dark:hover:bg-slate-500">Reject</button>
+                                                    <button onClick={() => onUpdateOffer(offer.id || offer.lenderId, 'Accepted')} className="px-3 py-1.5 text-xs font-medium rounded-md text-theme-black bg-theme-teal hover:bg-theme-teal/90">Accept</button>
                                                 </>
                                             ) : (
                                                 <span className={`px-3 py-1.5 text-xs font-medium rounded-full ${offer.status === 'Accepted' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200'}`}>{offer.status}</span>
@@ -88,9 +120,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ submission
                                     </div>
                                 ))}
                             </div>
-                        ) : (
-                           <p className="text-sm text-slate-500 dark:text-slate-400">No offers have been made yet. You will be notified when an offer is available.</p>
-                        )}
+                        ) : <p className="text-sm text-slate-500 dark:text-slate-400">No offers have been made yet. You will be notified when an offer is available.</p>}
                     </div>
                 </Card>
             </div>

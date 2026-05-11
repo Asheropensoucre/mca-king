@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import type { FormData, LenderInfo, Offer } from '../../types';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
+import { Textarea } from '../ui/Textarea';
 import { MerchantDetailView } from './shared/MerchantDetailView';
+import { api } from '../../src/lib/api-client';
 
 interface LenderDashboardProps { 
     profile: LenderInfo, 
@@ -14,12 +16,13 @@ interface LenderDashboardProps {
 export const LenderDashboard: React.FC<LenderDashboardProps> = ({ profile, merchants, onExit, onUpdateMerchant }) => {
     const [selectedDeal, setSelectedDeal] = useState<FormData | null>(null);
     const [isCreatingOffer, setIsCreatingOffer] = useState(false);
+    const [isRequestingDoc, setIsRequestingDoc] = useState(false);
     const [offerAmount, setOfferAmount] = useState('');
     const [offerTerm, setOfferTerm] = useState('');
+    const [stipDescription, setStipDescription] = useState('');
+    const [message, setMessage] = useState<string | null>(null);
 
-    const assignedMerchants = merchants.filter(merchant => 
-        merchant.matchedLenderIds?.includes(profile.id)
-    );
+    const assignedMerchants = merchants.filter(merchant => merchant.matchedLenderIds?.includes(profile.id));
 
     const handleCreateOffer = (e: React.FormEvent) => {
         e.preventDefault();
@@ -40,7 +43,7 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ profile, merch
             status: "one or more lender's sent offer",
         };
 
-        void import('../../src/lib/api-client').then(({ api }) => api.offers.create(selectedDeal.id, newOffer)).catch(() => undefined);
+        void api.offers.create(selectedDeal.id, newOffer).catch(() => undefined);
         const result = onUpdateMerchant(updatedMerchant);
         setSelectedDeal(result);
         setIsCreatingOffer(false);
@@ -48,15 +51,35 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ profile, merch
         setOfferTerm('');
     };
 
+    const handleRequestDocument = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedDeal || !stipDescription.trim()) return;
+        try {
+            await api.stipulations.create(selectedDeal.id, profile.id, stipDescription);
+            const updatedMerchant: FormData = { ...selectedDeal, status: 'more docs requested' };
+            const result = onUpdateMerchant(updatedMerchant);
+            setSelectedDeal(result);
+            setMessage('Document request sent.');
+            setStipDescription('');
+            setIsRequestingDoc(false);
+        } catch (err) {
+            setMessage(err instanceof Error ? err.message : 'Could not request document.');
+        }
+    };
+
     if (selectedDeal) {
         return (
              <div className="p-4 sm:p-6 lg:p-8">
                 <div className="max-w-4xl mx-auto">
                     <button onClick={() => setSelectedDeal(null)} className="mb-4 text-sm font-medium text-theme-teal hover:text-theme-teal/80">&larr; Back to My Deals</button>
-                    <div className="flex justify-between items-center mb-4">
+                    <div className="flex justify-between items-center mb-4 gap-3 flex-wrap">
                         <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{selectedDeal.businessInfo.legalName}</h2>
-                        <button onClick={() => setIsCreatingOffer(true)} className="px-4 py-2 rounded-md text-sm font-medium text-theme-black bg-theme-yellow hover:bg-theme-yellow/90">Create Offer</button>
+                        <div className="flex gap-2 flex-wrap">
+                            <button onClick={() => setIsRequestingDoc(true)} className="px-4 py-2 rounded-md text-sm font-medium text-white bg-theme-maroon hover:bg-theme-maroon/90">Request Document</button>
+                            <button onClick={() => setIsCreatingOffer(true)} className="px-4 py-2 rounded-md text-sm font-medium text-theme-black bg-theme-yellow hover:bg-theme-yellow/90">Create Offer</button>
+                        </div>
                     </div>
+                    {message && <p className="mb-4 text-sm text-theme-teal">{message}</p>}
                     <MerchantDetailView item={selectedDeal} />
                 </div>
                 {isCreatingOffer && (
@@ -73,6 +96,24 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ profile, merch
                                 <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t flex justify-end space-x-2">
                                     <button type="button" onClick={() => setIsCreatingOffer(false)} className="px-4 py-2 text-sm rounded-md bg-white border dark:bg-slate-600 dark:border-slate-500 dark:text-slate-200">Cancel</button>
                                     <button type="submit" className="px-4 py-2 text-sm rounded-md bg-theme-yellow text-black">Send Offer</button>
+                                </div>
+                            </form>
+                        </Card>
+                    </div>
+                )}
+                {isRequestingDoc && (
+                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                        <Card className="w-full max-w-md">
+                            <form onSubmit={handleRequestDocument}>
+                                <div className="p-6">
+                                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Request Document</h3>
+                                    <div className="mt-4">
+                                        <Textarea label="What document is needed?" name="description" value={stipDescription} onChange={e => setStipDescription(e.target.value)} required />
+                                    </div>
+                                </div>
+                                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t flex justify-end space-x-2">
+                                    <button type="button" onClick={() => setIsRequestingDoc(false)} className="px-4 py-2 text-sm rounded-md bg-white border dark:bg-slate-600 dark:border-slate-500 dark:text-slate-200">Cancel</button>
+                                    <button type="submit" className="px-4 py-2 text-sm rounded-md bg-theme-yellow text-black">Send Request</button>
                                 </div>
                             </form>
                         </Card>

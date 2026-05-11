@@ -8,6 +8,10 @@ import { GET as getLeads, POST as postLeads } from '../routes/leads/index'
 import { GET as getLead, PATCH as patchLead, DELETE as deleteLead } from '../routes/leads/[id]'
 import { POST as postLeadNote } from '../routes/leads/[id]/notes'
 import { POST as convertLead } from '../routes/leads/[id]/convert'
+import { POST as uploadDocument } from '../routes/documents/upload'
+import { GET as getDocuments } from '../routes/documents/index'
+import { DELETE as deleteDocument } from '../routes/documents/[id]'
+import { GET as getStipulations, POST as postStipulations } from '../routes/stipulations/index'
 import type { RouteContext } from '../lib/route-utils'
 
 type Handler = (req: Request, context?: RouteContext) => Promise<Response> | Response
@@ -53,6 +57,26 @@ function matchRoute(method: string, pathname: string): RouteMatch | null {
   if (offerMatch) {
     const params = { id: decodeURIComponent(offerMatch[1]) }
     if (method === 'PATCH') return { handler: patchOffer, params }
+  }
+
+
+  if (pathname === '/api/documents/upload') {
+    if (method === 'POST') return { handler: uploadDocument }
+  }
+
+  if (pathname === '/api/documents') {
+    if (method === 'GET') return { handler: getDocuments }
+  }
+
+  const documentMatch = pathname.match(/^\/api\/documents\/([^/]+)$/)
+  if (documentMatch) {
+    const params = { id: decodeURIComponent(documentMatch[1]) }
+    if (method === 'DELETE') return { handler: deleteDocument, params }
+  }
+
+  if (pathname === '/api/stipulations') {
+    if (method === 'GET') return { handler: getStipulations }
+    if (method === 'POST') return { handler: postStipulations }
   }
 
   if (pathname === '/api/leads') {
