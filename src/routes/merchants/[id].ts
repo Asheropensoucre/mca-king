@@ -1,6 +1,8 @@
 import type { FormData } from '../../../types'
 import { merchantToUpdate, rowToMerchant, type MerchantRow } from '../../lib/data-shapes'
+import { displayName, toNumber, type EmailUser } from '../../lib/email-data'
 import { triggerMerchantStatusEmail } from '../../lib/email-triggers'
+import { sendNewMerchantAlert } from '../../lib/send-email'
 import { requireAuth } from '../../lib/requireAuth'
 import { runAutoMatch } from '../../lib/matching'
 import { assertRole, badRequest, forbidden, getId, json, notFound, type RouteContext } from '../../lib/route-utils'
@@ -19,6 +21,36 @@ function canRead(userRole: string, userId: string, row: MerchantRow): boolean {
   return false
 }
 
+function sendRepAssignmentAlert(merchant: MerchantRow): void {
+  if (!merchant.assigned_rep_id) return
+
+  void (async () => {
+    try {
+      const { data: rep, error } = await supabaseAdmin
+        .from('users')
+        .select('id,email,full_name,name,role')
+        .eq('id', merchant.assigned_rep_id)
+        .maybeSingle<EmailUser>()
+
+      if (error) {
+        console.error('[email] Failed to fetch assigned rep', error)
+        return
+      }
+
+      if (!rep?.email) return
+
+      await sendNewMerchantAlert({
+        rep_email: rep.email,
+        rep_name: displayName(rep, 'Sales Rep'),
+        business_name: merchant.business_name,
+        requested_amount: toNumber(merchant.requested_amount),
+      })
+    } catch (error) {
+      console.error('[email] Rep assignment alert trigger failed', error)
+    }
+  })()
+}
+
 export async function GET(req: Request, context?: RouteContext): Promise<Response> {
   const user = await requireAuth(req)
   const id = getId(context)
@@ -30,6 +62,10 @@ export async function GET(req: Request, context?: RouteContext): Promise<Respons
   if (!canRead(user.role, user.id, row)) return forbidden()
 
   return json(rowToMerchant(row))
+}
+
+type MerchantPatchBody = Partial<FormData> & {
+  assigned_rep_id?: string | null
 }
 
 export async function PATCH(req: Request, context?: RouteContext): Promise<Response> {
@@ -45,7 +81,12 @@ export async function PATCH(req: Request, context?: RouteContext): Promise<Respo
   if (!existing) return notFound()
   if (user.role === 'sales_rep' && existing.assigned_rep_id !== user.id) return forbidden()
 
-  const patch = await req.json() as Partial<FormData>
+  const patch = await req.json() as MerchantPatchBody
+  const hasAssignedRepId = Object.prototype.hasOwnProperty.call(patch, 'assigned_rep_id')
+  const hasSalesRepId = Object.prototype.hasOwnProperty.call(patch, 'salesRepId')
+  const nextAssignedRepId = hasAssignedRepId ? patch.assigned_rep_id ?? null : hasSalesRepId ? patch.salesRepId ?? null : existing.assigned_rep_id
+  const assignmentChanged = (hasAssignedRepId || hasSalesRepId) && nextAssignedRepId !== existing.assigned_rep_id
+
   const currentPayload = rowToMerchant(existing)
   const merged: FormData = { ...currentPayload, ...patch, id }
   if (patch.businessInfo) merged.businessInfo = { ...currentPayload.businessInfo, ...patch.businessInfo }
@@ -54,8 +95,11 @@ export async function PATCH(req: Request, context?: RouteContext): Promise<Respo
   if (patch.documents) merged.documents = patch.documents
   if (patch.offers) merged.offers = patch.offers
   if (patch.matchedLenderIds) merged.matchedLenderIds = patch.matchedLenderIds
+  if (hasAssignedRepId || hasSalesRepId) merged.salesRepId = nextAssignedRepId ?? undefined
 
-  const update = merchantToUpdate(merged)
+  const update: ReturnType<typeof merchantToUpdate> & { assigned_rep_id?: string | null } = merchantToUpdate(merged)
+  if (hasAssignedRepId || hasSalesRepId) update.assigned_rep_id = nextAssignedRepId
+
   const { data, error } = await supabaseAdmin
     .from('merchants')
     .update(update)
@@ -64,6 +108,10 @@ export async function PATCH(req: Request, context?: RouteContext): Promise<Respo
     .single<MerchantRow>()
 
   if (error) return badRequest(error.message)
+
+  if (assignmentChanged && data.assigned_rep_id) {
+    sendRepAssignmentAlert(data)
+  }
 
   if (patch.status && patch.status !== existing.status) {
     const history = await supabaseAdmin.from('status_history').insert({
