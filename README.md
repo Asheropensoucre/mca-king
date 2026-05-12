@@ -60,7 +60,7 @@ MCA King is a Vite React application, not a full-stack framework with automatic 
 
 `src/server/api.ts` maps HTTP methods and paths to handlers under `src/routes`, including auth, merchants, lenders, offers, leads, documents, stipulations, matching, and users.
 
-> **Production note:** the current Vite middleware bridge is a development/runtime integration. For production deployment, these route handlers should be hosted in an appropriate server runtime, serverless functions, or a dedicated API service.
+> **Production note:** Vercel production uses a single bundled serverless function at `api/index.js`, generated from `src/server/vercel-entry.ts` by `bun run build:api`. The bundle includes `src/server/api.ts` and route dependencies so Vercel does not need to resolve extensionless TypeScript imports at runtime.
 
 ### Role-based access control
 

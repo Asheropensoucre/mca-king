@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { handleApiRequest } from '../src/server/api'
+import { handleApiRequest } from './api'
 
 export const config = {
   api: {
