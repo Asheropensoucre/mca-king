@@ -713,6 +713,8 @@ CommissionReport.tsx
 ---
 
 # Phase G — Compliance, Audit, and Sensitive Data Hardening
+> Detailed customer-data readiness checklist: see [`PRODUCTION_SECURITY_HARDENING_PLAN.md`](PRODUCTION_SECURITY_HARDENING_PLAN.md).
+
 
 ## Goal
 

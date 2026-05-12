@@ -4,6 +4,8 @@
 > **Current master expansion plan:** see [`Docs/MCA_BROKER_CRM_EXPANSION_PLAN.md`](Docs/MCA_BROKER_CRM_EXPANSION_PLAN.md) for the detailed broker CRM gap analysis, database modules, and phased build roadmap covering activities, tasks, funding, commissions, lender submissions, renewals, reporting, compliance, and communications.
 >
 > **Deployment:** see [`Docs/VERCEL_DEPLOYMENT.md`](Docs/VERCEL_DEPLOYMENT.md) for the Vercel serverless API setup, environment variables, and deployment checklist.
+>
+> **Production security hardening:** see [`Docs/PRODUCTION_SECURITY_HARDENING_PLAN.md`](Docs/PRODUCTION_SECURITY_HARDENING_PLAN.md) for the dedicated security pass required before storing real customer/merchant data at scale.
 
 ---
 
@@ -470,6 +472,21 @@ Replace the profile selector mockup with real login and registration screens bac
 - [ ] Deploy to Vercel, set all env vars in Vercel dashboard
 - [ ] Smoke test every role end-to-end on the live URL
 - [ ] Write a short demo walkthrough script
+
+### Phase 8 — Production Security Hardening / Customer Data Readiness
+Before onboarding real merchant/customer data, complete the dedicated security pass in [`Docs/PRODUCTION_SECURITY_HARDENING_PLAN.md`](Docs/PRODUCTION_SECURITY_HARDENING_PLAN.md).
+
+- [ ] Endpoint-by-endpoint authorization and ownership audit
+- [ ] CSRF protection for cookie-authenticated mutations
+- [ ] Rate limiting for auth, AI, and document upload routes
+- [ ] Strict input validation schemas for all API routes
+- [ ] Private document access hardening and signed URL audit logs
+- [ ] Audit logging for sensitive actions and status changes
+- [ ] Sensitive data masking/minimization
+- [ ] Disabled-user/session revocation flow
+- [ ] Security headers and CORS review
+- [ ] Supabase RLS/storage policy verification
+- [ ] Security regression tests and incident-response checklist
 
 ---
 
