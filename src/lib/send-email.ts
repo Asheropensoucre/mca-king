@@ -1,15 +1,18 @@
-import { APP_URL, FROM, resend } from './email'
+import { getAppUrl, getEmailConfig } from './email'
 import { templates } from './email-templates'
 
-const appUrl = (): string => APP_URL
+const appUrl = (): string => getAppUrl()
 
 async function send(to: string | string[], subject: string, html: string): Promise<void> {
   try {
+    const config = getEmailConfig()
+    if (!config) return
+
     const recipients = Array.isArray(to) ? to.filter(Boolean) : [to].filter(Boolean)
     if (recipients.length === 0) return
 
-    await resend.emails.send({
-      from: FROM,
+    await config.resend.emails.send({
+      from: config.from,
       to: recipients,
       subject,
       html,
