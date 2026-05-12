@@ -1,4 +1,5 @@
 import React from 'react'
+import { corporateTech as COLORS } from './corporateTechTheme'
 
 interface PrimaryButtonProps {
   label: string
@@ -11,18 +12,6 @@ interface PrimaryButtonProps {
   fullWidth?: boolean
 }
 
-const COLORS = {
-  yellow: '#f3e600',
-  teal: '#55ead4',
-  maroon: '#880425',
-  black: '#000000',
-  darkBg: '#111827',
-  darkCard: '#1f2937',
-  slate700: '#374151',
-  white: '#ffffff',
-  danger: '#ef4444',
-}
-
 function getIsDark(): boolean {
   return typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
 }
@@ -30,33 +19,33 @@ function getIsDark(): boolean {
 function getVariantColors(variant: PrimaryButtonProps['variant'], isDark: boolean) {
   if (variant === 'funded') {
     return {
-      text: COLORS.black,
-      background: COLORS.teal,
-      border: COLORS.teal,
-      shadowDark: isDark ? '#0f766e' : '#2dd4bf',
-      shadowLight: isDark ? '#99f6e4' : '#ccfbf1',
-      pressedText: COLORS.black,
+      text: COLORS.onSecondary,
+      background: isDark ? COLORS.secondaryContainer : COLORS.secondary,
+      border: isDark ? COLORS.secondaryFixed : COLORS.onSecondaryFixedVariant,
+      shadowDark: isDark ? COLORS.onSecondaryFixedVariant : COLORS.onSecondaryFixed,
+      shadowLight: isDark ? COLORS.secondaryFixedDim : COLORS.secondaryContainer,
+      pressedText: isDark ? COLORS.onSecondaryFixed : COLORS.secondaryFixed,
     }
   }
 
   if (variant === 'danger') {
     return {
-      text: COLORS.white,
-      background: COLORS.maroon,
-      border: COLORS.maroon,
-      shadowDark: isDark ? '#450a18' : '#5f031a',
-      shadowLight: isDark ? '#be123c' : '#c2415b',
-      pressedText: '#fecdd3',
+      text: COLORS.onError,
+      background: COLORS.error,
+      border: COLORS.onErrorContainer,
+      shadowDark: COLORS.onErrorContainer,
+      shadowLight: COLORS.errorContainer,
+      pressedText: COLORS.errorContainer,
     }
   }
 
   return {
-    text: COLORS.black,
-    background: COLORS.yellow,
-    border: COLORS.maroon,
-    shadowDark: isDark ? '#6b031d' : '#880425',
-    shadowLight: isDark ? '#55ead4' : '#fff8a6',
-    pressedText: COLORS.maroon,
+    text: COLORS.onTertiaryFixed,
+    background: isDark ? COLORS.tertiaryFixedDim : COLORS.tertiaryFixed,
+    border: isDark ? COLORS.tertiaryContainer : COLORS.tertiary,
+    shadowDark: isDark ? COLORS.onTertiaryFixedVariant : COLORS.tertiary,
+    shadowLight: isDark ? COLORS.tertiaryFixed : COLORS.surfaceContainerHighest,
+    pressedText: COLORS.onTertiaryFixedVariant,
   }
 }
 

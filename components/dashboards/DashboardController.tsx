@@ -111,7 +111,7 @@ export const DashboardController: React.FC<DashboardControllerProps> = ({ curren
                     <div className="mb-6 flex justify-end">{themeToggle}</div>
                     <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-lg dark:border-slate-700 dark:bg-dark-card">
                         <img src="/logo.png" alt="MCA King Logo" className="mx-auto mb-6 h-20 w-auto" />
-                        <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Start Your Application</h1>
+                        <h1 className="text-3xl font-black text-theme-maroon dark:text-theme-yellow">Start Your Application</h1>
                         <p className="mt-3 text-slate-500 dark:text-slate-400">You do not have an active application yet. Submit one application, then it will stay locked while it is under review.</p>
                         <div className="mt-8 flex justify-center">
                             <PrimaryButton label="Start Application" onClick={() => onStartMerchantApplication?.()} />
@@ -144,7 +144,7 @@ export const DashboardController: React.FC<DashboardControllerProps> = ({ curren
     return (
          <div className="p-4 sm:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto text-center">
-                 <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Dashboard Setup Needed</h1>
+                 <h1 className="text-3xl font-black text-theme-maroon dark:text-theme-yellow">Dashboard Setup Needed</h1>
                  <p className="text-slate-500 dark:text-slate-400 mt-4">Your account is active, but there is not yet a matching dashboard profile.</p>
                  <div className="mt-6 flex justify-center"><PrimaryButton label="Logout" onClick={onLogout} /></div>
             </div>

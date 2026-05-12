@@ -26,6 +26,9 @@ interface AdminDashboardProps {
 
 type AdminSection = 'leads' | 'merchants' | 'lenders' | 'pipeline';
 
+const themedSelectClass = 'w-full rounded-lg border-2 border-theme-yellow bg-slate-950 px-3 py-2 text-sm font-bold text-theme-teal shadow-[4px_4px_0_var(--ct-tertiary-container)] outline-none transition focus:border-theme-teal focus:shadow-[4px_4px_0_var(--ct-secondary-fixed-dim)]';
+const headerClass = 'text-left text-xs font-black uppercase tracking-wider text-theme-yellow';
+
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, merchants, lenders, onExit, themeToggle, onUpdateMerchant, onUpdateLenderInfo, salesReps, onSalesRepCreated, onPrint }) => {
     const [activeSection, setActiveSection] = useState<AdminSection>('leads');
     const [selectedItem, setSelectedItem] = useState<FormData | LenderInfo | null>(null);
@@ -87,74 +90,76 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
         if (!selectedItem) return null;
         const isMerchant = 'businessInfo' in selectedItem;
         return (
-            <>
-                <div className="max-w-5xl mx-auto">
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
-                        <PrimaryButton label={`← Back to ${activeSection === 'pipeline' ? 'Kamba Pipeline' : 'Directory'}`} size="small" onClick={() => setSelectedItem(null)} />
-                        {!isEditing && (
-                            <div className="flex items-center gap-2 flex-wrap">
-                                {isMerchant && onPrint && (
-                                    <PrimaryButton label="Download PDF" size="small" onClick={() => onPrint(selectedItem as FormData)} />
-                                )}
-                                <PrimaryButton label="Edit" size="small" onClick={() => setIsEditing(true)} />
-                            </div>
-                        )}
-                    </div>
-                    {isEditing ? (
-                        isMerchant ? (
-                            <EditMerchantForm initialData={selectedItem as FormData} onSave={handleSaveMerchant} onCancel={() => setIsEditing(false)} />
-                        ) : (
-                            <EditLenderForm initialData={selectedItem as LenderInfo} onSave={handleSaveLender} onCancel={() => setIsEditing(false)} />
-                        )
-                    ) : (
-                        isMerchant ? (
-                            <MerchantDetailView item={selectedItem as FormData} lenders={lenders} canDeleteDocuments={true} canManageMatches={true} canRemoveMatches={true} />
-                        ) : (
-                            <LenderDetailView item={selectedItem as LenderInfo} />
-                        )
+            <div className="max-w-5xl mx-auto">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                    <PrimaryButton label={`← Back to ${activeSection === 'pipeline' ? 'Kamba Pipeline' : 'Directory'}`} size="small" onClick={() => setSelectedItem(null)} />
+                    {!isEditing && (
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {isMerchant && onPrint && (
+                                <PrimaryButton label="Download PDF" size="small" onClick={() => onPrint(selectedItem as FormData)} />
+                            )}
+                            <PrimaryButton label="Edit" size="small" onClick={() => setIsEditing(true)} />
+                        </div>
                     )}
                 </div>
-            </>
+                {isEditing ? (
+                    isMerchant ? (
+                        <EditMerchantForm initialData={selectedItem as FormData} onSave={handleSaveMerchant} onCancel={() => setIsEditing(false)} />
+                    ) : (
+                        <EditLenderForm initialData={selectedItem as LenderInfo} onSave={handleSaveLender} onCancel={() => setIsEditing(false)} />
+                    )
+                ) : (
+                    isMerchant ? (
+                        <MerchantDetailView item={selectedItem as FormData} lenders={lenders} canDeleteDocuments={true} canManageMatches={true} canRemoveMatches={true} />
+                    ) : (
+                        <LenderDetailView item={selectedItem as LenderInfo} />
+                    )
+                )}
+            </div>
         );
     };
 
     const renderMerchants = () => (
-        <Card>
-            <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                    <thead className="bg-slate-50 dark:bg-slate-800"><tr className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider"><th>Business Name</th><th>Sales Rep</th><th>Monthly Revenue</th><th>Status</th><th className="relative"><span className="sr-only">View</span></th></tr></thead>
-                    <tbody className="bg-white divide-y divide-slate-200 dark:bg-dark-card dark:divide-slate-700">
-                        {merchants.length > 0 ? merchants.map((sub) => (
-                            <tr key={sub.id}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-100">{sub.businessInfo.legalName}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-                                    <select
-                                        value={sub.salesRepId || ''}
-                                        onChange={(e) => onUpdateMerchant({ ...sub, salesRepId: e.target.value || undefined })}
-                                        className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-theme-yellow sm:text-sm sm:leading-6 dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600"
-                                        aria-label={`Sales rep for ${sub.businessInfo.legalName}`}
-                                    >
-                                        <option value="">Unassigned</option>
-                                        {salesReps.map(rep => (
-                                            <option key={rep.id} value={rep.id}>{rep.name}</option>
-                                        ))}
-                                    </select>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">${Number(sub.businessInfo.monthlyRevenue).toLocaleString()}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-                                    <select value={sub.status} onChange={(e) => onUpdateMerchant({ ...sub, status: e.target.value as ApplicationStatus })} className="block w-72 rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-theme-yellow sm:text-sm sm:leading-6 dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600">
-                                        {APPLICATION_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                                    </select>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><PrimaryButton label="View Details" size="small" onClick={() => handleSelectItem(sub)} /></td>
-                            </tr>
-                        )) : (
-                            <tr><td colSpan={5} className="px-6 py-12 text-center text-sm text-slate-500 dark:text-slate-400">No merchant submissions yet.</td></tr>
-                        )}
-                    </tbody>
-                </table>
+        <div className="space-y-4">
+            <div className="grid grid-cols-12 gap-4 px-4 text-xs font-black uppercase tracking-wider text-theme-yellow">
+                <div className="col-span-12 md:col-span-3">Business Name</div>
+                <div className="col-span-12 md:col-span-2">Sales Rep</div>
+                <div className="col-span-12 md:col-span-2">Monthly Revenue</div>
+                <div className="col-span-12 md:col-span-3">Status</div>
+                <div className="col-span-12 md:col-span-2 text-right">Action</div>
             </div>
-        </Card>
+            {merchants.length > 0 ? merchants.map((sub) => (
+                <div key={sub.id} className="grid grid-cols-12 items-center gap-4 rounded-xl border-2 border-theme-maroon/80 bg-white/95 p-4 shadow-[6px_6px_0_var(--ct-primary)] dark:border-theme-yellow/80 dark:bg-dark-card/95 dark:shadow-[6px_6px_0_var(--ct-secondary-fixed-dim)]">
+                    <div className="col-span-12 md:col-span-3">
+                        <p className="text-sm font-black text-theme-maroon dark:text-theme-yellow">{sub.businessInfo.legalName}</p>
+                    </div>
+                    <div className="col-span-12 md:col-span-2">
+                        <select
+                            value={sub.salesRepId || ''}
+                            onChange={(e) => onUpdateMerchant({ ...sub, salesRepId: e.target.value || undefined })}
+                            className={themedSelectClass}
+                            aria-label={`Sales rep for ${sub.businessInfo.legalName}`}
+                        >
+                            <option value="">Unassigned</option>
+                            {salesReps.map(rep => (
+                                <option key={rep.id} value={rep.id}>{rep.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="col-span-12 md:col-span-2">
+                        <p className="text-sm font-bold text-slate-700 dark:text-slate-200">${Number(sub.businessInfo.monthlyRevenue).toLocaleString()}</p>
+                    </div>
+                    <div className="col-span-12 md:col-span-3">
+                        <select value={sub.status} onChange={(e) => onUpdateMerchant({ ...sub, status: e.target.value as ApplicationStatus })} className={themedSelectClass}>
+                            {APPLICATION_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                    </div>
+                    <div className="col-span-12 text-right md:col-span-2"><PrimaryButton label="View Details" size="small" onClick={() => handleSelectItem(sub)} /></div>
+                </div>
+            )) : (
+                <Card className="p-8 text-center text-sm font-semibold text-slate-500 dark:text-slate-300">No merchant submissions yet.</Card>
+            )}
+        </div>
     );
 
     const renderCreateSalesRepModal = () => (
@@ -162,7 +167,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
             <Card className="w-full max-w-md">
                 <form onSubmit={handleCreateSalesRep}>
                     <div className="p-6">
-                        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Create Sales Rep</h3>
+                        <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Create Sales Rep</h3>
                         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Create a real login account for a sales representative.</p>
                         <div className="mt-4 space-y-4">
                             <label className="block">
@@ -191,15 +196,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
 
     const renderLenders = () => (
         <Card>
-            <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                    <thead className="bg-slate-50 dark:bg-slate-800"><tr><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Lender</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Contact</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Min Revenue</th><th className="relative"><span className="sr-only">View</span></th></tr></thead>
-                    <tbody className="bg-white divide-y divide-slate-200 dark:bg-dark-card dark:divide-slate-700">
+            <div className="overflow-x-auto p-4">
+                <table className="min-w-full border-separate border-spacing-y-3">
+                    <thead><tr><th className={headerClass}>Lender</th><th className={headerClass}>Contact</th><th className={headerClass}>Min Revenue</th><th className="relative"><span className="sr-only">View</span></th></tr></thead>
+                    <tbody>
                         {lenders.length > 0 ? lenders.map((sub) => (
-                            <tr key={sub.id}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-100">{sub.lenderName}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{sub.email}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{sub.minRevenue}</td>
+                            <tr key={sub.id} className="rounded-xl bg-slate-950/5 dark:bg-slate-950/40">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-theme-maroon dark:text-theme-yellow">{sub.lenderName}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{sub.email}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{sub.minRevenue}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><PrimaryButton label="View Details" size="small" onClick={() => handleSelectItem(sub)} /></td>
                             </tr>
                         )) : (
@@ -229,8 +234,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
         >
             {selectedItem ? renderSelectedItem() : (
                 <div className={activeSection === 'pipeline' ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}>
-                    <div className="mb-4 flex justify-between items-center gap-3">
-                        <p className="text-sm text-slate-500 dark:text-slate-400">Signed in as {currentUser.full_name ?? currentUser.name ?? currentUser.email}</p>
+                    <div className="mb-5 rounded-xl border-2 border-theme-maroon/80 bg-white/95 p-4 shadow-[6px_6px_0_var(--ct-primary)] dark:border-theme-yellow/80 dark:bg-dark-card/95 dark:shadow-[6px_6px_0_var(--ct-secondary-fixed-dim)] flex justify-between items-center gap-3">
+                        <p className="text-sm font-bold text-theme-maroon dark:text-theme-teal">Signed in as {currentUser.full_name ?? currentUser.name ?? currentUser.email}</p>
                         <PrimaryButton label="Create Sales Rep" size="small" onClick={() => setIsCreatingRep(true)} />
                     </div>
                     {activeSection === 'leads' && <LeadManager isAdmin={true} salesReps={salesReps} />}

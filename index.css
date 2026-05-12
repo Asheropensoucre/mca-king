@@ -1,3 +1,53 @@
+:root {
+  --ct-surface: #fff7fa;
+  --ct-surface-dim: #fccaff;
+  --ct-surface-bright: #fff7fa;
+  --ct-surface-container-lowest: #ffffff;
+  --ct-surface-container-low: #ffeffb;
+  --ct-surface-container: #ffe7fd;
+  --ct-surface-container-high: #ffdefe;
+  --ct-surface-container-highest: #fed6ff;
+  --ct-on-surface: #350040;
+  --ct-on-surface-variant: #444651;
+  --ct-inverse-surface: #560068;
+  --ct-inverse-on-surface: #ffebfc;
+  --ct-outline: #757682;
+  --ct-outline-variant: #c5c5d3;
+  --ct-surface-tint: #4059aa;
+  --ct-primary: #00236f;
+  --ct-on-primary: #ffffff;
+  --ct-primary-container: #1e3a8a;
+  --ct-on-primary-container: #90a8ff;
+  --ct-inverse-primary: #b6c4ff;
+  --ct-secondary: #006a61;
+  --ct-on-secondary: #ffffff;
+  --ct-secondary-container: #86f2e4;
+  --ct-on-secondary-container: #006f66;
+  --ct-tertiary: #6f5d00;
+  --ct-on-tertiary: #ffffff;
+  --ct-tertiary-container: #c6aa23;
+  --ct-on-tertiary-container: #4b3f00;
+  --ct-error: #ba1a1a;
+  --ct-on-error: #ffffff;
+  --ct-error-container: #ffdad6;
+  --ct-on-error-container: #93000a;
+  --ct-primary-fixed: #dce1ff;
+  --ct-primary-fixed-dim: #b6c4ff;
+  --ct-on-primary-fixed: #00164e;
+  --ct-on-primary-fixed-variant: #264191;
+  --ct-secondary-fixed: #89f5e7;
+  --ct-secondary-fixed-dim: #6bd8cb;
+  --ct-on-secondary-fixed: #00201d;
+  --ct-on-secondary-fixed-variant: #005049;
+  --ct-tertiary-fixed: #ffe262;
+  --ct-tertiary-fixed-dim: #e3c53f;
+  --ct-on-tertiary-fixed: #221b00;
+  --ct-on-tertiary-fixed-variant: #534600;
+  --ct-background: #fff7fa;
+  --ct-on-background: #350040;
+  --ct-surface-variant: #fed6ff;
+}
+
 html {
   min-height: 100%;
 }
@@ -6,8 +56,8 @@ body {
   min-height: 100%;
   margin: 0;
   background:
-    linear-gradient(135deg, rgba(243, 230, 0, 0.22), rgba(85, 234, 212, 0.24) 45%, rgba(136, 4, 37, 0.18)),
-    #f8fafc;
+    linear-gradient(135deg, color-mix(in srgb, var(--ct-primary-fixed) 78%, transparent), color-mix(in srgb, var(--ct-secondary-fixed) 68%, transparent) 45%, color-mix(in srgb, var(--ct-surface-variant) 75%, transparent)),
+    var(--ct-background);
   background-attachment: fixed;
 }
 
@@ -18,28 +68,28 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background-image:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.07) 1px, transparent 1px),
-    linear-gradient(rgba(0, 0, 0, 0.07) 1px, transparent 1px),
-    radial-gradient(circle at 20% 20%, rgba(243, 230, 0, 0.18), transparent 28%),
-    radial-gradient(circle at 80% 10%, rgba(85, 234, 212, 0.22), transparent 30%),
-    radial-gradient(circle at 70% 85%, rgba(136, 4, 37, 0.16), transparent 32%);
+    linear-gradient(90deg, color-mix(in srgb, var(--ct-on-surface) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, var(--ct-on-surface) 7%, transparent) 1px, transparent 1px),
+    radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--ct-tertiary-fixed) 35%, transparent), transparent 28%),
+    radial-gradient(circle at 80% 10%, color-mix(in srgb, var(--ct-secondary-fixed) 32%, transparent), transparent 30%),
+    radial-gradient(circle at 70% 85%, color-mix(in srgb, var(--ct-primary-fixed-dim) 30%, transparent), transparent 32%);
   background-size: 22px 22px, 22px 22px, 100% 100%, 100% 100%, 100% 100%;
 }
 
 html.dark body {
   background:
-    linear-gradient(135deg, rgba(17, 24, 39, 0.98), rgba(136, 4, 37, 0.55) 48%, rgba(85, 234, 212, 0.16)),
-    #111827;
+    linear-gradient(135deg, color-mix(in srgb, var(--ct-inverse-surface) 92%, var(--ct-primary)), color-mix(in srgb, var(--ct-primary) 76%, var(--ct-inverse-surface)) 48%, color-mix(in srgb, var(--ct-secondary) 36%, var(--ct-inverse-surface))),
+    var(--ct-inverse-surface);
   background-attachment: fixed;
 }
 
 html.dark body::before {
   background-image:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-    radial-gradient(circle at 20% 20%, rgba(243, 230, 0, 0.14), transparent 28%),
-    radial-gradient(circle at 80% 10%, rgba(85, 234, 212, 0.14), transparent 30%),
-    radial-gradient(circle at 70% 85%, rgba(136, 4, 37, 0.34), transparent 32%);
+    linear-gradient(90deg, color-mix(in srgb, var(--ct-inverse-on-surface) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, var(--ct-inverse-on-surface) 8%, transparent) 1px, transparent 1px),
+    radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--ct-tertiary-fixed) 18%, transparent), transparent 28%),
+    radial-gradient(circle at 80% 10%, color-mix(in srgb, var(--ct-secondary-fixed) 18%, transparent), transparent 30%),
+    radial-gradient(circle at 70% 85%, color-mix(in srgb, var(--ct-primary-fixed-dim) 20%, transparent), transparent 32%);
 }
 
 #root {
@@ -48,16 +98,12 @@ html.dark body::before {
   position: relative;
 }
 
-/* Let the global wallpaper show behind page shells while keeping cards/panels opaque. */
 #root > .min-h-screen,
 #root .min-h-screen.bg-slate-50,
 #root .min-h-screen.dark\:bg-dark-bg,
 #root .min-h-screen.flex,
 #root .min-h-screen.p-4,
-#root .min-h-screen.p-4.sm\:p-6.lg\:p-8 {
-  background-color: transparent !important;
-}
-
+#root .min-h-screen.p-4.sm\:p-6.lg\:p-8,
 html.dark #root > .min-h-screen,
 html.dark #root .min-h-screen.bg-slate-50,
 html.dark #root .min-h-screen.dark\:bg-dark-bg,
@@ -65,4 +111,28 @@ html.dark #root .min-h-screen.flex,
 html.dark #root .min-h-screen.p-4,
 html.dark #root .min-h-screen.p-4.sm\:p-6.lg\:p-8 {
   background-color: transparent !important;
+}
+
+/* Corporate Tech shadow overrides so Tailwind shadow utilities stay inside the approved palette. */
+.shadow-sm,
+.shadow,
+.shadow-md,
+.shadow-lg,
+.shadow-xl,
+.shadow-2xl {
+  --tw-shadow-color: var(--ct-primary);
+  --tw-shadow: 0 4px 0 color-mix(in srgb, var(--ct-primary) 60%, transparent);
+  --tw-shadow-colored: 0 4px 0 color-mix(in srgb, var(--ct-primary) 60%, transparent);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 transparent), var(--tw-ring-shadow, 0 0 transparent), var(--tw-shadow) !important;
+}
+
+html.dark .shadow-sm,
+html.dark .shadow,
+html.dark .shadow-md,
+html.dark .shadow-lg,
+html.dark .shadow-xl,
+html.dark .shadow-2xl {
+  --tw-shadow-color: var(--ct-secondary-fixed-dim);
+  --tw-shadow: 0 4px 0 color-mix(in srgb, var(--ct-secondary-fixed-dim) 60%, transparent);
+  --tw-shadow-colored: 0 4px 0 color-mix(in srgb, var(--ct-secondary-fixed-dim) 60%, transparent);
 }

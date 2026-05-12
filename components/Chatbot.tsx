@@ -121,8 +121,8 @@ export const Chatbot: React.FC<ChatbotProps> = ({ context }) => {
             </div>
 
             {/* FAB */}
-            <div className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2">
-                <PrimaryButton label={isOpen ? 'Close AI' : 'Ask AI'} onClick={() => setIsOpen(!isOpen)} size="large" />
+            <div className="fixed bottom-6 right-6 z-50">
+                <PrimaryButton label={isOpen ? 'Close AI' : 'Ask AI'} onClick={() => setIsOpen(!isOpen)} />
             </div>
         </>
     );

@@ -1,19 +1,9 @@
 import React from 'react'
+import { corporateTech as COLORS } from './corporateTechTheme'
 
 interface DarkModeToggleProps {
   isDark: boolean
   onToggle: () => void
-}
-
-const COLORS = {
-  yellow: '#f3e600',
-  teal: '#55ead4',
-  maroon: '#880425',
-  black: '#000000',
-  darkBg: '#111827',
-  darkCard: '#1f2937',
-  darkBorder: '#374151',
-  lightCard: '#ffffff',
 }
 
 export function DarkModeToggle({ isDark, onToggle }: DarkModeToggleProps) {
@@ -38,15 +28,15 @@ export function DarkModeToggle({ isDark, onToggle }: DarkModeToggleProps) {
       <span style={{
         boxSizing: 'border-box',
         borderRadius: '5px',
-        border: isDark ? `2px solid ${COLORS.yellow}` : `2px solid ${COLORS.maroon}`,
-        boxShadow: isDark ? `4px 4px ${COLORS.teal}` : `4px 4px ${COLORS.maroon}`,
+        border: isDark ? `2px solid ${COLORS.inversePrimary}` : `2px solid ${COLORS.primary}`,
+        boxShadow: isDark ? `4px 4px ${COLORS.secondaryFixedDim}` : `4px 4px ${COLORS.primary}`,
         position: 'absolute',
         cursor: 'pointer',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: isDark ? COLORS.darkCard : COLORS.lightCard,
+        backgroundColor: isDark ? COLORS.inverseSurface : COLORS.surfaceContainerLowest,
         transition: '0.3s',
       }}>
         <span style={{
@@ -55,12 +45,12 @@ export function DarkModeToggle({ isDark, onToggle }: DarkModeToggleProps) {
           content: '""',
           height: '20px',
           width: '20px',
-          border: isDark ? `2px solid ${COLORS.yellow}` : `2px solid ${COLORS.maroon}`,
+          border: isDark ? `2px solid ${COLORS.inversePrimary}` : `2px solid ${COLORS.primary}`,
           borderRadius: '5px',
           left: isDark ? '28px' : '-2px',
           bottom: '2px',
-          backgroundColor: isDark ? COLORS.darkBg : COLORS.yellow,
-          boxShadow: isDark ? `0 3px 0 ${COLORS.teal}` : `0 3px 0 ${COLORS.maroon}`,
+          backgroundColor: isDark ? COLORS.primaryContainer : COLORS.tertiaryFixed,
+          boxShadow: isDark ? `0 3px 0 ${COLORS.secondaryFixedDim}` : `0 3px 0 ${COLORS.primary}`,
           transition: '0.3s',
         }} />
       </span>

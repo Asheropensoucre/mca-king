@@ -7,13 +7,29 @@ const escapeHtml = (value: string | number | null | undefined): string => String
 
 const money = (value: number): string => `$${value.toLocaleString()}`
 
+const colors = {
+  surfaceContainerLowest: '#ffffff',
+  surfaceContainerLow: '#ffeffb',
+  inverseSurface: '#560068',
+  inverseOnSurface: '#ffebfc',
+  outlineVariant: '#c5c5d3',
+  primary: '#00236f',
+  onPrimary: '#ffffff',
+  primaryContainer: '#1e3a8a',
+  secondary: '#006a61',
+  onSecondary: '#ffffff',
+  secondaryFixed: '#89f5e7',
+  tertiaryFixed: '#ffe262',
+  onTertiaryFixed: '#221b00',
+} as const
+
 const shell = (title: string, body: string): string => `
-  <div style="margin:0;background:#0f172a;padding:24px;font-family:Arial,sans-serif;color:#f8fafc;">
-    <div style="max-width:600px;margin:0 auto;background:#111827;border:1px solid #334155;border-radius:14px;overflow:hidden;">
-      <div style="padding:22px 24px;background:#581c2c;">
-        <h1 style="margin:0;font-size:22px;line-height:1.3;color:#facc15;">${escapeHtml(title)}</h1>
+  <div style="margin:0;background:${colors.inverseSurface};padding:24px;font-family:'FiraCode Nerd Font Mono','Fira Code',monospace;color:${colors.inverseOnSurface};">
+    <div style="max-width:600px;margin:0 auto;background:${colors.primary};border:1px solid ${colors.outlineVariant};border-radius:14px;overflow:hidden;">
+      <div style="padding:22px 24px;background:${colors.primaryContainer};">
+        <h1 style="margin:0;font-size:22px;line-height:1.3;color:${colors.tertiaryFixed};">${escapeHtml(title)}</h1>
       </div>
-      <div style="padding:24px;color:#e5e7eb;font-size:15px;line-height:1.6;">
+      <div style="padding:24px;color:${colors.inverseOnSurface};font-size:15px;line-height:1.6;">
         ${body}
       </div>
     </div>
@@ -21,18 +37,18 @@ const shell = (title: string, body: string): string => `
 `
 
 const table = (rows: { label: string; value: string | number }[]): string => `
-  <table style="width:100%;border-collapse:collapse;margin:18px 0;background:#0f172a;border-radius:10px;overflow:hidden;">
+  <table style="width:100%;border-collapse:collapse;margin:18px 0;background:${colors.inverseSurface};border-radius:10px;overflow:hidden;">
     ${rows.map(row => `
       <tr>
-        <td style="padding:10px 12px;border-bottom:1px solid #334155;font-weight:bold;color:#facc15;width:42%;">${escapeHtml(row.label)}</td>
-        <td style="padding:10px 12px;border-bottom:1px solid #334155;color:#f8fafc;">${escapeHtml(row.value)}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid ${colors.outlineVariant};font-weight:bold;color:${colors.tertiaryFixed};width:42%;">${escapeHtml(row.label)}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid ${colors.outlineVariant};color:${colors.inverseOnSurface};">${escapeHtml(row.value)}</td>
       </tr>
     `).join('')}
   </table>
 `
 
-const button = (href: string, label: string, color = '#14b8a6'): string => `
-  <a href="${escapeHtml(href)}" style="display:inline-block;padding:12px 20px;background:${color};color:#020617;text-decoration:none;border-radius:8px;font-weight:bold;">${escapeHtml(label)}</a>
+const button = (href: string, label: string, color: string = colors.secondaryFixed, textColor: string = colors.onTertiaryFixed): string => `
+  <a href="${escapeHtml(href)}" style="display:inline-block;padding:12px 20px;background:${color};color:${textColor};text-decoration:none;border-radius:8px;font-weight:bold;">${escapeHtml(label)}</a>
 `
 
 export const templates = {
@@ -50,7 +66,7 @@ export const templates = {
         { label: 'Business', value: data.business_name },
         { label: 'Requested', value: money(data.requested_amount) },
       ])}
-      ${button(data.app_url, 'View Application', '#facc15')}
+      ${button(data.app_url, 'View Application', colors.tertiaryFixed)}
     `),
   }),
 
@@ -77,7 +93,7 @@ export const templates = {
         { label: 'Current Positions', value: data.current_positions },
       ])}
       ${button(data.app_url, 'Log In to Review')}
-      <p style="font-size:12px;color:#94a3b8;margin-top:24px;">You are receiving this because you are part of the MCA King lender network.</p>
+      <p style="font-size:12px;color:${colors.outlineVariant};margin-top:24px;">You are receiving this because you are part of the MCA King lender network.</p>
     `),
   }),
 
@@ -101,7 +117,7 @@ export const templates = {
         { label: 'Term', value: `${data.term_months} months` },
         { label: 'Payment Frequency', value: data.payment_freq },
       ])}
-      ${button(data.app_url, 'Review Offer', '#facc15')}
+      ${button(data.app_url, 'Review Offer', colors.tertiaryFixed)}
     `),
   }),
 
@@ -130,9 +146,9 @@ export const templates = {
     html: shell('Additional Documents Requested', `
       <p>Hi ${escapeHtml(data.merchant_name)},</p>
       <p>${escapeHtml(data.lender_name)} has requested additional documentation before proceeding with your application.</p>
-      <div style="background:#0f172a;padding:16px;border-radius:8px;margin:16px 0;border:1px solid #334155;">
-        <strong style="color:#facc15;">What's needed:</strong>
-        <p style="margin:8px 0 0;color:#f8fafc;">${escapeHtml(data.description)}</p>
+      <div style="background:${colors.inverseSurface};padding:16px;border-radius:8px;margin:16px 0;border:1px solid ${colors.outlineVariant};">
+        <strong style="color:${colors.tertiaryFixed};">What's needed:</strong>
+        <p style="margin:8px 0 0;color:${colors.inverseOnSurface};">${escapeHtml(data.description)}</p>
       </div>
       ${button(data.app_url, 'Upload Documents')}
     `),
@@ -148,7 +164,7 @@ export const templates = {
       <p>Hi ${escapeHtml(data.merchant_name)},</p>
       <p>Your funding contract for <strong>${escapeHtml(data.business_name)}</strong> is ready for your review and signature.</p>
       <p>Please log in to review the contract details.</p>
-      ${button(data.app_url, 'Review Contract', '#facc15')}
+      ${button(data.app_url, 'Review Contract', colors.tertiaryFixed)}
     `),
   }),
 

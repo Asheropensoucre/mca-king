@@ -58,7 +58,7 @@ export const DocumentsPanel: React.FC<DocumentsPanelProps> = ({ merchantId, canD
     <Card>
       <div className="p-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
-          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">{title}</h3>
+          <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">{title}</h3>
           {canUpload && (
             <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
               <select value={docType} onChange={e => setDocType(e.target.value as DocType)} className="rounded-md border-0 py-1.5 pl-3 pr-8 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600">
@@ -79,7 +79,7 @@ export const DocumentsPanel: React.FC<DocumentsPanelProps> = ({ merchantId, canD
         {documents.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-              <thead className="bg-slate-50 dark:bg-slate-800"><tr><th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">File</th><th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Type</th><th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Uploaded</th><th className="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">Actions</th></tr></thead>
+              <thead className="bg-slate-950/90"><tr><th className="px-4 py-2 text-left text-xs font-black text-theme-yellow uppercase">File</th><th className="px-4 py-2 text-left text-xs font-black text-theme-yellow uppercase">Type</th><th className="px-4 py-2 text-left text-xs font-black text-theme-yellow uppercase">Uploaded</th><th className="px-4 py-2 text-right text-xs font-black text-theme-yellow uppercase">Actions</th></tr></thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {documents.map(doc => (
                   <tr key={doc.id}>

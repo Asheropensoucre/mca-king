@@ -96,7 +96,7 @@ export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, on
     <div className="max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Leads</h2>
+          <h2 className="text-2xl font-black text-theme-maroon dark:text-theme-yellow">Leads</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">Track prospects before they become merchant applications.</p>
         </div>
         <PrimaryButton label="New Lead" size="small" onClick={() => setShowNewForm(true)} />
@@ -107,7 +107,7 @@ export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, on
           <button key={lead.id} onClick={() => void openLead(lead)} className="text-left focus:outline-none focus:ring-2 focus:ring-theme-teal rounded-lg">
             <Card className="p-5 h-full hover:border-theme-teal/70 transition-colors">
               <div className="flex justify-between gap-3 items-start">
-                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{lead.business_name}</h3>
+                <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">{lead.business_name}</h3>
                 <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusClasses[lead.status]}`}>{lead.status.replace('_', ' ')}</span>
               </div>
               <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Owner: {lead.owner_name || 'N/A'}</p>
@@ -128,7 +128,7 @@ export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, on
           <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             {showNewForm ? (
               <form onSubmit={createLead}>
-                <div className="p-6 border-b border-slate-200 dark:border-slate-700"><h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">New Lead</h3></div>
+                <div className="p-6 border-b border-slate-200 dark:border-slate-700"><h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">New Lead</h3></div>
                 <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input label="Business Name" name="business_name" value={form.business_name} onChange={e => setForm({ ...form, business_name: e.target.value })} required />
                   <Input label="Owner Name" name="owner_name" value={form.owner_name} onChange={e => setForm({ ...form, owner_name: e.target.value })} />
@@ -142,7 +142,7 @@ export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, on
               </form>
             ) : selectedLead && (
               <div>
-                <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between"><h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{selectedLead.business_name}</h3><button onClick={() => setSelectedLead(null)} className="text-sm text-theme-teal">Close</button></div>
+                <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between"><h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">{selectedLead.business_name}</h3><button onClick={() => setSelectedLead(null)} className="text-sm text-theme-teal">Close</button></div>
                 <div className="p-6 space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Input label="Business Name" name="business_name" value={selectedLead.business_name} onChange={e => setSelectedLead({ ...selectedLead, business_name: e.target.value })} onBlur={() => void updateLead({ business_name: selectedLead.business_name })} />
@@ -153,7 +153,7 @@ export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, on
                     {isAdmin && <label className="block"><span className="text-sm font-medium text-slate-700 dark:text-slate-300">Assign Rep</span><select value={selectedLead.assigned_rep_id || ''} onChange={e => void updateLead({ assigned_rep_id: e.target.value || null })} className="mt-1 block w-full rounded-md border-0 py-2 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600"><option value="">Unassigned</option>{salesReps.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}</select></label>}
                   </div>
                   <PrimaryButton disabled={selectedLead.status === 'converted'} label={selectedLead.status === 'converted' ? 'Already Converted' : 'Convert to Merchant'} onClick={() => void convertLead()} />
-                  <div><h4 className="font-semibold text-slate-800 dark:text-slate-100 mb-2">Notes</h4><div className="space-y-2 max-h-52 overflow-y-auto">{selectedLead.notes?.map(note => <div key={note.id} className="p-3 rounded-md bg-slate-50 dark:bg-slate-800"><p className="text-sm text-slate-700 dark:text-slate-200">{note.body}</p><p className="text-xs text-slate-500 mt-1">{note.author_name || 'Unknown'} • {new Date(note.created_at).toLocaleString()}</p></div>)}</div></div>
+                  <div><h4 className="font-black text-theme-maroon dark:text-theme-yellow mb-2">Notes</h4><div className="space-y-2 max-h-52 overflow-y-auto">{selectedLead.notes?.map(note => <div key={note.id} className="p-3 rounded-md bg-slate-50 dark:bg-slate-800"><p className="text-sm text-slate-700 dark:text-slate-200">{note.body}</p><p className="text-xs text-slate-500 mt-1">{note.author_name || 'Unknown'} • {new Date(note.created_at).toLocaleString()}</p></div>)}</div></div>
                   <Textarea label="Add Note" name="note" value={noteBody} onChange={e => setNoteBody(e.target.value)} />
                   <div className="flex justify-end"><PrimaryButton label="Add Note" size="small" variant="funded" onClick={() => void addNote()} /></div>
                 </div>

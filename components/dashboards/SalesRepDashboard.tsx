@@ -45,7 +45,7 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
                 <div className="max-w-4xl mx-auto">
                     <PrimaryButton label={`← Back to ${activeSection === 'pipeline' ? 'Kamba Pipeline' : 'My Deals'}`} size="small" onClick={() => setSelectedDeal(null)} />
                     <div className="flex justify-between items-center mb-4 gap-3">
-                        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{selectedDealCurrent.businessInfo.legalName}</h2>
+                        <h2 className="text-2xl font-black text-theme-maroon dark:text-theme-yellow">{selectedDealCurrent.businessInfo.legalName}</h2>
                         {onPrint && (
                             <PrimaryButton label="Download PDF" size="small" onClick={() => onPrint(selectedDealCurrent)} />
                         )}
@@ -59,8 +59,8 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
                         <Card>
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                                    <thead className="bg-slate-50 dark:bg-slate-800">
-                                        <tr className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                    <thead className="bg-slate-950/90">
+                                        <tr className="text-left text-xs font-black uppercase tracking-wider text-theme-yellow">
                                             <th>Business Name</th>
                                             <th>Primary Contact</th>
                                             <th>Contact Info</th>

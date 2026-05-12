@@ -141,7 +141,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
             <Card className="mb-6">
                 <div className="p-6">
                     <div className="mb-6 text-center">
-                        <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-200">Application Details</h2>
+                        <h2 className="text-xl font-black text-theme-maroon dark:text-theme-yellow">Application Details</h2>
                         {formState === 'submitted' && <p className="mt-2 text-sm text-theme-teal">Your application has been submitted and is under review.</p>}
                         {formState === 'grace_pending' && <p className="mt-2 text-sm text-amber-600 dark:text-amber-300">You may reapply in {monthsUntilReapply} month{monthsUntilReapply === 1 ? '' : 's'}.</p>}
                         {formState === 'can_reapply' && <p className="mt-2 text-sm text-theme-teal">You are eligible to apply again.</p>}
@@ -162,7 +162,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
             <div className="max-w-5xl mx-auto">
                 <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-6">
                     <div>
-                        <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">My Application Dashboard</h1>
+                        <h1 className="text-3xl font-black text-theme-maroon dark:text-theme-yellow">My Application Dashboard</h1>
                         <p className="text-slate-500 dark:text-slate-400">Welcome, {currentUser.full_name ?? currentUser.name ?? submission.owners[0]?.name ?? 'Valued Client'}</p>
                     </div>
                     <div className="flex items-center gap-3 self-start sm:self-auto">
@@ -175,7 +175,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
                     <div className="p-6">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                             <div>
-                                <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-200">Application Status</h2>
+                                <h2 className="text-xl font-black text-theme-maroon dark:text-theme-yellow">Application Status</h2>
                                 <p className="text-sm text-slate-500 dark:text-slate-400">Current step: <span className="font-semibold text-slate-700 dark:text-slate-200">{submission.status}</span></p>
                             </div>
                             <span className="inline-flex self-start sm:self-auto rounded-full bg-theme-yellow px-3 py-1 text-xs font-bold text-theme-black">
@@ -208,7 +208,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
 
                 <Card className="mb-6">
                     <div className="p-6">
-                        <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-4">Stipulations</h2>
+                        <h2 className="text-xl font-black text-theme-maroon dark:text-theme-yellow mb-4">Stipulations</h2>
                         {stipulations.length > 0 ? (
                             <div className="space-y-4">
                                 {stipulations.map(stip => (
@@ -231,7 +231,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
 
                 <Card>
                     <div className="p-6">
-                        <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-4">Offers</h2>
+                        <h2 className="text-xl font-black text-theme-maroon dark:text-theme-yellow mb-4">Offers</h2>
                         {submission.offers && submission.offers.length > 0 ? (
                             <div className="space-y-4">
                                 {submission.offers.map(offer => (

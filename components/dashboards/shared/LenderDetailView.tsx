@@ -10,7 +10,7 @@ interface LenderDetailViewProps {
 export const LenderDetailView: React.FC<LenderDetailViewProps> = ({ item }) => (
     <Card>
         <div className="p-6">
-            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">{item.lenderName}</h3>
+            <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow mb-4">{item.lenderName}</h3>
             <dl className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
                 <SummaryItem label="Positions" value={item.positions} />
                 <SummaryItem label="Longest Term (Days)" value={item.longestTerm} />

@@ -1,20 +1,11 @@
 import React from 'react'
+import { corporateTech as COLORS } from './corporateTechTheme'
 
 interface RoleToggleProps<T extends string> {
   value: T
   options: { value: T; label: string }[]
   onChange: (value: T) => void
   name?: string
-}
-
-const COLORS = {
-  yellow: '#f3e600',
-  teal: '#55ead4',
-  maroon: '#880425',
-  black: '#000000',
-  white: '#ffffff',
-  darkBg: '#111827',
-  darkCard: '#1f2937',
 }
 
 function isDarkMode(): boolean {
@@ -32,12 +23,12 @@ export function RoleToggle<T extends string>({ value, options, onChange, name = 
         position: 'relative',
         width: `${width}px`,
         height: '40px',
-        backgroundColor: isDark ? COLORS.darkCard : COLORS.white,
-        border: `2px solid ${isDark ? COLORS.yellow : COLORS.maroon}`,
+        backgroundColor: isDark ? COLORS.inverseSurface : COLORS.surfaceContainerLowest,
+        border: `2px solid ${isDark ? COLORS.inversePrimary : COLORS.primary}`,
         borderRadius: '34px',
         display: 'flex',
         flexDirection: 'row',
-        boxShadow: `4px 4px ${isDark ? COLORS.teal : COLORS.maroon}`,
+        boxShadow: `4px 4px ${isDark ? COLORS.secondaryFixedDim : COLORS.primary}`,
       }}
       role="radiogroup"
       aria-label="Account role"
@@ -76,7 +67,7 @@ export function RoleToggle<T extends string>({ value, options, onChange, name = 
               style={{
                 width: '100%',
                 height: '100%',
-                backgroundColor: checked ? (isDark ? COLORS.yellow : COLORS.maroon) : (isDark ? COLORS.darkCard : COLORS.white),
+                backgroundColor: checked ? (isDark ? COLORS.inversePrimary : COLORS.primary) : (isDark ? COLORS.inverseSurface : COLORS.surfaceContainerLowest),
                 borderRadius: '50px',
                 display: 'flex',
                 justifyContent: 'center',
@@ -86,7 +77,7 @@ export function RoleToggle<T extends string>({ value, options, onChange, name = 
             >
               <span
                 style={{
-                  color: checked ? (isDark ? COLORS.black : COLORS.white) : (isDark ? COLORS.teal : COLORS.maroon),
+                  color: checked ? (isDark ? COLORS.onPrimaryFixed : COLORS.onPrimary) : (isDark ? COLORS.secondaryFixed : COLORS.primary),
                   fontWeight: 800,
                   fontSize: '14px',
                 }}

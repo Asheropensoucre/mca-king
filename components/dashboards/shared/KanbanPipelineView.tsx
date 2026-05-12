@@ -66,7 +66,7 @@ const PipelineCardContent: React.FC<{ merchant: FormData; lenders: LenderInfo[] 
 
   return (
     <div className="bg-white dark:bg-dark-card rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col gap-2.5 shrink-0 w-full mb-4 last:mb-0 hover:border-theme-teal/70 hover:shadow-md transition-all">
-      <div className="text-base font-bold text-slate-800 dark:text-slate-100 truncate" title={merchant.businessInfo.legalName}>
+      <div className="text-base font-black text-theme-maroon dark:text-theme-yellow truncate" title={merchant.businessInfo.legalName}>
         {merchant.businessInfo.legalName || 'Unnamed Business'}
       </div>
       <div className="text-xs text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700 pb-1.5">
@@ -298,7 +298,7 @@ export const KanbanPipelineView: React.FC<KanbanPipelineViewProps> = ({ merchant
     <div className="h-[calc(100vh-2rem)] lg:h-[calc(100vh-4rem)] flex flex-col min-h-[720px]">
       <div className="mb-5 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card px-6 py-5 shadow-sm">
         <div>
-          <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Kamba Pipeline</h2>
+          <h2 className="text-3xl font-black text-theme-maroon dark:text-theme-yellow">Kamba Pipeline</h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 max-w-3xl">Drag deals through the 12-step funding flow. This board controls the real application status and is built as a full workspace for managing many deals across many stages.</p>
         </div>
         <div className="flex flex-wrap gap-3 text-sm">

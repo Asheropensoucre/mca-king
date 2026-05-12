@@ -29,11 +29,11 @@ export const EditMerchantForm: React.FC<EditMerchantFormProps> = ({ initialData,
     return (
         <Card className="space-y-6">
             <div className="p-6">
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-4">Business Information</h3>
+                <h3 className="text-xl font-black text-theme-maroon dark:text-theme-yellow mb-4">Business Information</h3>
                 <BusinessInfoForm data={formData.businessInfo} updateData={updateBusinessInfo} requestedAmount={formData.requestedAmount} updateParentData={updateParentData} />
             </div>
             <div className="p-6 border-t border-slate-200 dark:border-slate-700">
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-4">Owner Information</h3>
+                <h3 className="text-xl font-black text-theme-maroon dark:text-theme-yellow mb-4">Owner Information</h3>
                 <OwnersForm data={formData.owners} updateData={updateOwners} />
             </div>
             <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-4">

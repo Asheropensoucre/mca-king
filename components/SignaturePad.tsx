@@ -5,9 +5,9 @@ interface SignaturePadProps {
   onSignatureEnd: (signature: string) => void;
 }
 
-const SIGNATURE_BACKGROUND_COLOR = '#FFFFFF'; // White
-const SIGNATURE_PEN_COLOR = '#1e293b'; // Slate-800 (near black)
-const SIGNATURE_PLACEHOLDER_COLOR = '#94a3b8'; // Slate-400 (light gray)
+const SIGNATURE_BACKGROUND_COLOR = '#ffffff';
+const SIGNATURE_PEN_COLOR = '#00236f';
+const SIGNATURE_PLACEHOLDER_COLOR = '#757682';
 
 
 export const SignaturePad: React.FC<SignaturePadProps> = ({ onSignatureEnd }) => {

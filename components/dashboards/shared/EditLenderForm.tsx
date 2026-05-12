@@ -43,7 +43,7 @@ export const EditLenderForm: React.FC<EditLenderFormProps> = ({ initialData, onS
                     <Textarea name="industryRestrictions" label="Industry Restrictions" value={data.industryRestrictions} onChange={handleChange} className="md:col-span-3" rows={5}/>
                     <Textarea name="notes" label="Notes" value={data.notes} onChange={handleChange} className="md:col-span-3" rows={3}/>
 
-                    <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 md:col-span-3 mt-4">Contact Info</h3>
+                    <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow md:col-span-3 mt-4">Contact Info</h3>
                     <Input name="isoRep" label="ISO Rep Name" value={data.isoRep} onChange={handleChange} />
                     <Input name="cell" label="Cell Phone" type="tel" value={data.cell} onChange={handleChange} />
                     <Input name="email" label="Email" type="email" value={data.email} onChange={handleChange} />

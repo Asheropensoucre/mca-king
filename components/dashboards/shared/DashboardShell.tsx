@@ -30,48 +30,48 @@ export const DashboardShell = <T extends string>({
   children,
 }: DashboardShellProps<T>) => {
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-dark-bg">
+    <div className="min-h-screen text-slate-900 dark:text-slate-100">
       <div className="flex min-h-screen">
-        <aside className="hidden lg:flex lg:w-72 lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white lg:dark:border-slate-700 lg:dark:bg-dark-card">
-          <div className="flex items-center justify-between gap-3 px-6 py-6 border-b border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-3 min-w-0">
+        <aside className="hidden lg:flex lg:w-72 lg:flex-col lg:border-r-2 lg:border-theme-maroon/70 lg:bg-slate-950/90 lg:shadow-[8px_0_0_var(--ct-secondary-fixed-dim)] lg:backdrop-blur-sm lg:dark:border-theme-yellow/80 lg:dark:bg-slate-950/95">
+          <div className="flex items-center justify-between gap-3 border-b-2 border-theme-maroon/70 px-6 py-6 dark:border-theme-yellow/70">
+            <div className="flex min-w-0 items-center gap-3">
               <img src="/logo.png" alt="MCA King Logo" className="h-10 w-auto" />
               <div className="min-w-0">
-                <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">{title}</h1>
-                {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-44">{subtitle}</p>}
+                <h1 className="text-lg font-black text-theme-yellow">{title}</h1>
+                {subtitle && <p className="max-w-44 truncate text-xs font-semibold text-theme-teal/90">{subtitle}</p>}
               </div>
             </div>
             {themeToggle}
           </div>
-          <nav className="flex-1 p-4 space-y-2" aria-label="Dashboard sections">
+          <nav className="flex-1 space-y-3 p-4" aria-label="Dashboard sections">
             {sections.map(section => (
               <button
                 key={section.id}
                 type="button"
                 onClick={() => onSectionChange(section.id)}
-                className={`w-full rounded-lg px-4 py-3 text-left text-sm font-semibold transition-colors ${
+                className={`w-full rounded-lg border-2 px-4 py-3 text-left text-sm font-black transition-all ${
                   activeSection === section.id
-                    ? 'bg-theme-yellow text-theme-black shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
+                    ? 'border-theme-maroon bg-theme-yellow text-theme-black shadow-[4px_4px_0_var(--ct-secondary-fixed-dim)]'
+                    : 'border-theme-teal/40 bg-slate-900/80 text-theme-teal hover:border-theme-yellow hover:bg-slate-800 hover:text-theme-yellow'
                 }`}
               >
                 {section.label}
               </button>
             ))}
           </nav>
-          <div className="space-y-3 p-4 border-t border-slate-200 dark:border-slate-700">
+          <div className="border-t-2 border-theme-maroon/70 p-4 dark:border-theme-yellow/70">
             <PrimaryButton label={`${exitLabel} →`} size="small" fullWidth onClick={onExit} />
           </div>
         </aside>
 
-        <main className="flex-1 min-w-0">
-          <div className="lg:hidden p-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card">
-            <div className="flex items-center justify-between gap-4 mb-4">
-              <div className="flex items-center gap-3 min-w-0">
+        <main className="min-w-0 flex-1">
+          <div className="border-b-2 border-theme-maroon/70 bg-white/90 p-4 shadow-[0_6px_0_var(--ct-primary)] backdrop-blur-sm dark:border-theme-yellow/70 dark:bg-slate-950/90 dark:shadow-[0_6px_0_var(--ct-secondary-fixed-dim)] lg:hidden">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-3">
                 <img src="/logo.png" alt="MCA King Logo" className="h-10 w-auto" />
                 <div className="min-w-0">
-                  <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100 truncate">{title}</h1>
-                  {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{subtitle}</p>}
+                  <h1 className="truncate text-lg font-black text-theme-maroon dark:text-theme-yellow">{title}</h1>
+                  {subtitle && <p className="truncate text-xs font-semibold text-theme-teal">{subtitle}</p>}
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">
@@ -85,16 +85,21 @@ export const DashboardShell = <T extends string>({
                   key={section.id}
                   type="button"
                   onClick={() => onSectionChange(section.id)}
-                  className={`shrink-0 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                  className={`shrink-0 rounded-lg border-2 px-4 py-2 text-sm font-black transition-colors ${
                     activeSection === section.id
-                      ? 'bg-theme-yellow text-theme-black shadow-sm'
-                      : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                      ? 'border-theme-maroon bg-theme-yellow text-theme-black shadow-[3px_3px_0_var(--ct-secondary-fixed-dim)]'
+                      : 'border-theme-teal/50 bg-white/90 text-theme-maroon dark:bg-slate-900 dark:text-theme-teal'
                   }`}
                 >
                   {section.label}
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="hidden border-b-2 border-theme-maroon/70 bg-white/90 px-8 py-5 shadow-[0_6px_0_var(--ct-primary)] backdrop-blur-sm dark:border-theme-yellow/70 dark:bg-slate-950/80 dark:shadow-[0_6px_0_var(--ct-secondary-fixed-dim)] lg:block">
+            <h2 className="text-2xl font-black text-theme-maroon dark:text-theme-yellow">{title}</h2>
+            {subtitle && <p className="mt-1 text-sm font-semibold text-theme-teal">{subtitle}</p>}
           </div>
 
           <div className="p-4 sm:p-6 lg:p-8">
