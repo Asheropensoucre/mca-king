@@ -4,7 +4,7 @@ _Last updated: 2026-05-12_
 
 ## Purpose
 
-This guide explains how to deploy MCA King to Vercel safely. MCA King is a Vite + React app with server-side API route handlers. Local development uses a Vite middleware bridge, while production on Vercel uses root-level serverless functions in the `api/` directory.
+This guide explains how to deploy MCA King to Vercel safely on the Hobby plan. MCA King is a Vite + React app with server-side API route handlers. Local development uses a Vite middleware bridge, while production on Vercel uses **one root-level catch-all serverless function** in the `api/` directory.
 
 ## Deployment Architecture
 
@@ -13,7 +13,9 @@ Browser
   ↓
 Vercel static frontend build from dist/
   ↓
-Vercel serverless functions in api/
+Single Vercel catch-all serverless function: api/[...path].ts
+  ↓
+Existing central API router: src/server/api.ts
   ↓
 Existing route logic in src/routes/
   ↓
@@ -31,59 +33,92 @@ vite.config.ts
 src/server/api.ts
 ```
 
-The dev bridge forwards local `/api/*` requests to the same handlers used in production.
+The dev bridge forwards local `/api/*` requests to the same central router used in production.
 
 ### Production
 
-Vercel does not run the Vite dev middleware. Production API calls are handled by root-level Vercel functions:
+Vercel does not run the Vite dev middleware. Production API calls are handled by one root-level Vercel function:
 
 ```txt
-api/
+api/[...path].ts
 ```
 
-Each file in `api/` is a thin wrapper around existing `src/routes/*` route logic. Do not duplicate business logic in `api/`; import and reuse route handlers from `src/routes`.
+This keeps the deployment compatible with the Vercel Hobby plan's 12-function limit. Instead of creating one function per route, the catch-all function forwards all `/api/*` requests to:
+
+```txt
+src/server/api.ts
+```
+
+`src/server/api.ts` then dispatches requests to the existing route handlers under `src/routes`. Do not duplicate business logic in `api/`; import and reuse the existing central router.
 
 ## Important Files
 
 ```txt
 vercel.json                 # Vercel build/output config and API rewrite
 .env.example                # Placeholder env var names only; no secrets
-api/_utils.ts               # VercelRequest/VercelResponse bridge to Web Request/Response
-api/**                      # Vercel serverless wrappers
+api/[...path].ts            # Single catch-all Vercel serverless function
 src/routes/**               # Existing API route logic
-src/server/api.ts           # Local dev API route registry
+src/server/api.ts           # Central API route registry for local and production
 vite.config.ts              # Vite config and dev-only middleware bridge
 src/lib/session-auth.ts     # Session cookie settings for local/prod
 ```
 
 ## API Route Mapping
 
-| Vercel function file | Production route |
+All production API routes are handled by this single Vercel function:
+
+```txt
+api/[...path].ts
+```
+
+The catch-all forwards to `src/server/api.ts`, which currently routes:
+
+| Production route | Methods |
 |---|---|
-| `api/ai/chat.ts` | `POST /api/ai/chat` |
-| `api/auth/login.ts` | `POST /api/auth/login` |
-| `api/auth/register.ts` | `POST /api/auth/register` |
-| `api/auth/logout.ts` | `POST /api/auth/logout` |
-| `api/auth/me.ts` | `GET /api/auth/me` |
-| `api/merchants/index.ts` | `GET/POST /api/merchants` |
-| `api/merchants/[id].ts` | `GET/PATCH/DELETE /api/merchants/:id` |
-| `api/lenders/index.ts` | `GET/POST /api/lenders` |
-| `api/lenders/[id].ts` | `GET/PATCH/DELETE /api/lenders/:id` |
-| `api/offers/index.ts` | `GET/POST /api/offers` |
-| `api/offers/[id].ts` | `PATCH /api/offers/:id` |
-| `api/leads/index.ts` | `GET/POST /api/leads` |
-| `api/leads/[id].ts` | `GET/PATCH/DELETE /api/leads/:id` |
-| `api/leads/[id]/notes.ts` | `POST /api/leads/:id/notes` |
-| `api/leads/[id]/convert.ts` | `POST /api/leads/:id/convert` |
-| `api/documents/index.ts` | `GET /api/documents` |
-| `api/documents/upload.ts` | `POST /api/documents/upload` |
-| `api/documents/[id].ts` | `DELETE /api/documents/:id` |
-| `api/stipulations/index.ts` | `GET/POST /api/stipulations` |
-| `api/matching/index.ts` | `GET /api/matching` |
-| `api/matching/run.ts` | `POST /api/matching/run` |
-| `api/matching/manual.ts` | `POST/DELETE /api/matching/manual` |
-| `api/matching/notify.ts` | `POST /api/matching/notify` |
-| `api/users/sales-reps.ts` | `GET /api/users/sales-reps` |
+| `/api/ai/chat` | `POST` |
+| `/api/auth/login` | `POST` |
+| `/api/auth/register` | `POST` |
+| `/api/auth/logout` | `POST` |
+| `/api/auth/me` | `GET` |
+| `/api/merchants` | `GET`, `POST` |
+| `/api/merchants/:id` | `GET`, `PATCH`, `DELETE` |
+| `/api/lenders` | `GET`, `POST` |
+| `/api/lenders/:id` | `GET`, `PATCH`, `DELETE` |
+| `/api/offers` | `GET`, `POST` |
+| `/api/offers/:id` | `PATCH` |
+| `/api/leads` | `GET`, `POST` |
+| `/api/leads/:id` | `GET`, `PATCH`, `DELETE` |
+| `/api/leads/:id/notes` | `POST` |
+| `/api/leads/:id/convert` | `POST` |
+| `/api/documents` | `GET` |
+| `/api/documents/upload` | `POST` |
+| `/api/documents/:id` | `DELETE` |
+| `/api/stipulations` | `GET`, `POST` |
+| `/api/matching` | `GET` |
+| `/api/matching/run` | `POST` |
+| `/api/matching/manual` | `POST`, `DELETE` |
+| `/api/matching/notify` | `POST` |
+| `/api/users/sales-reps` | `GET` |
+
+## Multipart Uploads
+
+The catch-all function disables Vercel body parsing:
+
+```ts
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+}
+```
+
+This is required for:
+
+```txt
+POST /api/documents/upload
+```
+
+Normal JSON routes still work because the catch-all function reads the raw request stream and forwards it as a Web `Request` to the central API router.
 
 ## Environment Variables
 
@@ -200,7 +235,7 @@ Add every variable from `.env.example` with real values. `GEMINI_API_KEY` is ser
 Important rules:
 
 - Do not prefix secret server variables with `VITE_`.
-- `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `RESEND_API_KEY`, and `BETTER_AUTH_SECRET` are server-only secrets.
+- `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `RESEND_API_KEY`, `GEMINI_API_KEY`, and `BETTER_AUTH_SECRET` are server-only secrets.
 - `VITE_*` variables are visible to browser code.
 
 ### 6. Deploy
@@ -275,7 +310,23 @@ After deployment, test these flows against the Vercel URL:
 
 ### API routes work locally but 404 on Vercel
 
-Check that the root `api/` folder exists and was committed.
+Check that the root catch-all function exists and was committed:
+
+```txt
+api/[...path].ts
+```
+
+Also confirm `vercel.json` includes the `/api/(.*)` rewrite.
+
+### Hobby plan reports too many Serverless Functions
+
+The project should have only one API function file:
+
+```txt
+api/[...path].ts
+```
+
+If Vercel reports more than 12 functions, remove old one-route-per-file wrappers from `api/` and redeploy.
 
 ### Cookies not persisting
 
@@ -310,9 +361,10 @@ Check:
 
 ## Maintenance Notes
 
-When adding a new route under `src/routes`, also add:
+When adding a new API route under `src/routes`:
 
-1. A root Vercel wrapper under `api/`.
-2. A local-dev registration in `src/server/api.ts`.
-3. API client methods in `src/lib/api-client.ts` if used by frontend.
-4. Documentation in this deployment guide if it changes public API behavior.
+1. Register it in `src/server/api.ts`.
+2. Add API client methods in `src/lib/api-client.ts` if used by frontend.
+3. Update this deployment guide if it changes public API behavior.
+
+Do **not** add a new Vercel file for every route. The deployment uses the single catch-all function to stay compatible with the Vercel Hobby plan.
