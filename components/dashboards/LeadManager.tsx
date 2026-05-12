@@ -4,6 +4,7 @@ import { api } from '../../src/lib/api-client';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
+import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 
 const STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
 const STATUS_OPTIONS: { value: LeadStatus; label: string }[] = [
@@ -98,7 +99,7 @@ export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, on
           <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Leads</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">Track prospects before they become merchant applications.</p>
         </div>
-        <button onClick={() => setShowNewForm(true)} className="px-4 py-2 rounded-md text-sm font-medium text-theme-black bg-theme-yellow hover:bg-theme-yellow/90">New Lead</button>
+        <PrimaryButton label="New Lead" size="small" onClick={() => setShowNewForm(true)} />
       </div>
       {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -137,7 +138,7 @@ export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, on
                   {isAdmin && <label className="block"><span className="text-sm font-medium text-slate-700 dark:text-slate-300">Assign Rep</span><select value={form.assigned_rep_id} onChange={e => setForm({ ...form, assigned_rep_id: e.target.value })} className="mt-1 block w-full rounded-md border-0 py-2 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600"><option value="">Unassigned</option>{salesReps.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}</select></label>}
                   <div className="sm:col-span-2"><Textarea label="Initial Note" name="initial_note" value={form.initial_note} onChange={e => setForm({ ...form, initial_note: e.target.value })} /></div>
                 </div>
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t flex justify-end gap-2"><button type="button" onClick={() => setShowNewForm(false)} className="px-4 py-2 text-sm rounded-md bg-white border dark:bg-slate-600 dark:border-slate-500 dark:text-slate-200">Cancel</button><button type="submit" className="px-4 py-2 text-sm rounded-md bg-theme-yellow text-black">Save Lead</button></div>
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t flex justify-end gap-2"><PrimaryButton label="Cancel" size="small" variant="danger" onClick={() => setShowNewForm(false)} /><PrimaryButton type="submit" label="Save Lead" size="small" /></div>
               </form>
             ) : selectedLead && (
               <div>
@@ -151,10 +152,10 @@ export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, on
                     <label className="block"><span className="text-sm font-medium text-slate-700 dark:text-slate-300">Status</span><select value={selectedLead.status} disabled={selectedLead.status === 'converted'} onChange={e => void updateLead({ status: e.target.value as LeadStatus })} className="mt-1 block w-full rounded-md border-0 py-2 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600">{selectedLead.status === 'converted' && <option value="converted">Converted</option>}{STATUS_OPTIONS.map(status => <option key={status.value} value={status.value}>{status.label}</option>)}</select></label>
                     {isAdmin && <label className="block"><span className="text-sm font-medium text-slate-700 dark:text-slate-300">Assign Rep</span><select value={selectedLead.assigned_rep_id || ''} onChange={e => void updateLead({ assigned_rep_id: e.target.value || null })} className="mt-1 block w-full rounded-md border-0 py-2 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600"><option value="">Unassigned</option>{salesReps.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}</select></label>}
                   </div>
-                  <button disabled={selectedLead.status === 'converted'} onClick={() => void convertLead()} className="px-4 py-2 rounded-md text-sm font-medium text-theme-black bg-theme-yellow hover:bg-theme-yellow/90 disabled:bg-slate-300 disabled:text-slate-500">{selectedLead.status === 'converted' ? 'Already Converted' : 'Convert to Merchant'}</button>
+                  <PrimaryButton disabled={selectedLead.status === 'converted'} label={selectedLead.status === 'converted' ? 'Already Converted' : 'Convert to Merchant'} onClick={() => void convertLead()} />
                   <div><h4 className="font-semibold text-slate-800 dark:text-slate-100 mb-2">Notes</h4><div className="space-y-2 max-h-52 overflow-y-auto">{selectedLead.notes?.map(note => <div key={note.id} className="p-3 rounded-md bg-slate-50 dark:bg-slate-800"><p className="text-sm text-slate-700 dark:text-slate-200">{note.body}</p><p className="text-xs text-slate-500 mt-1">{note.author_name || 'Unknown'} • {new Date(note.created_at).toLocaleString()}</p></div>)}</div></div>
                   <Textarea label="Add Note" name="note" value={noteBody} onChange={e => setNoteBody(e.target.value)} />
-                  <div className="flex justify-end"><button onClick={() => void addNote()} className="px-4 py-2 rounded-md text-sm font-medium text-theme-black bg-theme-teal hover:bg-theme-teal/90">Add Note</button></div>
+                  <div className="flex justify-end"><PrimaryButton label="Add Note" size="small" variant="funded" onClick={() => void addNote()} /></div>
                 </div>
               </div>
             )}

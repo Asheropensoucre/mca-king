@@ -4,6 +4,7 @@ import { Input } from './ui/Input';
 import { Textarea } from './ui/Textarea';
 import { Select } from './ui/Select';
 import { Card } from './ui/Card';
+import { PrimaryButton } from '../src/components/ui/PrimaryButton';
 
 interface LenderFormProps {
     data: LenderInfo;
@@ -28,7 +29,7 @@ export const LenderForm: React.FC<LenderFormProps> = ({ data, updateData, onSubm
                     </div>
                     <div className="flex items-center gap-3 self-start sm:self-auto">
                         {headerAction}
-                        <button onClick={onExit} className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-theme-teal hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600">Exit Form</button>
+                        <PrimaryButton label="Exit Form" size="small" onClick={onExit} />
                     </div>
                 </div>
                 <form onSubmit={onSubmit}>
@@ -62,12 +63,7 @@ export const LenderForm: React.FC<LenderFormProps> = ({ data, updateData, onSubm
                             </div>
                         </div>
                          <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex justify-end">
-                            <button
-                                type="submit"
-                                className="px-6 py-2 rounded-md text-sm font-medium text-theme-black bg-theme-yellow hover:bg-theme-yellow/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-theme-yellow/80"
-                            >
-                                Submit Lender Info
-                            </button>
+                            <PrimaryButton type="submit" label="Submit Lender Info" onClick={() => undefined} />
                         </div>
                     </Card>
                 </form>

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { FormData } from '../types';
+import { PrimaryButton } from '../src/components/ui/PrimaryButton';
 
 interface SummaryProps {
   formData: Omit<FormData, 'id'>;
@@ -17,7 +18,7 @@ const Section: React.FC<{title: string, onEdit: () => void, children: React.Reac
     <div className="border-b border-slate-200 dark:border-slate-700 pb-6">
         <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">{title}</h3>
-            <button onClick={onEdit} className="font-medium text-sm text-theme-teal hover:text-theme-teal/80">Edit</button>
+            <PrimaryButton label="Edit" size="small" onClick={onEdit} />
         </div>
         {children}
     </div>

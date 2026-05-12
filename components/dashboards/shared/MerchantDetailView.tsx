@@ -4,6 +4,7 @@ import { Card } from '../../ui/Card';
 import { SummaryItem } from './SummaryItem';
 import { DocumentsPanel } from './DocumentsPanel';
 import { api } from '../../../src/lib/api-client';
+import { PrimaryButton } from '../../../src/components/ui/PrimaryButton';
 
 interface MerchantDetailViewProps { 
     item: FormData, 
@@ -124,10 +125,8 @@ const MatchedLendersPanel: React.FC<MatchedLendersPanelProps> = ({ merchantId, l
                     </div>
                     {canManageMatches && (
                         <div className="flex flex-wrap gap-2">
-                            <button onClick={handleRunAutoMatch} className="px-3 py-2 rounded-md text-sm font-medium text-theme-black bg-theme-yellow hover:bg-theme-yellow/90">Run Auto-Match</button>
-                            <button onClick={handleNotify} disabled={matches.length === 0} className="px-3 py-2 rounded-md text-sm font-medium text-theme-black bg-theme-teal hover:bg-theme-teal/90 disabled:opacity-50 disabled:cursor-not-allowed">
-                                {allNotified && latestNotified ? `Notified ${formatDateTime(latestNotified)}` : 'Notify Lenders'}
-                            </button>
+                            <PrimaryButton label="Run Auto-Match" size="small" onClick={handleRunAutoMatch} />
+                            <PrimaryButton label={allNotified && latestNotified ? `Notified ${formatDateTime(latestNotified)}` : 'Notify Lenders'} size="small" variant="funded" onClick={handleNotify} disabled={matches.length === 0} />
                         </div>
                     )}
                 </div>
@@ -141,7 +140,7 @@ const MatchedLendersPanel: React.FC<MatchedLendersPanelProps> = ({ merchantId, l
                             <option value="">Select lender to manually add</option>
                             {unmatchedLenders.map(lender => <option key={lender.id} value={lender.id}>{lender.lenderName}</option>)}
                         </select>
-                        <button onClick={handleAddManual} disabled={!selectedLenderId} className="px-4 py-2 rounded-md text-sm font-medium text-white bg-theme-maroon hover:bg-theme-maroon/90 disabled:opacity-50 disabled:cursor-not-allowed">Add</button>
+                        <PrimaryButton label="Add" size="small" variant="danger" onClick={handleAddManual} disabled={!selectedLenderId} />
                     </div>
                 )}
 

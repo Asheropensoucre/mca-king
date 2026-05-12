@@ -1,6 +1,7 @@
 import React from 'react';
 import type { OwnerInfo } from '../types';
 import { Input } from './ui/Input';
+import { PrimaryButton } from '../src/components/ui/PrimaryButton';
 
 interface OwnersFormProps {
   data: OwnerInfo[];
@@ -36,13 +37,7 @@ export const OwnersForm: React.FC<OwnersFormProps> = ({ data, updateData }) => {
           <div className="flex justify-between items-start mb-4">
             <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Owner #{index + 1}</h3>
             {data.length > 1 && (
-              <button
-                type="button"
-                onClick={() => removeOwner(index)}
-                className="text-theme-red hover:text-theme-red/80 font-medium text-sm"
-              >
-                Remove
-              </button>
+              <PrimaryButton label="Remove" size="small" variant="danger" onClick={() => removeOwner(index)} />
             )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -60,13 +55,7 @@ export const OwnersForm: React.FC<OwnersFormProps> = ({ data, updateData }) => {
         </div>
       ))}
       <div className="flex justify-between items-center mt-6">
-        <button
-          type="button"
-          onClick={addOwner}
-          className="px-4 py-2 border border-dashed border-slate-400 text-slate-600 rounded-md hover:bg-slate-100 hover:border-slate-500 transition-colors text-sm dark:border-slate-500 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:border-slate-400"
-        >
-          + Add Another Owner
-        </button>
+        <PrimaryButton label="+ Add Another Owner" size="small" onClick={addOwner} />
         <div className="text-right">
             <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Total Ownership: <span className={`font-bold ${totalOwnership === 100 ? 'text-theme-teal' : 'text-theme-red'}`}>{totalOwnership}%</span></p>
             {totalOwnership !== 100 && <p className="text-xs text-theme-red">Total ownership must equal 100%.</p>}

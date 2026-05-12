@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { LenderInfo } from '../../../types';
 import { Card } from '../../ui/Card';
+import { PrimaryButton } from '../../../src/components/ui/PrimaryButton';
 import { Input } from '../../ui/Input';
 import { Select } from '../../ui/Select';
 import { Textarea } from '../../ui/Textarea';
@@ -49,8 +50,8 @@ export const EditLenderForm: React.FC<EditLenderFormProps> = ({ initialData, onS
                 </div>
             </div>
             <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-4">
-                <button onClick={onCancel} type="button" className="px-6 py-2 rounded-md text-sm font-medium bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 dark:bg-slate-600 dark:text-slate-200 dark:border-slate-500 dark:hover:bg-slate-500">Cancel</button>
-                <button onClick={() => onSave(data)} type="button" className="px-6 py-2 rounded-md text-sm font-medium text-theme-black bg-theme-yellow hover:bg-theme-yellow/90">Save Changes</button>
+                <PrimaryButton label="Cancel" size="small" variant="danger" onClick={onCancel} />
+                <PrimaryButton label="Save Changes" onClick={() => onSave(data)} />
             </div>
         </Card>
     );

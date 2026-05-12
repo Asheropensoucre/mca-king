@@ -75,6 +75,7 @@ export interface FormData {
   requestedAmount: string;
   salesRepId?: string;
   matchedLenderIds?: string[];
+  updated_at?: string;
 }
 
 export interface LenderInfo {

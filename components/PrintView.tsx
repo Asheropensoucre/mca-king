@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import type { FormData } from '../types';
+import { PrimaryButton } from '../src/components/ui/PrimaryButton';
 
 const PrintSummaryItem: React.FC<{ label: string; value?: string | number | null }> = ({ label, value }) => (
     <div className="py-2 grid grid-cols-3 gap-4 border-b">
@@ -40,8 +41,8 @@ export const PrintView: React.FC<{ formData: FormData; onClose: () => void; }> =
             <main className="mt-8">
                 <div className="mb-8 text-right print:hidden">
                     <p className="text-sm text-gray-500 mb-2">Your application is ready to print or save as PDF.</p>
-                    <button onClick={() => window.print()} className="px-4 py-2 rounded mr-2 bg-theme-yellow text-theme-black font-sans font-semibold">Print / Save as PDF</button>
-                    <button onClick={onClose} className="px-4 py-2 rounded bg-slate-200 text-slate-800 font-sans font-semibold">Close</button>
+                    <PrimaryButton label="Print / Save as PDF" size="small" onClick={() => window.print()} />
+                    <PrimaryButton label="Close" size="small" variant="danger" onClick={onClose} />
                 </div>
                 
                 <section className="mb-8">

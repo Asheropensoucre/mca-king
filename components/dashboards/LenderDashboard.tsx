@@ -4,6 +4,7 @@ import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 import { MerchantDetailView } from './shared/MerchantDetailView';
+import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 import { api } from '../../src/lib/api-client';
 
 interface LenderDashboardProps { 
@@ -73,12 +74,12 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
         return (
              <div className="p-4 sm:p-6 lg:p-8">
                 <div className="max-w-4xl mx-auto">
-                    <button onClick={() => setSelectedDeal(null)} className="mb-4 text-sm font-medium text-theme-teal hover:text-theme-teal/80">&larr; Back to My Deals</button>
+                    <PrimaryButton label="← Back to My Deals" size="small" onClick={() => setSelectedDeal(null)} />
                     <div className="flex justify-between items-center mb-4 gap-3 flex-wrap">
                         <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{selectedDeal.businessInfo.legalName}</h2>
                         <div className="flex gap-2 flex-wrap">
-                            <button onClick={() => setIsRequestingDoc(true)} className="px-4 py-2 rounded-md text-sm font-medium text-white bg-theme-maroon hover:bg-theme-maroon/90">Request Document</button>
-                            <button onClick={() => setIsCreatingOffer(true)} className="px-4 py-2 rounded-md text-sm font-medium text-theme-black bg-theme-yellow hover:bg-theme-yellow/90">Create Offer</button>
+                            <PrimaryButton label="Request Document" variant="danger" onClick={() => setIsRequestingDoc(true)} />
+                            <PrimaryButton label="Create Offer" onClick={() => setIsCreatingOffer(true)} />
                         </div>
                     </div>
                     {message && <p className="mb-4 text-sm text-theme-teal">{message}</p>}
@@ -96,8 +97,8 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
                                     </div>
                                 </div>
                                 <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t flex justify-end space-x-2">
-                                    <button type="button" onClick={() => setIsCreatingOffer(false)} className="px-4 py-2 text-sm rounded-md bg-white border dark:bg-slate-600 dark:border-slate-500 dark:text-slate-200">Cancel</button>
-                                    <button type="submit" className="px-4 py-2 text-sm rounded-md bg-theme-yellow text-black">Send Offer</button>
+                                    <PrimaryButton label="Cancel" size="small" variant="danger" onClick={() => setIsCreatingOffer(false)} />
+                                    <PrimaryButton type="submit" label="Send Offer" onClick={() => undefined} />
                                 </div>
                             </form>
                         </Card>
@@ -114,8 +115,8 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
                                     </div>
                                 </div>
                                 <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t flex justify-end space-x-2">
-                                    <button type="button" onClick={() => setIsRequestingDoc(false)} className="px-4 py-2 text-sm rounded-md bg-white border dark:bg-slate-600 dark:border-slate-500 dark:text-slate-200">Cancel</button>
-                                    <button type="submit" className="px-4 py-2 text-sm rounded-md bg-theme-yellow text-black">Send Request</button>
+                                    <PrimaryButton label="Cancel" size="small" variant="danger" onClick={() => setIsRequestingDoc(false)} />
+                                    <PrimaryButton type="submit" label="Send Request" onClick={() => undefined} />
                                 </div>
                             </form>
                         </Card>
@@ -135,7 +136,7 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
                     </div>
                     <div className="flex items-center gap-3 self-start sm:self-auto">
                         {themeToggle}
-                        <button onClick={onExit} className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-theme-teal hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600">Logout</button>
+                        <PrimaryButton label="Logout" size="small" onClick={onExit} />
                     </div>
                 </div>
                 <Card>
@@ -152,7 +153,7 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">${Number(deal.businessInfo.monthlyRevenue).toLocaleString()}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{deal.businessInfo.industryType}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{deal.status}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onClick={() => setSelectedDeal(deal)} className="text-theme-teal hover:text-theme-teal/80">View Details</button></td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><PrimaryButton label="View Details" size="small" onClick={() => setSelectedDeal(deal)} /></td>
                                         </tr>
                                     )) : (
                                         <tr><td colSpan={6} className="px-6 py-12 text-center text-sm text-slate-500 dark:text-slate-400">No merchants have been assigned to you yet.</td></tr>

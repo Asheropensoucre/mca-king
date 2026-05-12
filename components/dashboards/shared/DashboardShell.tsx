@@ -1,4 +1,5 @@
 import React from 'react';
+import { PrimaryButton } from '../../../src/components/ui/PrimaryButton';
 
 interface DashboardShellSection<T extends string> {
   id: T;
@@ -32,12 +33,15 @@ export const DashboardShell = <T extends string>({
     <div className="min-h-screen bg-slate-50 dark:bg-dark-bg">
       <div className="flex min-h-screen">
         <aside className="hidden lg:flex lg:w-72 lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white lg:dark:border-slate-700 lg:dark:bg-dark-card">
-          <div className="flex items-center gap-3 px-6 py-6 border-b border-slate-200 dark:border-slate-700">
-            <img src="/logo.png" alt="MCA King Logo" className="h-10 w-auto" />
-            <div>
-              <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">{title}</h1>
-              {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-44">{subtitle}</p>}
+          <div className="flex items-center justify-between gap-3 px-6 py-6 border-b border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-3 min-w-0">
+              <img src="/logo.png" alt="MCA King Logo" className="h-10 w-auto" />
+              <div className="min-w-0">
+                <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">{title}</h1>
+                {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-44">{subtitle}</p>}
+              </div>
             </div>
+            {themeToggle}
           </div>
           <nav className="flex-1 p-4 space-y-2" aria-label="Dashboard sections">
             {sections.map(section => (
@@ -56,10 +60,7 @@ export const DashboardShell = <T extends string>({
             ))}
           </nav>
           <div className="space-y-3 p-4 border-t border-slate-200 dark:border-slate-700">
-            {themeToggle && <div className="flex justify-center">{themeToggle}</div>}
-            <button onClick={onExit} className="w-full rounded-lg bg-slate-100 px-4 py-2 text-left text-sm font-semibold text-theme-teal hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600">
-              {exitLabel} &rarr;
-            </button>
+            <PrimaryButton label={`${exitLabel} →`} size="small" fullWidth onClick={onExit} />
           </div>
         </aside>
 
@@ -75,7 +76,7 @@ export const DashboardShell = <T extends string>({
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {themeToggle}
-                <button onClick={onExit} className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-theme-teal hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600">Logout</button>
+                <PrimaryButton label="Logout" size="small" onClick={onExit} />
               </div>
             </div>
             <div className="flex gap-2 overflow-x-auto pb-1">

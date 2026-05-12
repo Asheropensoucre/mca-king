@@ -1,4 +1,5 @@
 import React, { useRef, useLayoutEffect, useState, useCallback } from 'react';
+import { PrimaryButton } from '../src/components/ui/PrimaryButton';
 
 interface SignaturePadProps {
   onSignatureEnd: (signature: string) => void;
@@ -142,13 +143,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSignatureEnd }) =>
         className="w-full touch-none rounded-lg border-2 border-slate-300 bg-white aspect-[3/1] focus:border-theme-yellow focus:ring-2 focus:ring-theme-yellow/50 focus:outline-none dark:border-slate-600"
       />
       <div className="mt-2 text-right">
-        <button
-          type="button"
-          onClick={clearSignature}
-          className="text-sm font-medium text-theme-teal hover:text-theme-teal/80"
-        >
-          Clear Signature
-        </button>
+        <PrimaryButton label="Clear Signature" size="small" variant="danger" onClick={clearSignature} />
       </div>
     </div>
   );

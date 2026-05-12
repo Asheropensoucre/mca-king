@@ -8,7 +8,8 @@ import { StepIndicator } from './components/StepIndicator';
 import { DashboardController } from './components/dashboards/DashboardController';
 import { LenderForm } from './components/LenderForm';
 import { DocumentUploadStep } from './components/DocumentUploadStep';
-import { ThemeToggle, type Theme } from './components/ThemeToggle';
+import { DarkModeToggle } from './src/components/ui/DarkModeToggle';
+import { PrimaryButton } from './src/components/ui/PrimaryButton';
 import { PrintView } from './components/PrintView';
 import { Chatbot } from './components/Chatbot';
 import { DEFAULT_APPLICATION_STATUS } from './components/dashboards/shared/applicationStatus';
@@ -57,6 +58,7 @@ const initialLenderData: LenderInfo = {
     fees: '', trucking: '',
 };
 
+type Theme = 'light' | 'dark';
 type AuthMode = 'login' | 'register';
 type SetupView = 'dashboard' | 'merchant_form' | 'lender_form';
 
@@ -107,6 +109,12 @@ const App: React.FC = () => {
     setSetupView('dashboard');
     setAuthMode('login');
   }, []);
+
+  const toggleTheme = useCallback(() => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  }, []);
+
+  const darkModeToggle = <DarkModeToggle isDark={theme === 'dark'} onToggle={toggleTheme} />;
 
   const updateBusinessInfo = useCallback((data: Partial<BusinessInfo>) => setFormData(prev => ({ ...prev, businessInfo: { ...prev.businessInfo, ...data } })), []);
   const updateOwners = useCallback((owners: OwnerInfo[]) => setFormData(prev => ({ ...prev, owners })), []);
@@ -194,8 +202,8 @@ const App: React.FC = () => {
                 <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-4">{isMerchant ? 'Application Submitted!' : 'Lender Info Submitted!'}</h2>
                 <p className="text-slate-600 dark:text-slate-400 mt-2">Thank you. We have received your {isMerchant ? 'application' : 'information'}.</p>
                 <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center mt-6">
-                    <button onClick={() => { setIsSubmitted(false); setSetupView('dashboard'); }} className="px-6 py-2 rounded-md text-sm font-medium text-theme-black bg-theme-yellow hover:bg-theme-yellow/90">View My Dashboard</button>
-                    {isMerchant && <button onClick={handleDownloadPdf} className="px-6 py-2 rounded-md text-sm font-medium text-theme-black bg-theme-teal hover:bg-theme-teal/90">Download Application PDF</button>}
+                    <PrimaryButton label="View My Dashboard" onClick={() => { setIsSubmitted(false); setSetupView('dashboard'); }} />
+                    {isMerchant && <PrimaryButton label="Download Application PDF" onClick={handleDownloadPdf} variant="funded" />}
                 </div>
             </div>
             <Chatbot context={chatContext} />
@@ -205,10 +213,10 @@ const App: React.FC = () => {
 
   if (setupView === 'merchant_form') {
     return (
-      <div className="min-h-screen flex flex-col justify-center items-center p-8 sm:p-12">
+      <div className="min-h-screen flex flex-col justify-center items-center p-8 pb-36 sm:p-12 sm:pb-36">
         <img src="/logo.png" alt="MCA King Logo" className="mb-8 h-24 w-auto" />
         <div className="w-full max-w-6xl relative">
-          <div className="mb-4 flex justify-end"><ThemeToggle theme={theme} setTheme={setTheme} /></div>
+          <div className="mb-4 flex justify-end">{darkModeToggle}</div>
           <div className="bg-white dark:bg-dark-card rounded-xl shadow-lg grid md:grid-cols-3">
             <div className="p-12 border-r border-slate-200 dark:border-theme-maroon/50 hidden md:block"><StepIndicator steps={STEPS.map(s => s.name)} descriptions={STEPS.map(s => s.description)} currentStep={currentStep} /></div>
             <div className="md:col-span-2 p-12">
@@ -216,13 +224,13 @@ const App: React.FC = () => {
               <form onSubmit={handleMerchantSubmit} noValidate>
                 <div className="mb-8">{renderStepContent()}</div>
                 <div className="mt-8 pt-5 border-t border-slate-200 dark:border-slate-700 flex justify-between">
-                  <button type="button" onClick={() => setCurrentStep(Math.max(0, currentStep - 1))} disabled={currentStep === 0} className="px-6 py-2 rounded-md text-sm font-medium bg-white text-slate-700 border border-slate-300 disabled:opacity-50 dark:bg-slate-600 dark:text-slate-200 dark:border-slate-500">Back</button>
-                  {currentStep < STEPS.length - 1 ? <button type="button" onClick={() => isStepValid && setCurrentStep(currentStep + 1)} disabled={!isStepValid} className="px-6 py-2 rounded-md text-sm font-medium text-theme-black bg-theme-yellow disabled:opacity-50">Next</button> : <button type="submit" className="px-6 py-2 rounded-md text-sm font-medium text-theme-black bg-theme-teal disabled:opacity-50" disabled={formData.documents.length === 0}>Submit Application</button>}
+                  <PrimaryButton label="Back" size="small" variant="danger" onClick={() => setCurrentStep(Math.max(0, currentStep - 1))} disabled={currentStep === 0} />
+                  {currentStep < STEPS.length - 1 ? <PrimaryButton label="Next" onClick={() => isStepValid && setCurrentStep(currentStep + 1)} disabled={!isStepValid} /> : <PrimaryButton type="submit" label="Submit Application" disabled={formData.documents.length === 0} variant="funded" />}
                 </div>
               </form>
             </div>
           </div>
-          <div className="text-center mt-4"><button onClick={() => setSetupView('dashboard')} className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-theme-teal">&larr; Back to Dashboard</button></div>
+          <div className="mt-6 flex justify-center"><PrimaryButton label="Back to Dashboard" size="small" onClick={() => setSetupView('dashboard')} /></div>
         </div>
         <Chatbot context={chatContext} />
       </div>
@@ -230,19 +238,20 @@ const App: React.FC = () => {
   }
 
   if (setupView === 'lender_form') {
-    return <><LenderForm data={lenderData} updateData={updateLenderInfo} onSubmit={handleLenderSubmit} onExit={() => setSetupView('dashboard')} headerAction={<ThemeToggle theme={theme} setTheme={setTheme} />} /><Chatbot context={chatContext} /></>;
+    return <><LenderForm data={lenderData} updateData={updateLenderInfo} onSubmit={handleLenderSubmit} onExit={() => setSetupView('dashboard')} headerAction={darkModeToggle} /><Chatbot context={chatContext} /></>;
   }
 
   return (
     <>
-      {(currentUser.role === 'merchant' || currentUser.role === 'lender') && (
-        <div className="fixed bottom-4 right-4 z-50">
-          <button onClick={() => setSetupView(currentUser.role === 'merchant' ? 'merchant_form' : 'lender_form')} className="rounded-full bg-theme-yellow px-5 py-3 text-sm font-bold text-theme-black shadow-lg hover:bg-theme-yellow/90">
-            {currentUser.role === 'merchant' ? 'New Application' : 'Edit Lender Profile'}
-          </button>
+      {currentUser.role === 'lender' && (
+        <div className="fixed bottom-24 right-4 z-40">
+          <PrimaryButton
+            label="Edit Profile"
+            onClick={() => setSetupView('lender_form')}
+          />
         </div>
       )}
-      <DashboardController currentUser={currentUser} onLogout={handleLogout} themeToggle={<ThemeToggle theme={theme} setTheme={setTheme} />} onPrint={setPrintingSubmission} />
+      <DashboardController currentUser={currentUser} onLogout={handleLogout} onStartMerchantApplication={() => setSetupView('merchant_form')} themeToggle={darkModeToggle} onPrint={setPrintingSubmission} />
       <Chatbot context={chatContext} />
     </>
   );

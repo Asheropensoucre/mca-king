@@ -5,6 +5,7 @@ import { MerchantDetailView } from './shared/MerchantDetailView';
 import { DashboardShell } from './shared/DashboardShell';
 import { KanbanPipelineView } from './shared/KanbanPipelineView';
 import { LeadManager } from './LeadManager';
+import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 
 interface SalesRepDashboardProps { 
     currentUser: AuthUser;
@@ -42,16 +43,11 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
         >
             {selectedDealCurrent ? (
                 <div className="max-w-4xl mx-auto">
-                    <button onClick={() => setSelectedDeal(null)} className="mb-4 text-sm font-medium text-theme-teal hover:text-theme-teal/80">&larr; Back to {activeSection === 'pipeline' ? 'Kamba Pipeline' : 'My Deals'}</button>
+                    <PrimaryButton label={`← Back to ${activeSection === 'pipeline' ? 'Kamba Pipeline' : 'My Deals'}`} size="small" onClick={() => setSelectedDeal(null)} />
                     <div className="flex justify-between items-center mb-4 gap-3">
                         <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{selectedDealCurrent.businessInfo.legalName}</h2>
                         {onPrint && (
-                            <button
-                                onClick={() => onPrint(selectedDealCurrent)}
-                                className="px-4 py-2 rounded-md text-sm font-medium text-theme-black bg-theme-yellow hover:bg-theme-yellow/90"
-                            >
-                                Download PDF
-                            </button>
+                            <PrimaryButton label="Download PDF" size="small" onClick={() => onPrint(selectedDealCurrent)} />
                         )}
                     </div>
                     <MerchantDetailView item={selectedDealCurrent} lenders={lenders} canManageMatches={true} />
@@ -84,7 +80,7 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
                                                         {primaryOwner?.email && <a href={`mailto:${primaryOwner.email}`} className="text-theme-teal hover:text-theme-teal/80 block mt-1">Email</a>}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{deal.status}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onClick={() => setSelectedDeal(deal)} className="text-theme-teal hover:text-theme-teal/80">View Details</button></td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><PrimaryButton label="View Details" size="small" onClick={() => setSelectedDeal(deal)} /></td>
                                                 </tr>
                                             );
                                         }) : (

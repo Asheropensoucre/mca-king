@@ -5,15 +5,17 @@ import { LenderDashboard } from './LenderDashboard';
 import { MerchantDashboard } from './MerchantDashboard';
 import { SalesRepDashboard } from './SalesRepDashboard';
 import { api } from '../../src/lib/api-client';
+import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 
 interface DashboardControllerProps {
     currentUser: AuthUser;
     onLogout: () => void;
+    onStartMerchantApplication?: () => void;
     themeToggle?: React.ReactNode;
     onPrint?: (submission: FormData) => void;
 }
 
-export const DashboardController: React.FC<DashboardControllerProps> = ({ currentUser, onLogout, themeToggle, onPrint }) => {
+export const DashboardController: React.FC<DashboardControllerProps> = ({ currentUser, onLogout, onStartMerchantApplication, themeToggle, onPrint }) => {
     const [merchantSubmissions, setMerchantSubmissions] = useState<FormData[]>([]);
     const [lenderSubmissions, setLenderSubmissions] = useState<LenderInfo[]>([]);
     const [salesReps, setSalesReps] = useState<SalesRepresentative[]>([]);
@@ -78,7 +80,7 @@ export const DashboardController: React.FC<DashboardControllerProps> = ({ curren
     }
 
     if (error) {
-        return <div className="p-8 text-center"><p className="text-red-600 dark:text-red-300">{error}</p><button onClick={onLogout} className="mt-4 px-6 py-2 rounded-md text-sm font-medium text-theme-black bg-theme-yellow">Logout</button></div>;
+        return <div className="p-8 text-center"><p className="text-red-600 dark:text-red-300">{error}</p><div className="mt-4 flex justify-center"><PrimaryButton label="Logout" onClick={onLogout} /></div></div>;
     }
 
     if (currentUser.role === 'admin') {
@@ -99,8 +101,25 @@ export const DashboardController: React.FC<DashboardControllerProps> = ({ curren
     if (currentUser.role === 'merchant') {
         const submission = merchantSubmissions[0];
         if (submission) {
-            return <MerchantDashboard currentUser={currentUser} submission={submission} onExit={onLogout} themeToggle={themeToggle} onUpdateOffer={(offerId, status) => handleUpdateOffer(submission.id, offerId, status)} />;
+            return <MerchantDashboard currentUser={currentUser} submission={submission} onExit={onLogout} themeToggle={themeToggle} onUpdateMerchant={handleUpdateMerchant} onUpdateOffer={(offerId, status) => handleUpdateOffer(submission.id, offerId, status)} />;
         }
+
+        return (
+            <div className="p-4 sm:p-6 lg:p-8">
+                <div className="mx-auto max-w-3xl text-center">
+                    <div className="mb-6 flex justify-end">{themeToggle}</div>
+                    <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-lg dark:border-slate-700 dark:bg-dark-card">
+                        <img src="/logo.png" alt="MCA King Logo" className="mx-auto mb-6 h-20 w-auto" />
+                        <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Start Your Application</h1>
+                        <p className="mt-3 text-slate-500 dark:text-slate-400">You do not have an active application yet. Submit one application, then it will stay locked while it is under review.</p>
+                        <div className="mt-8 flex justify-center">
+                            <PrimaryButton label="Start Application" onClick={() => onStartMerchantApplication?.()} />
+                        </div>
+                        <div className="mt-6 flex justify-center"><PrimaryButton label="Logout" size="small" onClick={onLogout} /></div>
+                    </div>
+                </div>
+            </div>
+        );
     }
     
     if (currentUser.role === 'lender') {
@@ -126,7 +145,7 @@ export const DashboardController: React.FC<DashboardControllerProps> = ({ curren
             <div className="max-w-7xl mx-auto text-center">
                  <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Dashboard Setup Needed</h1>
                  <p className="text-slate-500 dark:text-slate-400 mt-4">Your account is active, but there is not yet a matching dashboard profile.</p>
-                 <button onClick={onLogout} className="mt-6 px-6 py-2 rounded-md text-sm font-medium text-theme-black bg-theme-yellow hover:bg-theme-yellow/90">Logout</button>
+                 <div className="mt-6 flex justify-center"><PrimaryButton label="Logout" onClick={onLogout} /></div>
             </div>
         </div>
     );

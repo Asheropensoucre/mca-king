@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import type { AuthUser, DocumentInfo, FormData, Stipulation } from '../../types';
+import React, { useEffect, useMemo, useState } from 'react';
+import type { ApplicationStatus, AuthUser, DocumentInfo, FormData, Stipulation } from '../../types';
 import { Card } from '../ui/Card';
 import { DocumentUpload } from '../DocumentUpload';
-import { APPLICATION_STATUS_CONFIG, getStatusIndex, getStatusThemeClasses } from './shared/applicationStatus';
+import { APPLICATION_STATUS_CONFIG, DEFAULT_APPLICATION_STATUS, getStatusIndex, getStatusThemeClasses } from './shared/applicationStatus';
 import { DocumentsPanel } from './shared/DocumentsPanel';
+import { EditMerchantForm } from './shared/EditMerchantForm';
+import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 import { api } from '../../src/lib/api-client';
 
 interface MerchantDashboardProps { 
@@ -11,13 +13,87 @@ interface MerchantDashboardProps {
     submission: FormData, 
     onExit: () => void,
     themeToggle?: React.ReactNode;
+    onUpdateMerchant: (updatedMerchant: FormData) => FormData;
     onUpdateOffer: (offerId: string, status: 'Accepted' | 'Rejected') => void 
 }
 
-export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUser, submission, onExit, themeToggle, onUpdateOffer }) => {
+type MerchantFormState = 'not_submitted' | 'submitted' | 'grace_pending' | 'can_reapply';
+
+const TERMINAL_STATUSES: ApplicationStatus[] = [
+    'FUNDED',
+    'all lenders decline',
+    'Declined by funder',
+];
+
+function getMerchantFormState(merchant: FormData): MerchantFormState {
+    if (!merchant || !merchant.status) return 'not_submitted';
+
+    const isTerminal = TERMINAL_STATUSES.includes(merchant.status);
+    if (!isTerminal) return 'submitted';
+
+    const updatedAt = new Date(merchant.updated_at ?? new Date().toISOString());
+    const fiveMonthsLater = new Date(updatedAt);
+    fiveMonthsLater.setMonth(fiveMonthsLater.getMonth() + 5);
+    const now = new Date();
+
+    if (now >= fiveMonthsLater) return 'can_reapply';
+    return 'grace_pending';
+}
+
+function getMonthsUntilReapply(merchant: FormData): number {
+    const updatedAt = new Date(merchant.updated_at ?? new Date().toISOString());
+    const fiveMonthsLater = new Date(updatedAt);
+    fiveMonthsLater.setMonth(fiveMonthsLater.getMonth() + 5);
+    const diffMs = fiveMonthsLater.getTime() - Date.now();
+    if (diffMs <= 0) return 0;
+    return Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24 * 30)));
+}
+
+const ReadOnlyField: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+    <label className="block">
+        <span className="block text-sm font-semibold text-slate-500 dark:text-slate-400">{label}</span>
+        <input
+            value={value}
+            readOnly
+            className="mt-1 block w-full cursor-not-allowed rounded-md border-0 border-b-2 border-slate-200 bg-slate-100 px-4 py-3 text-base text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-400"
+        />
+    </label>
+);
+
+const LockedApplicationView: React.FC<{ merchant: FormData }> = ({ merchant }) => (
+    <div className="space-y-6 opacity-80">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <ReadOnlyField label="Business Legal Name" value={merchant.businessInfo.legalName} />
+            <ReadOnlyField label="DBA Name" value={merchant.businessInfo.dbaName} />
+            <ReadOnlyField label="Business Address" value={merchant.businessInfo.address} />
+            <ReadOnlyField label="Business Phone" value={merchant.businessInfo.phone} />
+            <ReadOnlyField label="Requested Funding Amount" value={merchant.requestedAmount ? `$${Number(merchant.requestedAmount).toLocaleString()}` : ''} />
+            <ReadOnlyField label="Average Monthly Revenue" value={merchant.businessInfo.monthlyRevenue ? `$${Number(merchant.businessInfo.monthlyRevenue).toLocaleString()}` : ''} />
+            <ReadOnlyField label="Industry" value={merchant.businessInfo.industryType} />
+            <ReadOnlyField label="Entity Type" value={merchant.businessInfo.entityType} />
+        </div>
+        {merchant.owners.map((owner, index) => (
+            <div key={owner.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/40">
+                <h4 className="mb-4 font-semibold text-slate-700 dark:text-slate-300">Owner #{index + 1}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <ReadOnlyField label="Name" value={owner.name} />
+                    <ReadOnlyField label="Title" value={owner.title} />
+                    <ReadOnlyField label="Email" value={owner.email} />
+                    <ReadOnlyField label="Ownership" value={owner.ownership ? `${owner.ownership}%` : ''} />
+                </div>
+            </div>
+        ))}
+    </div>
+);
+
+export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUser, submission, onExit, themeToggle, onUpdateMerchant, onUpdateOffer }) => {
     const currentStatusIndex = getStatusIndex(submission.status);
     const [stipulations, setStipulations] = useState<Stipulation[]>([]);
     const [refreshDocuments, setRefreshDocuments] = useState(0);
+    const [isEditingApplication, setIsEditingApplication] = useState(false);
+    const [applicationMessage, setApplicationMessage] = useState<string | null>(null);
+    const formState = useMemo(() => getMerchantFormState(submission), [submission]);
+    const monthsUntilReapply = useMemo(() => getMonthsUntilReapply(submission), [submission]);
 
     const loadStipulations = async () => {
         setStipulations(await api.stipulations.list(submission.id));
@@ -30,6 +106,57 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
         setRefreshDocuments(value => value + 1);
     };
 
+    const handleSaveApplication = (updated: FormData) => {
+        const saved = onUpdateMerchant({ ...updated, status: submission.status, offers: submission.offers, matchedLenderIds: submission.matchedLenderIds });
+        setIsEditingApplication(false);
+        setApplicationMessage('Changes saved. Your application remains under review.');
+        return saved;
+    };
+
+    const handleApplyAgain = () => {
+        const resetApplication: FormData = {
+            ...submission,
+            status: DEFAULT_APPLICATION_STATUS,
+            offers: [],
+            matchedLenderIds: [],
+            updated_at: new Date().toISOString(),
+        };
+        onUpdateMerchant(resetApplication);
+        setApplicationMessage('Your application has been reset. You can now update it for review.');
+        setIsEditingApplication(true);
+    };
+
+    const renderApplicationSection = () => {
+        if (isEditingApplication) {
+            return (
+                <EditMerchantForm
+                    initialData={submission}
+                    onSave={handleSaveApplication}
+                    onCancel={() => setIsEditingApplication(false)}
+                />
+            );
+        }
+
+        return (
+            <Card className="mb-6">
+                <div className="p-6">
+                    <div className="mb-6 text-center">
+                        <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-200">Application Details</h2>
+                        {formState === 'submitted' && <p className="mt-2 text-sm text-theme-teal">Your application has been submitted and is under review.</p>}
+                        {formState === 'grace_pending' && <p className="mt-2 text-sm text-amber-600 dark:text-amber-300">You may reapply in {monthsUntilReapply} month{monthsUntilReapply === 1 ? '' : 's'}.</p>}
+                        {formState === 'can_reapply' && <p className="mt-2 text-sm text-theme-teal">You are eligible to apply again.</p>}
+                        {applicationMessage && <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{applicationMessage}</p>}
+                    </div>
+                    <LockedApplicationView merchant={submission} />
+                    <div className="mt-8 flex justify-center">
+                        {formState === 'submitted' && <PrimaryButton label="Edit Application" onClick={() => setIsEditingApplication(true)} />}
+                        {formState === 'can_reapply' && <PrimaryButton label="Apply Again" onClick={handleApplyAgain} variant="funded" />}
+                    </div>
+                </div>
+            </Card>
+        );
+    };
+
     return (
         <div className="p-4 sm:p-6 lg:p-8">
             <div className="max-w-5xl mx-auto">
@@ -40,7 +167,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
                     </div>
                     <div className="flex items-center gap-3 self-start sm:self-auto">
                         {themeToggle}
-                        <button onClick={onExit} className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-theme-teal hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600">Logout</button>
+                        <PrimaryButton label="Logout" size="small" onClick={onExit} />
                     </div>
                 </div>
 
@@ -72,6 +199,8 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
                         </div>
                     </div>
                 </Card>
+
+                {renderApplicationSection()}
 
                 <div className="mb-6">
                     <DocumentsPanel key={refreshDocuments} merchantId={submission.id} canUpload={true} title="My Documents" />
@@ -115,8 +244,8 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
                                         <div className="mt-4 sm:mt-0 flex space-x-2">
                                             {offer.status === 'Pending' ? (
                                                 <>
-                                                    <button onClick={() => onUpdateOffer(offer.id || offer.lenderId, 'Rejected')} className="px-3 py-1.5 text-xs font-medium rounded-md bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 dark:bg-slate-600 dark:text-slate-200 dark:border-slate-500 dark:hover:bg-slate-500">Reject</button>
-                                                    <button onClick={() => onUpdateOffer(offer.id || offer.lenderId, 'Accepted')} className="px-3 py-1.5 text-xs font-medium rounded-md text-theme-black bg-theme-teal hover:bg-theme-teal/90">Accept</button>
+                                                    <PrimaryButton label="Reject" size="small" variant="danger" onClick={() => onUpdateOffer(offer.id || offer.lenderId, 'Rejected')} />
+                                                    <PrimaryButton label="Accept" size="small" variant="funded" onClick={() => onUpdateOffer(offer.id || offer.lenderId, 'Accepted')} />
                                                 </>
                                             ) : (
                                                 <span className={`px-3 py-1.5 text-xs font-medium rounded-full ${offer.status === 'Accepted' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200'}`}>{offer.status}</span>

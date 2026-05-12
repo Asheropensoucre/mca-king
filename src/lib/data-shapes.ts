@@ -110,6 +110,7 @@ export function rowToMerchant(row: MerchantRow): FormData {
       id: row.id,
       status: row.status,
       salesRepId: row.assigned_rep_id ?? base.salesRepId,
+      updated_at: row.updated_at,
     }
   }
   return {
@@ -134,6 +135,7 @@ export function rowToMerchant(row: MerchantRow): FormData {
     requestedAmount: row.requested_amount ? String(row.requested_amount) : '',
     salesRepId: row.assigned_rep_id ?? undefined,
     matchedLenderIds: [],
+    updated_at: row.updated_at,
   }
 }
 

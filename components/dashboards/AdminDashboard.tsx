@@ -9,6 +9,7 @@ import { DashboardShell } from './shared/DashboardShell';
 import { KanbanPipelineView } from './shared/KanbanPipelineView';
 import { APPLICATION_STATUSES } from './shared/applicationStatus';
 import { LeadManager } from './LeadManager';
+import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 
 interface AdminDashboardProps { 
     currentUser: AuthUser;
@@ -89,13 +90,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
             <>
                 <div className="max-w-5xl mx-auto">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
-                        <button onClick={() => setSelectedItem(null)} className="text-sm font-medium text-theme-teal hover:text-theme-teal/80 text-left">&larr; Back to {activeSection === 'pipeline' ? 'Kamba Pipeline' : 'Directory'}</button>
+                        <PrimaryButton label={`← Back to ${activeSection === 'pipeline' ? 'Kamba Pipeline' : 'Directory'}`} size="small" onClick={() => setSelectedItem(null)} />
                         {!isEditing && (
                             <div className="flex items-center gap-2 flex-wrap">
                                 {isMerchant && onPrint && (
-                                    <button onClick={() => onPrint(selectedItem as FormData)} className="px-4 py-2 rounded-md text-sm font-medium text-theme-black bg-theme-yellow hover:bg-theme-yellow/90">Download PDF</button>
+                                    <PrimaryButton label="Download PDF" size="small" onClick={() => onPrint(selectedItem as FormData)} />
                                 )}
-                                <button onClick={() => setIsEditing(true)} className="px-4 py-2 rounded-md text-sm font-medium text-slate-700 bg-slate-200 hover:bg-slate-300 dark:text-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600">Edit</button>
+                                <PrimaryButton label="Edit" size="small" onClick={() => setIsEditing(true)} />
                             </div>
                         )}
                     </div>
@@ -145,7 +146,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                                         {APPLICATION_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onClick={() => handleSelectItem(sub)} className="text-theme-teal hover:text-theme-teal/80">View Details</button></td>
+                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><PrimaryButton label="View Details" size="small" onClick={() => handleSelectItem(sub)} /></td>
                             </tr>
                         )) : (
                             <tr><td colSpan={5} className="px-6 py-12 text-center text-sm text-slate-500 dark:text-slate-400">No merchant submissions yet.</td></tr>
@@ -180,8 +181,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                         </div>
                     </div>
                     <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t flex justify-end space-x-2">
-                        <button type="button" onClick={() => setIsCreatingRep(false)} className="px-4 py-2 text-sm rounded-md bg-white border dark:bg-slate-600 dark:border-slate-500 dark:text-slate-200">Cancel</button>
-                        <button type="submit" className="px-4 py-2 text-sm rounded-md bg-theme-yellow text-black font-semibold">Create Sales Rep</button>
+                        <PrimaryButton label="Cancel" size="small" variant="danger" onClick={() => setIsCreatingRep(false)} />
+                        <PrimaryButton type="submit" label="Create Sales Rep" size="small" />
                     </div>
                 </form>
             </Card>
@@ -199,7 +200,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-100">{sub.lenderName}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{sub.email}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{sub.minRevenue}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onClick={() => handleSelectItem(sub)} className="text-theme-teal hover:text-theme-teal/80">View Details</button></td>
+                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><PrimaryButton label="View Details" size="small" onClick={() => handleSelectItem(sub)} /></td>
                             </tr>
                         )) : (
                             <tr><td colSpan={4} className="px-6 py-12 text-center text-sm text-slate-500 dark:text-slate-400">No lender submissions yet.</td></tr>
@@ -230,7 +231,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                 <div className={activeSection === 'pipeline' ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}>
                     <div className="mb-4 flex justify-between items-center gap-3">
                         <p className="text-sm text-slate-500 dark:text-slate-400">Signed in as {currentUser.full_name ?? currentUser.name ?? currentUser.email}</p>
-                        <button onClick={() => setIsCreatingRep(true)} className="px-4 py-2 rounded-md text-sm font-semibold text-theme-black bg-theme-yellow hover:bg-theme-yellow/90">Create Sales Rep</button>
+                        <PrimaryButton label="Create Sales Rep" size="small" onClick={() => setIsCreatingRep(true)} />
                     </div>
                     {activeSection === 'leads' && <LeadManager isAdmin={true} salesReps={salesReps} />}
                     {activeSection === 'merchants' && renderMerchants()}

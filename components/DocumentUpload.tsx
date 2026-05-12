@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import type { DocType, DocumentInfo } from '../types';
 import { api } from '../src/lib/api-client';
+import { PrimaryButton } from '../src/components/ui/PrimaryButton';
 
 interface DocumentUploadProps {
     onDocumentsChange: (documents: DocumentInfo[]) => void;
@@ -87,7 +88,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onDocumentsChang
                                 </div>
                                 <div className="flex items-center">
                                     <p className="text-sm text-slate-500 dark:text-slate-400 mr-4">{formatBytes(file.size)}</p>
-                                    <button type="button" onClick={() => removeFile(index)} className="text-theme-red hover:text-theme-red/80 text-sm font-medium">Remove</button>
+                                    <PrimaryButton label="Remove" size="small" variant="danger" onClick={() => removeFile(index)} />
                                 </div>
                             </li>
                         ))}

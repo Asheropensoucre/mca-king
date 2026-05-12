@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI } from '@google/genai';
-import { ChatBubbleIcon } from './icons';
+import { PrimaryButton } from '../src/components/ui/PrimaryButton';
 
 interface ChatbotProps {
     context: string;
@@ -118,21 +118,15 @@ export const Chatbot: React.FC<ChatbotProps> = ({ context }) => {
                             className="flex-1 block w-full rounded-md border-0 py-2.5 px-4 text-slate-800 bg-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-theme-yellow dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-theme-yellow"
                             aria-label="Chat message"
                         />
-                        <button type="submit" disabled={isLoading} className="p-2.5 rounded-full bg-theme-yellow text-theme-black hover:bg-theme-yellow/90 disabled:bg-theme-yellow/50 disabled:cursor-not-allowed transition-colors">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h14M12 5l7 7-7 7"></path></svg>
-                        </button>
+                        <PrimaryButton type="submit" label="Send" size="small" disabled={isLoading} />
                     </form>
                 </div>
             </div>
 
             {/* FAB */}
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="fixed bottom-6 right-4 sm:right-8 bg-theme-yellow hover:bg-theme-yellow/90 text-theme-black p-3 rounded-full shadow-lg transition-transform hover:scale-110"
-                aria-label="Open AI assistant"
-            >
-                <ChatBubbleIcon />
-            </button>
+            <div className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2">
+                <PrimaryButton label={isOpen ? 'Close AI' : 'Ask AI'} onClick={() => setIsOpen(!isOpen)} size="large" />
+            </div>
         </>
     );
 };
