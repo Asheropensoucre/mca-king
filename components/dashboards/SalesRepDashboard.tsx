@@ -6,6 +6,7 @@ import { DashboardShell } from './shared/DashboardShell';
 import { KanbanPipelineView } from './shared/KanbanPipelineView';
 import { LeadManager } from './LeadManager';
 import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
+import { Chatbot } from '../Chatbot';
 
 interface SalesRepDashboardProps { 
     currentUser: AuthUser;
@@ -28,6 +29,7 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
     const selectedDealCurrent = selectedDeal ? deals.find(deal => deal.id === selectedDeal.id) || selectedDeal : null;
 
     return (
+        <>
         <DashboardShell<SalesRepSection>
             title="Sales Rep Dashboard"
             subtitle={`Welcome, ${rep?.name ?? currentUser.full_name ?? currentUser.name ?? currentUser.email}`}
@@ -97,5 +99,15 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
                 </div>
             )}
         </DashboardShell>
+        <Chatbot
+            currentUser={currentUser}
+            currentPage="Sales Rep Dashboard"
+            contextData={{
+                activeSection,
+                assignedDealCount: deals.length,
+                selectedDeal: selectedDealCurrent ? { id: selectedDealCurrent.id, businessName: selectedDealCurrent.businessInfo.legalName, status: selectedDealCurrent.status } : null,
+            }}
+        />
+        </>
     );
 };

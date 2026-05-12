@@ -130,13 +130,6 @@ const App: React.FC = () => {
     return true;
   }, [currentStep, formData]);
 
-  const chatContext = useMemo(() => {
-    if (!currentUser) return 'The user is on the authentication screen.';
-    if (setupView === 'merchant_form') return `The user is a merchant filling out an application and is currently on the "${STEPS[currentStep].name}" step.`;
-    if (setupView === 'lender_form') return 'The user is a lender filling out their criteria form.';
-    return `The user is viewing the ${currentUser.role} dashboard.`;
-  }, [currentUser, setupView, currentStep]);
-
   const renderStepContent = () => {
     switch (currentStep) {
       case 0: return <BusinessInfoForm data={formData.businessInfo} updateData={updateBusinessInfo} requestedAmount={formData.requestedAmount} updateParentData={updateFormData} />;
@@ -207,7 +200,7 @@ const App: React.FC = () => {
                     {isMerchant && <PrimaryButton label="Download Application PDF" onClick={handleDownloadPdf} variant="funded" />}
                 </div>
             </div>
-            <Chatbot context={chatContext} />
+            <Chatbot currentUser={currentUser} currentPage={isMerchant ? 'Application Submitted' : 'Lender Profile Submitted'} contextData={{ submissionType: isMerchant ? 'merchant_application' : 'lender_profile', currentSubmissionId }} />
         </div>
     );
   }
@@ -233,13 +226,13 @@ const App: React.FC = () => {
           </div>
           <div className="mt-6 flex justify-center"><PrimaryButton label="Back to Dashboard" size="small" onClick={() => setSetupView('dashboard')} /></div>
         </div>
-        <Chatbot context={chatContext} />
+        <Chatbot currentUser={currentUser} currentPage="Application Form" contextData={{ currentStep: STEPS[currentStep].name, stepNumber: currentStep + 1, totalSteps: STEPS.length, requestedAmount: formData.requestedAmount, documentsUploaded: formData.documents.length }} />
       </div>
     );
   }
 
   if (setupView === 'lender_form') {
-    return <><LenderForm data={lenderData} updateData={updateLenderInfo} onSubmit={handleLenderSubmit} onExit={() => setSetupView('dashboard')} headerAction={darkModeToggle} /><Chatbot context={chatContext} /></>;
+    return <><LenderForm data={lenderData} updateData={updateLenderInfo} onSubmit={handleLenderSubmit} onExit={() => setSetupView('dashboard')} headerAction={darkModeToggle} /><Chatbot currentUser={currentUser} currentPage="Lender Criteria Form" contextData={{ lenderName: lenderData.lenderName, minRevenue: lenderData.minRevenue, maxFundingAmount: lenderData.maxFundingAmount, minCreditScore: lenderData.minCreditScore }} /></>;
   }
 
   return (
@@ -253,7 +246,6 @@ const App: React.FC = () => {
         </div>
       )}
       <DashboardController currentUser={currentUser} onLogout={handleLogout} onStartMerchantApplication={() => setSetupView('merchant_form')} themeToggle={darkModeToggle} onPrint={setPrintingSubmission} />
-      <Chatbot context={chatContext} />
     </>
   );
 };

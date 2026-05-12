@@ -10,6 +10,7 @@ import { KanbanPipelineView } from './shared/KanbanPipelineView';
 import { APPLICATION_STATUSES } from './shared/applicationStatus';
 import { LeadManager } from './LeadManager';
 import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
+import { Chatbot } from '../Chatbot';
 
 interface AdminDashboardProps { 
     currentUser: AuthUser;
@@ -248,6 +249,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
             )}
         </DashboardShell>
         {isCreatingRep && renderCreateSalesRepModal()}
+        <Chatbot
+            currentUser={currentUser}
+            currentPage="Admin Dashboard"
+            contextData={{
+                activeSection,
+                merchantCount: merchants.length,
+                lenderCount: lenders.length,
+                salesRepCount: salesReps.length,
+                selectedItemType: selectedItem ? ('businessInfo' in selectedItem ? 'merchant' : 'lender') : null,
+            }}
+        />
         </>
     );
 };

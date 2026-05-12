@@ -7,6 +7,7 @@ import { DocumentsPanel } from './shared/DocumentsPanel';
 import { EditMerchantForm } from './shared/EditMerchantForm';
 import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 import { api } from '../../src/lib/api-client';
+import { Chatbot } from '../Chatbot';
 
 interface MerchantDashboardProps { 
     currentUser: AuthUser;
@@ -158,6 +159,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
     };
 
     return (
+        <>
         <div className="p-4 sm:p-6 lg:p-8">
             <div className="max-w-5xl mx-auto">
                 <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-6">
@@ -259,5 +261,19 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
                 </Card>
             </div>
         </div>
+        <Chatbot
+            currentUser={currentUser}
+            currentPage="Merchant Dashboard"
+            contextData={{
+                merchantStatus: submission.status,
+                currentStep: currentStatusIndex + 1,
+                totalSteps: APPLICATION_STATUS_CONFIG.length,
+                offers: submission.offers ?? [],
+                openStipulations: stipulations.filter(stip => !stip.is_fulfilled),
+                formState,
+                monthsUntilReapply,
+            }}
+        />
+        </>
     );
 };

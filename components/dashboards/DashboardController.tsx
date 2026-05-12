@@ -7,6 +7,7 @@ import { SalesRepDashboard } from './SalesRepDashboard';
 import { api } from '../../src/lib/api-client';
 import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 import { MCAKingLoader } from '../../src/components/ui/MCAKingLoader';
+import { Chatbot } from '../Chatbot';
 
 interface DashboardControllerProps {
     currentUser: AuthUser;
@@ -106,6 +107,7 @@ export const DashboardController: React.FC<DashboardControllerProps> = ({ curren
         }
 
         return (
+            <>
             <div className="p-4 sm:p-6 lg:p-8">
                 <div className="mx-auto max-w-3xl text-center">
                     <div className="mb-6 flex justify-end">{themeToggle}</div>
@@ -120,6 +122,8 @@ export const DashboardController: React.FC<DashboardControllerProps> = ({ curren
                     </div>
                 </div>
             </div>
+            <Chatbot currentUser={currentUser} currentPage="Merchant Dashboard" contextData={{ merchantStatus: 'not_submitted', hasApplication: false }} />
+            </>
         );
     }
     
@@ -142,6 +146,7 @@ export const DashboardController: React.FC<DashboardControllerProps> = ({ curren
     }
 
     return (
+         <>
          <div className="p-4 sm:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto text-center">
                  <h1 className="text-3xl font-black text-theme-maroon dark:text-theme-yellow">Dashboard Setup Needed</h1>
@@ -149,5 +154,7 @@ export const DashboardController: React.FC<DashboardControllerProps> = ({ curren
                  <div className="mt-6 flex justify-center"><PrimaryButton label="Logout" onClick={onLogout} /></div>
             </div>
         </div>
+        <Chatbot currentUser={currentUser} currentPage="Dashboard Setup Needed" contextData={{ role: currentUser.role, setupNeeded: true }} />
+        </>
     );
 };

@@ -6,6 +6,7 @@ import { Textarea } from '../ui/Textarea';
 import { MerchantDetailView } from './shared/MerchantDetailView';
 import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 import { api } from '../../src/lib/api-client';
+import { Chatbot } from '../Chatbot';
 
 interface LenderDashboardProps { 
     currentUser: AuthUser;
@@ -72,6 +73,7 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
 
     if (selectedDeal) {
         return (
+             <>
              <div className="p-4 sm:p-6 lg:p-8">
                 <div className="max-w-4xl mx-auto">
                     <PrimaryButton label="← Back to My Deals" size="small" onClick={() => setSelectedDeal(null)} />
@@ -123,10 +125,20 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
                     </div>
                 )}
             </div>
+            <Chatbot
+                currentUser={currentUser}
+                currentPage="Lender Dashboard"
+                contextData={{
+                    lenderProfile: { id: profile.id, lenderName: profile.lenderName, minRevenue: profile.minRevenue, maxFundingAmount: profile.maxFundingAmount, minCreditScore: profile.minCreditScore },
+                    selectedDeal: selectedDeal ? { id: selectedDeal.id, businessName: selectedDeal.businessInfo.legalName, status: selectedDeal.status, offers: selectedDeal.offers ?? [] } : null,
+                }}
+            />
+            </>
         );
     }
 
     return (
+        <>
         <div className="p-4 sm:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
                  <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-6">
@@ -165,5 +177,15 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
                 </Card>
             </div>
         </div>
+        <Chatbot
+            currentUser={currentUser}
+            currentPage="Lender Dashboard"
+            contextData={{
+                lenderProfile: { id: profile.id, lenderName: profile.lenderName, minRevenue: profile.minRevenue, maxFundingAmount: profile.maxFundingAmount, minCreditScore: profile.minCreditScore },
+                assignedMerchantCount: assignedMerchants.length,
+                assignedMerchants: assignedMerchants.map(merchant => ({ id: merchant.id, businessName: merchant.businessInfo.legalName, status: merchant.status })),
+            }}
+        />
+        </>
     );
 };
