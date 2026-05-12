@@ -3,6 +3,17 @@ import { supabaseAdmin } from './supabase-server'
 
 export const SESSION_COOKIE_NAME = 'mca_session'
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7
+const isProduction = process.env.NODE_ENV === 'production'
+
+function sessionCookieAttributes(maxAge: number): string {
+  return [
+    'Path=/',
+    `Max-Age=${maxAge}`,
+    'HttpOnly',
+    'SameSite=Lax',
+    ...(isProduction ? ['Secure'] : []),
+  ].join('; ')
+}
 
 type UserRow = {
   id: string
@@ -25,11 +36,11 @@ type SessionRow = {
 }
 
 export function serializeSessionCookie(token: string): string {
-  return `${SESSION_COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; Max-Age=${SESSION_MAX_AGE_SECONDS}; HttpOnly; SameSite=Lax`
+  return `${SESSION_COOKIE_NAME}=${encodeURIComponent(token)}; ${sessionCookieAttributes(SESSION_MAX_AGE_SECONDS)}`
 }
 
 export function serializeExpiredSessionCookie(): string {
-  return `${SESSION_COOKIE_NAME}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax`
+  return `${SESSION_COOKIE_NAME}=; ${sessionCookieAttributes(0)}`
 }
 
 function parseCookies(header: string | null): Map<string, string> {

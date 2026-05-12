@@ -93,6 +93,8 @@ Matching criteria include:
 
 ## Getting Started
 
+For production hosting, see the [Vercel Deployment Guide](Docs/VERCEL_DEPLOYMENT.md).
+
 ### Prerequisites
 
 - [Bun](https://bun.sh/) installed locally

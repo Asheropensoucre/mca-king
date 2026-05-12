@@ -2,6 +2,8 @@
 > This is the forward-looking build plan. For the project audit and history, see `Project_Road_Map.md`.
 >
 > **Current master expansion plan:** see [`Docs/MCA_BROKER_CRM_EXPANSION_PLAN.md`](Docs/MCA_BROKER_CRM_EXPANSION_PLAN.md) for the detailed broker CRM gap analysis, database modules, and phased build roadmap covering activities, tasks, funding, commissions, lender submissions, renewals, reporting, compliance, and communications.
+>
+> **Deployment:** see [`Docs/VERCEL_DEPLOYMENT.md`](Docs/VERCEL_DEPLOYMENT.md) for the Vercel serverless API setup, environment variables, and deployment checklist.
 
 ---
 

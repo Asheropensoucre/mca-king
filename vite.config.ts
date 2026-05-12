@@ -36,6 +36,7 @@ const apiPlugin = (): Plugin => ({
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, __dirname, '');
     Object.assign(process.env, env);
+    const isProduction = process.env.NODE_ENV === 'production';
     return {
       root: __dirname,
       server: {
@@ -43,7 +44,7 @@ export default defineConfig(({ mode }) => {
         strictPort: false,
         host: '0.0.0.0',
       },
-      plugins: [apiPlugin(), react()],
+      plugins: isProduction ? [react()] : [apiPlugin(), react()],
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
