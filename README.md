@@ -19,20 +19,20 @@
 
 ## Overview
 
-MCA King is a dual-sided merchant cash advance platform for managing funding applications from lead intake through lender matching, offers, contracts, stipulations, and final funding. It gives merchants, lenders, brokers, and MCA shops a unified workspace around a 12-step Kamba pipeline, role-based dashboards, document workflows, and automated notifications.
+MCA King is a broker/ISO-centered merchant cash advance CRM for managing merchant funding files from lead intake through lender submission, approvals, offers, contracts, stipulations, and final funding. The broker shop sources merchant deals; admins and sales reps manage those files; lenders/funders sign in to review broker-submitted merchant files, approve or decline them, request stipulations, and send offers.
 
-The app is designed for MCA brokers and funding teams that need to collect merchant applications, route deals to lenders, manage offers, request additional documents, and track deal status through funding.
+The app is designed for MCA broker owners, ISO shops, internal sales reps, merchants, and lender/funder users. Admin users represent the broker/ISO shop owner or operator, not a lender marketplace operator.
 
 <!-- Add screenshots here -->
 
 ## Features
 
-- **Role-based dashboards** for Admin, Sales Rep, Merchant, and Lender users.
+- **Role-based dashboards** for broker/ISO Admins, internal Sales Reps, Merchants, and Lender/Funder users.
 - **12-step Kamba pipeline** with drag-and-drop deal movement powered by `@dnd-kit`.
-- **Automated and manual lender matching engine** with server-side matching criteria and persistent `lender_matches` records.
+- **Automated and manual lender matching engine** that helps the broker shop decide which lenders/funders should review each merchant file.
 - **Leads system** with a mini pipeline, assignment, notes/call log, and lead-to-merchant conversion.
 - **Document uploads** to Supabase Storage with private files and signed URLs.
-- **Stipulations flow** for lenders/admins to request additional documents and merchants to fulfill them.
+- **Stipulations flow** for lenders/funders or broker admins to request additional documents and merchants to fulfill them.
 - **Email automation** with 7 Resend-powered triggers for merchant, lender, offer, stipulation, contract, and funded-deal events.
 - **Real auth with Better Auth-compatible email/password and database sessions**, backed by Supabase auth tables and secure HTTP-only session cookies.
 - **AI Assistant with page-aware context** through the MCA King Assistant powered by Gemini.
@@ -68,10 +68,10 @@ Server routes call `requireAuth(req)` from `src/lib/requireAuth.ts`, which resol
 
 Role examples:
 
-- Admins can manage merchants, lenders, leads, sales reps, matching, documents, and pipeline movement.
-- Sales reps can manage assigned deals and leads.
+- Admins are broker/ISO shop owners or operators who can manage merchants, lenders/funders, leads, sales reps, matching, documents, and pipeline movement.
+- Sales reps are internal broker-shop users who manage assigned deals and leads.
 - Merchants can access their own applications, offers, stipulations, and documents.
-- Lenders can access their lender profile and matched merchants.
+- Lenders/funders can access their own profile and merchant files submitted or matched to them; they do not originate merchant deals in this CRM.
 
 ### 12-step status machine
 
@@ -104,7 +104,7 @@ Matching criteria include:
 ### Clone and install
 
 ```bash
-git clone <your-fork-or-repo-url>
+git clone https://github.com/Asheropensoucre/mca-king
 cd "Brokerage CRM"
 bun install
 ```
@@ -278,7 +278,7 @@ Brokerage CRM/
 | 1 | `application & 3 months bank statements in` | Merchant submitted the application and required bank statements; the file is waiting for review. |
 | 2 | `sent to lender` | Application is being matched and sent to lenders. This can trigger server-side auto-matching. |
 | 3 | `all lenders decline` | No lenders approved the application. This is a red/dead-end outcome. |
-| 4 | `one or more lender's sent offer` | One or more lenders submitted offers for merchant review. |
+| 4 | `one or more lender's sent offer` | One or more lenders/funders responded to the broker-submitted file with offers for merchant review. |
 | 5 | `Merchant accepts offer` | Merchant selected an offer and the deal moves toward contract. |
 | 6 | `Merchant Declines Offer's` | Merchant rejected all offers. |
 | 7 | `more docs requested` | A lender requested additional documents/stipulations from the merchant. This is yellow/action-needed. |
@@ -299,10 +299,10 @@ Color coding is configured in `components/dashboards/shared/applicationStatus.ts
 
 | Role | Can See | Can Do |
 |---|---|---|
-| Admin | All merchants, lenders, leads, sales reps, documents, matches, offers, stipulations, and full Kamba pipeline | Create sales reps, assign reps, edit merchants/lenders, run auto-match, add/remove manual matches, notify lenders, manage leads, delete documents, move deals through the pipeline, print applications |
-| Sales Rep | Assigned deals, leads, lender list for matching, pipeline view for assigned deals | Manage leads, convert leads, update assigned merchant deals, run matching, manually add matches, print assigned applications |
+| Admin / Broker Owner | All merchants, lenders/funders, leads, sales reps, documents, matches, offers, stipulations, and full Kamba pipeline | Operate the broker shop: create sales reps, assign reps, edit merchants/lenders, run auto-match, add/remove manual matches, submit/notify lenders, manage leads, delete documents, move deals through the pipeline, print applications |
+| Sales Rep | Assigned merchant files, leads, lender list for matching, pipeline view for assigned deals | Work broker-shop leads, convert leads, update assigned merchant files, run matching, manually add matches, print assigned applications |
 | Merchant | Own application, own documents, own stipulations, own offers, current pipeline status | Submit application, upload documents, fulfill stipulations, accept/reject offers, edit active application, reapply after grace period |
-| Lender | Own lender profile and merchants matched to that lender | Create/update lender profile, review matched merchants, submit offers, request stipulations/documents |
+| Lender/Funder | Own lender profile and merchant files submitted/matched to that lender | Maintain criteria, review broker-submitted merchant files, approve/decline, send offers, request stipulations/documents |
 
 ## Contributing
 

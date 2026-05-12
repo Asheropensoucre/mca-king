@@ -1,5 +1,23 @@
 # MCA King — Engineering Plan
 > This is the forward-looking build plan. For the project audit and history, see `Project_Road_Map.md`.
+>
+> **Current master expansion plan:** see [`Docs/MCA_BROKER_CRM_EXPANSION_PLAN.md`](Docs/MCA_BROKER_CRM_EXPANSION_PLAN.md) for the detailed broker CRM gap analysis, database modules, and phased build roadmap covering activities, tasks, funding, commissions, lender submissions, renewals, reporting, compliance, and communications.
+
+---
+
+
+## Product Role Model
+
+MCA King is broker/ISO-shop centered.
+
+| Role | Meaning |
+|---|---|
+| `admin` | Broker/ISO shop owner or operator. Admin controls users, reps, merchant files, lender/funder records, matching, submissions, and reporting. |
+| `sales_rep` | Internal broker-shop rep who works leads and assigned merchant files. |
+| `merchant` | Funding customer/applicant. Merchants submit applications, upload documents, respond to stipulations, and review offers. |
+| `lender` | Lender/funder reviewer. Lenders do not submit merchant deals; they review broker-submitted/matched files, approve/decline, request stipulations, and send offers. |
+
+Use “lender submission” to mean an outbound broker-shop submission of a merchant file to a lender/funder, not a lender-created deal.
 
 ---
 
@@ -90,7 +108,7 @@ is_primary      boolean default false
 ```
 
 ### `lenders`
-The lender network. Admin-managed.
+The lender/funder network. Broker-admin managed. Lenders are reviewers/funders of broker-submitted merchant files; they do not originate merchant deals in this CRM.
 
 ```sql
 id              uuid primary key default gen_random_uuid()

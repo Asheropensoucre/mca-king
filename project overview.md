@@ -1,65 +1,115 @@
-Project Overview: Automated Lending & Funding Portal
-Executive Summary
-This project outlines the architecture for a dual-sided Merchant Cash Advance (MCA) and lending platform. The system is designed to seamlessly transition a merchant from initial onboarding through automated/manual lender matching, document distribution, and final funding. It features dynamic dashboards tailored to the user's current status in the funding pipeline.
+# Project Overview: MCA King Broker CRM
 
-Phase 1: Onboarding & Intake
-The initial funnel where merchants enter the system and provide baseline qualification data.
+## Executive Summary
 
-Services & Process: The public-facing landing area where merchants learn about the funding options and start the funnel.
+MCA King is a broker/ISO-centered Merchant Cash Advance (MCA) CRM. The broker shop sources merchant files, manages those files through internal admins and sales reps, submits qualified merchant packages to lenders/funders, and tracks the file through offers, stipulations, contracts, and funding.
 
-Portal Sign-Up: Account creation and initial authentication.
+This is **not** a lender-originated deal marketplace. Lenders/funders are users who sign in to review merchant files submitted or matched to them by the broker shop. They can approve, decline, request stipulations, and send offers; they do not submit merchant deals into the CRM.
 
-Form Completion: The merchant fills out the core application. This serves as the foundational data payload for the matching engine.
+## Role Model
 
-Phase 2: Processing, Matching & Distribution Engine
-The backend logic layer that evaluates the merchant, finds the right lenders, and packages the data.
+| Role | Business meaning |
+|---|---|
+| Admin | Broker/ISO shop owner or operator. Controls the shop, users, lenders, assignments, matching, and pipeline. |
+| Sales Rep | Internal broker-shop rep who works leads and assigned merchant files. |
+| Merchant | Funding customer/applicant who submits an application, uploads documents, reviews offers, and responds to stipulations. |
+| Lender/Funder | Funding partner who reviews broker-submitted merchant files, approves/declines, requests documents, and sends offers. |
 
-Customer Profile Generation: The system compiles the intake form and any uploaded documents (e.g., 3 months of bank statements) into a unified, standardized merchant profile.
+## Phase 1: Onboarding & Intake
 
-Analyze Customer Profile: The system evaluates the merchant's metrics (industry, revenue, time in business, current advance positions, etc.).
+The broker shop brings merchants into the system and collects baseline qualification data.
 
-Identify & Match Suitable Lenders (Dual-System):
+- Merchant account creation and authentication
+- Merchant application form completion
+- Owner details and authorization
+- Required document upload, especially 3 months of bank statements
+- Initial status: `application & 3 months bank statements in`
 
-Automated Matching Engine: Algorithms pair the merchant with lenders based on strict criteria (e.g., if a lender explicitly targets "trucking industry" and "3rd to 6th position advances," and the merchant fits, it's an auto-match).
+## Phase 2: Processing, Matching & Broker-to-Lender Distribution
 
-Manual/Sales Rep Routing: Upon sign-up, merchants are assigned to internal Sales Reps. These reps have the authority to manually review the profile and explicitly match the merchant to specific lenders based on relationship nuances or complex profiles.
+The broker shop evaluates the merchant file, identifies suitable lenders/funders, and submits the file to those lenders.
 
-Send Profile to Lender Network (Distribution): * The system generates a standardized PDF/data package of the merchant.
+### Customer Profile Generation
 
-Using an email templating system with dynamic tags, the platform automatically emails the package (along with necessary attachments like bank statements) directly to the matched lenders' contact lists.
+The system compiles the merchant application and uploaded documents into a standardized merchant profile.
 
-Phase 3: Dynamic Portal Dashboards
-The logged-in user experience. The dashboard UI is state-dependent and dynamic, meaning the interface changes based on the user type (Merchant vs. Lender) and the current status of the application.
+### Analyze Customer Profile
 
-Merchant Dashboard
-Offer Management: * View incoming lender offers.
+The broker shop and matching engine evaluate:
 
-Select the preferred/winning offer.
+- Industry
+- Revenue
+- Time in business
+- Current advance positions
+- Credit score
+- NSF count
+- Requested amount
+- State restrictions
 
-View final contract details.
+### Identify Suitable Lenders
 
-Dynamic Actions (Status-Triggered):
+Matching is broker-controlled:
 
-Upload Remaining Docs (Stipulations): This module only appears or alerts the merchant when a specific lender requests additional documentation to close the deal.
+- **Automated matching:** server-side rules pair merchant files with lenders based on criteria.
+- **Manual broker routing:** admins and sales reps can manually add lender matches based on relationships, lender appetite, or file nuance.
 
-Request Payoff Letters: A dynamic feature available only to merchants who have an active/current cash advance with the platform and wish to pay it off early or consolidate it with a new advance.
+### Submit Merchant File to Lender Network
 
-General Utilities: Contact support, request help, and receive email notifications.
+The broker shop submits a merchant package to selected lenders/funders. Lender users then review the broker-submitted file and respond with an approval, decline, stipulation request, or offer.
 
-Lender / Admin Dashboard
-While not detailed in the original map, your logic requires a distinct view for the other side of the marketplace.
+## Phase 3: Dynamic Portal Dashboards
 
-View matched merchant profiles.
+The logged-in dashboard changes based on user role and application state.
 
-Request specific missing documents (which triggers the "Upload Remaining Docs" module on the merchant's side).
+### Merchant Dashboard
 
-Submit offers to the merchant.
+Merchants can:
 
-Key Technical Requirements to Build This:
-Rules Engine: To handle the complex "If X industry and Y position, then match with Lender Z" logic.
+- View current application status
+- Upload documents
+- Fulfill stipulations
+- View offers
+- Accept or reject offers
+- View contract/funding state
+- Reapply after the configured grace period when eligible
 
-Role-Based Access Control (RBAC): Distinct permissions and UI views for Merchants, Lenders, and Internal Sales Reps.
+### Broker/Admin Dashboard
 
-Document Parsing & Email Automation: A system to compile PDFs, securely attach sensitive bank statements, inject dynamic text tags, and fire out emails via an API (like SendGrid or AWS SES).
+Broker admins can:
 
-State Machine: The database needs to track the exact status of the application (e.g., Reviewing Offers, Stips Pending, Contract Generated) to tell the front-end dashboard which buttons and modules to show the merchant.
+- View all leads, merchants, lenders/funders, documents, offers, matches, and pipeline stages
+- Create and manage sales rep accounts
+- Assign reps to merchant files
+- Match and submit files to lenders/funders
+- Move merchant files through the 12-step Kamba pipeline
+- Review status history and operational workflow
+
+### Sales Rep Dashboard
+
+Sales reps can:
+
+- Manage assigned leads
+- Convert leads into merchant applications
+- Work assigned merchant files
+- Help collect documents
+- Match files to lenders when permitted
+- Track assigned files in the Kamba pipeline
+
+### Lender/Funder Dashboard
+
+Lenders/funders can:
+
+- View merchant files submitted/matched to them by the broker shop
+- Review merchant details and documents they are authorized to access
+- Approve/decline files through offers or response statuses
+- Request stipulations/additional documents
+- Send offers to the broker/merchant workflow
+
+## Key Technical Requirements
+
+- Rules engine for broker-controlled lender matching
+- Role-based access control for broker admins, sales reps, merchants, and lenders/funders
+- Secure document storage and signed URL access
+- Broker-to-lender package generation and notification workflow
+- State machine for the 12-step Kamba pipeline
+- Activity history, tasks, funding records, commissions, lender submission outcomes, renewals, reporting, and compliance controls as the CRM expands

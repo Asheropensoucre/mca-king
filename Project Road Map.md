@@ -1,5 +1,9 @@
 # Project Road Map and Audit
 
+> **Current master expansion plan:** see [`Docs/MCA_BROKER_CRM_EXPANSION_PLAN.md`](Docs/MCA_BROKER_CRM_EXPANSION_PLAN.md) for the detailed broker CRM gap analysis and next phased build plan.
+>
+> **Business model correction:** MCA King is a broker/ISO-shop CRM. Admin users represent the broker owner/operator, sales reps are internal broker-shop users, merchants submit funding applications, and lenders/funders only review broker-submitted or broker-matched merchant files. Lenders do not originate or submit merchant deals into this CRM.
+
 ## Executive Summary
 
 The project has been consolidated into a single main application folder: `mca-application-form/`.
