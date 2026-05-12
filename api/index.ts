@@ -18,14 +18,6 @@ async function readRequestBody(req: VercelRequest): Promise<BodyInit | null> {
   return chunks.length > 0 ? Buffer.concat(chunks) : null
 }
 
-function getRequestUrl(req: VercelRequest): string {
-  const protocolHeader = req.headers['x-forwarded-proto']
-  const protocol = Array.isArray(protocolHeader) ? protocolHeader[0] : protocolHeader ?? 'https'
-  const host = req.headers.host ?? 'localhost:3000'
-  const url = req.url ?? '/api'
-  return `${protocol}://${host}${url}`
-}
-
 function getRequestHeaders(req: VercelRequest): Headers {
   const headers = new Headers()
 
@@ -35,6 +27,35 @@ function getRequestHeaders(req: VercelRequest): Headers {
   }
 
   return headers
+}
+
+function getOriginalApiPath(req: VercelRequest): string {
+  const routedPath = req.query.path
+  const path = Array.isArray(routedPath)
+    ? `/api/${routedPath.join('/')}`
+    : typeof routedPath === 'string' && routedPath.length > 0
+      ? `/api/${routedPath}`
+      : '/api'
+
+  const searchParams = new URLSearchParams()
+  for (const [key, value] of Object.entries(req.query)) {
+    if (key === 'path' || value === undefined) continue
+    if (Array.isArray(value)) {
+      value.forEach(item => searchParams.append(key, item))
+    } else {
+      searchParams.set(key, value)
+    }
+  }
+
+  const queryString = searchParams.toString()
+  return queryString ? `${path}?${queryString}` : path
+}
+
+function getRequestUrl(req: VercelRequest): string {
+  const protocolHeader = req.headers['x-forwarded-proto']
+  const protocol = Array.isArray(protocolHeader) ? protocolHeader[0] : protocolHeader ?? 'https'
+  const host = req.headers.host ?? 'localhost:3000'
+  return `${protocol}://${host}${getOriginalApiPath(req)}`
 }
 
 async function sendWebResponse(res: VercelResponse, response: Response): Promise<void> {

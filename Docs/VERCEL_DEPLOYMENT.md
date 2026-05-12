@@ -13,7 +13,7 @@ Browser
   ↓
 Vercel static frontend build from dist/
   ↓
-Single Vercel catch-all serverless function: api/[...path].ts
+Single Vercel serverless function: api/index.ts
   ↓
 Existing central API router: src/server/api.ts
   ↓
@@ -40,7 +40,7 @@ The dev bridge forwards local `/api/*` requests to the same central router used 
 Vercel does not run the Vite dev middleware. Production API calls are handled by one root-level Vercel function:
 
 ```txt
-api/[...path].ts
+api/index.ts
 ```
 
 This keeps the deployment compatible with the Vercel Hobby plan's 12-function limit. Instead of creating one function per route, the catch-all function forwards all `/api/*` requests to:
@@ -56,7 +56,7 @@ src/server/api.ts
 ```txt
 vercel.json                 # Vercel build/output config and API rewrite
 .env.example                # Placeholder env var names only; no secrets
-api/[...path].ts            # Single catch-all Vercel serverless function
+api/index.ts            # Single catch-all Vercel serverless function
 src/routes/**               # Existing API route logic
 src/server/api.ts           # Central API route registry for local and production
 vite.config.ts              # Vite config and dev-only middleware bridge
@@ -68,10 +68,10 @@ src/lib/session-auth.ts     # Session cookie settings for local/prod
 All production API routes are handled by this single Vercel function:
 
 ```txt
-api/[...path].ts
+api/index.ts
 ```
 
-The catch-all forwards to `src/server/api.ts`, which currently routes:
+The `vercel.json` rewrite forwards all `/api/:path*` requests to the `/api` function (`api/index.ts`) with the original path captured as a `path` query parameter. `api/index.ts` reconstructs the original `/api/...` path before calling `src/server/api.ts`, which currently routes:
 
 | Production route | Methods |
 |---|---|
@@ -310,20 +310,24 @@ After deployment, test these flows against the Vercel URL:
 
 ### API routes work locally but 404 on Vercel
 
-Check that the root catch-all function exists and was committed:
+Check that the root API function exists and was committed:
 
 ```txt
-api/[...path].ts
+api/index.ts
 ```
 
-Also confirm `vercel.json` includes the `/api/(.*)` rewrite.
+Also confirm `vercel.json` includes this rewrite:
+
+```json
+{ "source": "/api/:path*", "destination": "/api?path=:path*" }
+```
 
 ### Hobby plan reports too many Serverless Functions
 
 The project should have only one API function file:
 
 ```txt
-api/[...path].ts
+api/index.ts
 ```
 
 If Vercel reports more than 12 functions, remove old one-route-per-file wrappers from `api/` and redeploy.
@@ -367,4 +371,4 @@ When adding a new API route under `src/routes`:
 2. Add API client methods in `src/lib/api-client.ts` if used by frontend.
 3. Update this deployment guide if it changes public API behavior.
 
-Do **not** add a new Vercel file for every route. The deployment uses the single catch-all function to stay compatible with the Vercel Hobby plan.
+Do **not** add a new Vercel file for every route. The deployment uses the single `api/index.ts` function plus a `/api/:path*` → `/api?path=:path*` rewrite to stay compatible with the Vercel Hobby plan.
