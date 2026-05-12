@@ -21,6 +21,7 @@ import { GET as getMatching } from '../routes/matching/index'
 import { POST as runMatching } from '../routes/matching/run'
 import { POST as postManualMatching, DELETE as deleteManualMatching } from '../routes/matching/manual'
 import { POST as notifyMatching } from '../routes/matching/notify'
+import { POST as aiChat } from '../routes/ai/chat'
 import type { RouteContext } from '../lib/route-utils'
 
 type Handler = (req: Request, context?: RouteContext) => Promise<Response> | Response
@@ -31,6 +32,10 @@ type RouteMatch = {
 }
 
 function matchRoute(method: string, pathname: string): RouteMatch | null {
+  if (pathname === '/api/ai/chat') {
+    if (method === 'POST') return { handler: aiChat }
+  }
+
   if (pathname === '/api/auth/register') {
     if (method === 'POST') return { handler: registerAuth }
   }

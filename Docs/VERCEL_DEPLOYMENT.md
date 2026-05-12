@@ -60,6 +60,7 @@ src/lib/session-auth.ts     # Session cookie settings for local/prod
 
 | Vercel function file | Production route |
 |---|---|
+| `api/ai/chat.ts` | `POST /api/ai/chat` |
 | `api/auth/login.ts` | `POST /api/auth/login` |
 | `api/auth/register.ts` | `POST /api/auth/register` |
 | `api/auth/logout.ts` | `POST /api/auth/logout` |
@@ -104,8 +105,7 @@ Never commit real values.
 | `BETTER_AUTH_URL` | Public Vercel app URL used for auth/email links. Update after first deploy. | Yes |
 | `RESEND_API_KEY` | Resend API key for outbound workflow emails. | Yes for email |
 | `EMAIL_FROM` | Verified sender email/domain in Resend. | Yes for email |
-| `GEMINI_API_KEY` | Gemini API key for MCA King Assistant. | Yes for AI |
-| `VITE_GEMINI_API_KEY` | Public Vite Gemini key placeholder if frontend use requires it. | Optional/currently listed for compatibility |
+| `GEMINI_API_KEY` | Server-only Gemini API key for MCA King Assistant through `/api/ai/chat`. Do not prefix with `VITE_`. | Yes for AI |
 | `VITE_SUPABASE_URL` | Public Supabase project URL exposed to browser. | Yes |
 | `VITE_SUPABASE_ANON_KEY` | Public Supabase anon/publishable key exposed to browser. | Yes |
 
@@ -195,7 +195,7 @@ In Vercel:
 Project Settings → Environment Variables
 ```
 
-Add every variable from `.env.example` with real values.
+Add every variable from `.env.example` with real values. `GEMINI_API_KEY` is server-only and must not be added as `VITE_GEMINI_API_KEY`.
 
 Important rules:
 
@@ -269,7 +269,7 @@ After deployment, test these flows against the Vercel URL:
    - `POST /api/matching/run`
    - `POST /api/matching/notify`
 10. Resend emails do not crash route execution.
-11. MCA King Assistant shows a Gemini key error if `GEMINI_API_KEY` is missing, or responds if configured.
+11. MCA King Assistant calls `/api/ai/chat`; it shows a server configuration error if `GEMINI_API_KEY` is missing, or responds if configured.
 
 ## Common Deployment Issues
 
@@ -298,7 +298,7 @@ Check:
 
 Check:
 
-- `GEMINI_API_KEY` is set in Vercel.
+- `GEMINI_API_KEY` is set in Vercel as a server-only variable, not a `VITE_*` variable.
 - Redeploy after adding the key.
 
 ### Resend errors

@@ -171,7 +171,7 @@ bun run preview
 | `BETTER_AUTH_SECRET` | Secret for Better Auth deployments that use Better Auth runtime/session features. | Recommended |
 | `RESEND_API_KEY` | Resend API key used for outbound email automation. | Yes for email |
 | `EMAIL_FROM` | Verified sender address used for Resend emails. | Yes for email |
-| `GEMINI_API_KEY` | Google Gemini API key used by MCA King Assistant. Mapped by Vite to `process.env.API_KEY` and `process.env.GEMINI_API_KEY`. | Yes for AI |
+| `GEMINI_API_KEY` | Server-only Google Gemini API key used by MCA King Assistant through `/api/ai/chat`. Do not prefix with `VITE_`. | Yes for AI |
 
 ## Project Structure
 
