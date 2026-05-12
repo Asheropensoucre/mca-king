@@ -6,6 +6,7 @@ import { MerchantDashboard } from './MerchantDashboard';
 import { SalesRepDashboard } from './SalesRepDashboard';
 import { api } from '../../src/lib/api-client';
 import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
+import { MCAKingLoader } from '../../src/components/ui/MCAKingLoader';
 
 interface DashboardControllerProps {
     currentUser: AuthUser;
@@ -76,7 +77,7 @@ export const DashboardController: React.FC<DashboardControllerProps> = ({ curren
     };
 
     if (loading) {
-        return <div className="p-8 text-center text-slate-500 dark:text-slate-400">Loading dashboard...</div>;
+        return <div className="p-8"><MCAKingLoader label="Loading dashboard..." centered /></div>;
     }
 
     if (error) {

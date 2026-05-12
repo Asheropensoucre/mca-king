@@ -10,6 +10,7 @@ import { LenderForm } from './components/LenderForm';
 import { DocumentUploadStep } from './components/DocumentUploadStep';
 import { DarkModeToggle } from './src/components/ui/DarkModeToggle';
 import { PrimaryButton } from './src/components/ui/PrimaryButton';
+import { MCAKingLoader } from './src/components/ui/MCAKingLoader';
 import { PrintView } from './components/PrintView';
 import { Chatbot } from './components/Chatbot';
 import { DEFAULT_APPLICATION_STATUS } from './components/dashboards/shared/applicationStatus';
@@ -176,7 +177,7 @@ const App: React.FC = () => {
   };
 
   if (authLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-dark-bg"><div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-300 border-t-theme-yellow" /></div>;
+    return <div className="min-h-screen flex items-center justify-center"><MCAKingLoader label="Loading MCA King..." size="large" /></div>;
   }
 
   if (!currentUser) {

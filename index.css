@@ -1,0 +1,68 @@
+html {
+  min-height: 100%;
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
+  background:
+    linear-gradient(135deg, rgba(243, 230, 0, 0.22), rgba(85, 234, 212, 0.24) 45%, rgba(136, 4, 37, 0.18)),
+    #f8fafc;
+  background-attachment: fixed;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.07) 1px, transparent 1px),
+    linear-gradient(rgba(0, 0, 0, 0.07) 1px, transparent 1px),
+    radial-gradient(circle at 20% 20%, rgba(243, 230, 0, 0.18), transparent 28%),
+    radial-gradient(circle at 80% 10%, rgba(85, 234, 212, 0.22), transparent 30%),
+    radial-gradient(circle at 70% 85%, rgba(136, 4, 37, 0.16), transparent 32%);
+  background-size: 22px 22px, 22px 22px, 100% 100%, 100% 100%, 100% 100%;
+}
+
+html.dark body {
+  background:
+    linear-gradient(135deg, rgba(17, 24, 39, 0.98), rgba(136, 4, 37, 0.55) 48%, rgba(85, 234, 212, 0.16)),
+    #111827;
+  background-attachment: fixed;
+}
+
+html.dark body::before {
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    radial-gradient(circle at 20% 20%, rgba(243, 230, 0, 0.14), transparent 28%),
+    radial-gradient(circle at 80% 10%, rgba(85, 234, 212, 0.14), transparent 30%),
+    radial-gradient(circle at 70% 85%, rgba(136, 4, 37, 0.34), transparent 32%);
+}
+
+#root {
+  isolation: isolate;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Let the global wallpaper show behind page shells while keeping cards/panels opaque. */
+#root > .min-h-screen,
+#root .min-h-screen.bg-slate-50,
+#root .min-h-screen.dark\:bg-dark-bg,
+#root .min-h-screen.flex,
+#root .min-h-screen.p-4,
+#root .min-h-screen.p-4.sm\:p-6.lg\:p-8 {
+  background-color: transparent !important;
+}
+
+html.dark #root > .min-h-screen,
+html.dark #root .min-h-screen.bg-slate-50,
+html.dark #root .min-h-screen.dark\:bg-dark-bg,
+html.dark #root .min-h-screen.flex,
+html.dark #root .min-h-screen.p-4,
+html.dark #root .min-h-screen.p-4.sm\:p-6.lg\:p-8 {
+  background-color: transparent !important;
+}

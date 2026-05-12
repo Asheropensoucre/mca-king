@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import type { DocType, DocumentInfo } from '../types';
 import { api } from '../src/lib/api-client';
 import { PrimaryButton } from '../src/components/ui/PrimaryButton';
+import { MCAKingLoader } from '../src/components/ui/MCAKingLoader';
 
 interface DocumentUploadProps {
     onDocumentsChange: (documents: DocumentInfo[]) => void;
@@ -70,10 +71,14 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onDocumentsChang
     return (
         <div className="space-y-4">
              <div>
-                <label htmlFor="file-upload" className="relative cursor-pointer rounded-md font-semibold text-theme-teal focus-within:outline-none focus-within:ring-2 focus-within:ring-theme-teal focus-within:ring-offset-2 hover:text-theme-teal/80">
-                    <span>{uploading ? 'Uploading...' : 'Upload required documents'}</span>
-                    <input id="file-upload" name="file-upload" type="file" className="sr-only" multiple onChange={handleFileChange} accept={accept} disabled={uploading} />
-                </label>
+                {uploading ? (
+                    <MCAKingLoader label="Uploading..." size="small" />
+                ) : (
+                    <label htmlFor="file-upload" className="relative cursor-pointer rounded-md font-semibold text-theme-teal focus-within:outline-none focus-within:ring-2 focus-within:ring-theme-teal focus-within:ring-offset-2 hover:text-theme-teal/80">
+                        <span>Upload required documents</span>
+                        <input id="file-upload" name="file-upload" type="file" className="sr-only" multiple onChange={handleFileChange} accept={accept} disabled={uploading} />
+                    </label>
+                )}
                 <p className="text-xs text-slate-500 dark:text-slate-400">e.g., Bank Statements, Photo ID. PNG, JPG, PDF up to 10MB.</p>
                 {message && <p className={`text-xs mt-1 ${message.toLowerCase().includes('failed') || message.toLowerCase().includes('error') ? 'text-theme-red' : 'text-theme-teal'}`}>{message}</p>}
             </div>

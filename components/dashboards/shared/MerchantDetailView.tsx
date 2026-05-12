@@ -5,6 +5,7 @@ import { SummaryItem } from './SummaryItem';
 import { DocumentsPanel } from './DocumentsPanel';
 import { api } from '../../../src/lib/api-client';
 import { PrimaryButton } from '../../../src/components/ui/PrimaryButton';
+import { MCAKingLoader } from '../../../src/components/ui/MCAKingLoader';
 
 interface MerchantDetailViewProps { 
     item: FormData, 
@@ -146,7 +147,7 @@ const MatchedLendersPanel: React.FC<MatchedLendersPanelProps> = ({ merchantId, l
 
                 <div className="mt-4 space-y-3">
                     {loading ? (
-                        <p className="text-sm text-slate-500 dark:text-slate-400">Loading matched lenders...</p>
+                        <MCAKingLoader label="Loading matched lenders..." size="small" />
                     ) : matches.length > 0 ? matches.map(match => (
                         <div key={match.id} className="flex flex-col gap-3 rounded-lg border border-slate-200 p-4 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between">
                             <div>

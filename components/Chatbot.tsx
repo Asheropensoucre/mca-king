@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { PrimaryButton } from '../src/components/ui/PrimaryButton';
+import { MCAKingLoader } from '../src/components/ui/MCAKingLoader';
 
 interface ChatbotProps {
     context: string;
@@ -94,12 +95,8 @@ export const Chatbot: React.FC<ChatbotProps> = ({ context }) => {
                     ))}
                     {isLoading && (
                          <div className="flex justify-start">
-                             <div className="max-w-[80%] p-3 rounded-lg text-sm bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200">
-                                <div className="flex items-center space-x-2">
-                                    <div className="w-2 h-2 rounded-full bg-slate-400 animate-pulse"></div>
-                                    <div className="w-2 h-2 rounded-full bg-slate-400 animate-pulse [animation-delay:0.2s]"></div>
-                                    <div className="w-2 h-2 rounded-full bg-slate-400 animate-pulse [animation-delay:0.4s]"></div>
-                                </div>
+                             <div className="max-w-[90%] rounded-lg bg-slate-100 p-3 dark:bg-slate-700">
+                                <MCAKingLoader label="Thinking..." size="small" />
                              </div>
                          </div>
                     )}

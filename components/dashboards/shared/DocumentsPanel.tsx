@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import type { DocType, Document } from '../../../types';
 import { api } from '../../../src/lib/api-client';
 import { Card } from '../../ui/Card';
+import { MCAKingLoader } from '../../../src/components/ui/MCAKingLoader';
 
 const DOC_TYPES: { value: DocType; label: string }[] = [
   { value: 'bank_statement', label: 'Bank Statement' },
@@ -63,10 +64,14 @@ export const DocumentsPanel: React.FC<DocumentsPanelProps> = ({ merchantId, canD
               <select value={docType} onChange={e => setDocType(e.target.value as DocType)} className="rounded-md border-0 py-1.5 pl-3 pr-8 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600">
                 {DOC_TYPES.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}
               </select>
-              <label className="cursor-pointer px-3 py-1.5 rounded-md text-sm font-medium text-theme-black bg-theme-yellow hover:bg-theme-yellow/90 text-center">
-                {loading ? 'Uploading...' : 'Upload'}
-                <input type="file" className="sr-only" onChange={handleUpload} disabled={loading} />
-              </label>
+              {loading ? (
+                <MCAKingLoader label="Uploading..." size="small" />
+              ) : (
+                <label className="cursor-pointer px-3 py-1.5 rounded-md text-sm font-medium text-theme-black bg-theme-yellow hover:bg-theme-yellow/90 text-center">
+                  Upload
+                  <input type="file" className="sr-only" onChange={handleUpload} disabled={loading} />
+                </label>
+              )}
             </div>
           )}
         </div>
