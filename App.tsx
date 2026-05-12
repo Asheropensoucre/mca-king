@@ -245,7 +245,7 @@ const App: React.FC = () => {
   return (
     <>
       {currentUser.role === 'lender' && (
-        <div className="fixed bottom-24 right-4 z-40">
+        <div className="fixed bottom-6 left-6 z-50">
           <PrimaryButton
             label="Edit Profile"
             onClick={() => setSetupView('lender_form')}
