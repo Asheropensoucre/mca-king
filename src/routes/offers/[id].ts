@@ -1,4 +1,5 @@
 import type { FormData, Offer } from '../../../types'
+import { recordActivity } from '../../lib/activity'
 import { normalizeOfferStatus, rowToMerchant, type MerchantRow, type OfferRow } from '../../lib/data-shapes'
 import { triggerOfferAccepted } from '../../lib/email-triggers'
 import { requireAuth } from '../../lib/requireAuth'
@@ -100,6 +101,15 @@ export async function PATCH(req: Request, context?: RouteContext): Promise<Respo
   if (updatedOffer.status === 'Accepted') {
     triggerOfferAccepted(savedOffer.id)
   }
+
+  recordActivity({
+    entity_type: 'offer',
+    entity_id: merchant.id,
+    user_id: user.id,
+    activity_type: 'offer',
+    body: `Offer ${dbStatus} by merchant`,
+    metadata: { offer_id: id, status: dbStatus },
+  })
 
   const result: Offer = savedOffer.payload ? { ...savedOffer.payload, id: savedOffer.id } : updatedOffer
   return json(result)

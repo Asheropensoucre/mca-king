@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import type { Lead, LeadStatus, SalesRepresentative } from '../../types';
+import type { AuthUser, Lead, LeadStatus, SalesRepresentative } from '../../types';
 import { api } from '../../src/lib/api-client';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
+import { ActivityTimeline } from './shared/ActivityTimeline';
+import { TaskPanel } from './shared/TaskPanel';
 
 const STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
 const STATUS_OPTIONS: { value: LeadStatus; label: string }[] = [
@@ -36,9 +38,10 @@ interface LeadManagerProps {
   isAdmin: boolean;
   salesReps: SalesRepresentative[];
   onConverted?: (merchantId: string) => void;
+  currentUser: AuthUser;
 }
 
-export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, onConverted }) => {
+export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, onConverted, currentUser }) => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
@@ -125,7 +128,7 @@ export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, on
 
       {(showNewForm || selectedLead) && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <Card className="w-full max-w-5xl max-h-[90vh] overflow-y-auto">
             {showNewForm ? (
               <form onSubmit={createLead}>
                 <div className="p-6 border-b border-slate-200 dark:border-slate-700"><h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">New Lead</h3></div>
@@ -153,9 +156,16 @@ export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, on
                     {isAdmin && <label className="block"><span className="text-sm font-medium text-slate-700 dark:text-slate-300">Assign Rep</span><select value={selectedLead.assigned_rep_id || ''} onChange={e => void updateLead({ assigned_rep_id: e.target.value || null })} className="mt-1 block w-full rounded-md border-0 py-2 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600"><option value="">Unassigned</option>{salesReps.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}</select></label>}
                   </div>
                   <PrimaryButton disabled={selectedLead.status === 'converted'} label={selectedLead.status === 'converted' ? 'Already Converted' : 'Convert to Merchant'} onClick={() => void convertLead()} />
-                  <div><h4 className="font-black text-theme-maroon dark:text-theme-yellow mb-2">Notes</h4><div className="space-y-2 max-h-52 overflow-y-auto">{selectedLead.notes?.map(note => <div key={note.id} className="p-3 rounded-md bg-slate-50 dark:bg-slate-800"><p className="text-sm text-slate-700 dark:text-slate-200">{note.body}</p><p className="text-xs text-slate-500 mt-1">{note.author_name || 'Unknown'} • {new Date(note.created_at).toLocaleString()}</p></div>)}</div></div>
-                  <Textarea label="Add Note" name="note" value={noteBody} onChange={e => setNoteBody(e.target.value)} />
-                  <div className="flex justify-end"><PrimaryButton label="Add Note" size="small" variant="funded" onClick={() => void addNote()} /></div>
+                  <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                    <ActivityTimeline entityType="lead" entityId={selectedLead.id} currentUserRole={currentUser.role} />
+                    <TaskPanel entityType="lead" entityId={selectedLead.id} currentUser={currentUser} />
+                  </div>
+                  <details>
+                    <summary className="cursor-pointer text-sm font-black text-theme-teal">Legacy lead notes</summary>
+                    <div className="mt-3"><h4 className="font-black text-theme-maroon dark:text-theme-yellow mb-2">Notes</h4><div className="space-y-2 max-h-52 overflow-y-auto">{selectedLead.notes?.map(note => <div key={note.id} className="p-3 rounded-md bg-slate-50 dark:bg-slate-800"><p className="text-sm text-slate-700 dark:text-slate-200">{note.body}</p><p className="text-xs text-slate-500 mt-1">{note.author_name || 'Unknown'} • {new Date(note.created_at).toLocaleString()}</p></div>)}</div></div>
+                    <Textarea label="Add Note" name="note" value={noteBody} onChange={e => setNoteBody(e.target.value)} />
+                    <div className="flex justify-end"><PrimaryButton label="Add Note" size="small" variant="funded" onClick={() => void addNote()} /></div>
+                  </details>
                 </div>
               </div>
             )}

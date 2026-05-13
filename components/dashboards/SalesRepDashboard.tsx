@@ -7,6 +7,7 @@ import { KanbanPipelineView } from './shared/KanbanPipelineView';
 import { LeadManager } from './LeadManager';
 import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 import { Chatbot } from '../Chatbot';
+import { TaskPanel } from './shared/TaskPanel';
 
 interface SalesRepDashboardProps { 
     currentUser: AuthUser;
@@ -52,11 +53,14 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
                             <PrimaryButton label="Download PDF" size="small" onClick={() => onPrint(selectedDealCurrent)} />
                         )}
                     </div>
-                    <MerchantDetailView item={selectedDealCurrent} lenders={lenders} canManageMatches={true} />
+                    <MerchantDetailView item={selectedDealCurrent} lenders={lenders} canManageMatches={true} currentUser={currentUser} />
                 </div>
             ) : (
                 <div className={activeSection === 'pipeline' ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}>
-                    {activeSection === 'leads' && <LeadManager isAdmin={false} salesReps={salesReps} />}
+                    <div className="mb-6">
+                        <TaskPanel currentUser={currentUser} title="My Tasks" overview />
+                    </div>
+                    {activeSection === 'leads' && <LeadManager isAdmin={false} salesReps={salesReps} currentUser={currentUser} />}
                     {activeSection === 'deals' && (
                         <Card>
                             <div className="overflow-x-auto">

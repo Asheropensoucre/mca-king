@@ -1,4 +1,5 @@
 import type { Lead, LeadNote, LeadStatus } from '../../../types'
+import { recordActivity } from '../../lib/activity'
 import { requireAuth } from '../../lib/requireAuth'
 import { assertRole, badRequest, forbidden, json } from '../../lib/route-utils'
 import { supabaseAdmin } from '../../lib/supabase-server'
@@ -80,13 +81,29 @@ export async function POST(req: Request): Promise<Response> {
   if (error) return badRequest(error.message)
 
   if (body.initial_note?.trim()) {
+    const noteBody = body.initial_note.trim()
     const { error: noteError } = await supabaseAdmin.from('lead_notes').insert({
       lead_id: data.id,
       written_by: user.id,
-      body: body.initial_note.trim(),
+      body: noteBody,
     })
     if (noteError) return badRequest(noteError.message)
+    recordActivity({
+      entity_type: 'lead',
+      entity_id: data.id,
+      user_id: user.id,
+      activity_type: 'note',
+      body: noteBody,
+    })
   }
+
+  recordActivity({
+    entity_type: 'lead',
+    entity_id: data.id,
+    user_id: user.id,
+    activity_type: 'system',
+    body: `Lead created: ${data.business_name}`,
+  })
 
   return json(data, { status: 201 })
 }

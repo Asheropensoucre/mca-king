@@ -1,4 +1,5 @@
 import type { DocType } from '../../../types'
+import { recordActivity } from '../../lib/activity'
 import { requireAuth } from '../../lib/requireAuth'
 import { badRequest, forbidden, json } from '../../lib/route-utils'
 import { supabaseAdmin } from '../../lib/supabase-server'
@@ -63,6 +64,25 @@ export async function POST(req: Request): Promise<Response> {
       .eq('merchant_id', merchantIdValue)
     if (stipError) return badRequest(stipError.message)
   }
+
+  const activityBody = `Document uploaded: ${fileValue.name} (${docTypeValue})`
+  const activityMetadata = { doc_type: docTypeValue, file_name: fileValue.name, document_id: data.id }
+  recordActivity({
+    entity_type: 'document',
+    entity_id: merchantIdValue,
+    user_id: user.id,
+    activity_type: 'upload',
+    body: activityBody,
+    metadata: activityMetadata,
+  })
+  recordActivity({
+    entity_type: 'merchant',
+    entity_id: merchantIdValue,
+    user_id: user.id,
+    activity_type: 'upload',
+    body: activityBody,
+    metadata: activityMetadata,
+  })
 
   return json(data, { status: 201 })
 }

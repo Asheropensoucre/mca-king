@@ -1,4 +1,5 @@
 import type { FormData } from '../../../types'
+import { recordActivity } from '../../lib/activity'
 import { merchantToInsert, rowToMerchant, type MerchantRow } from '../../lib/data-shapes'
 import { triggerNewMerchantAlert } from '../../lib/email-triggers'
 import { requireAuth } from '../../lib/requireAuth'
@@ -69,6 +70,13 @@ export async function POST(req: Request): Promise<Response> {
   if (history.error) return badRequest(history.error.message)
 
   triggerNewMerchantAlert(created.id)
+  recordActivity({
+    entity_type: 'merchant',
+    entity_id: created.id,
+    user_id: user.id,
+    activity_type: 'system',
+    body: `Merchant application created: ${data.business_name}`,
+  })
 
   return json(created, { status: 201 })
 }

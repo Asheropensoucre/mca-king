@@ -1,4 +1,4 @@
-import type { LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch } from '../../types'
+import type { Activity, ActivityType, EntityType, LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch, Task } from '../../types'
 
 function headers(extra?: HeadersInit): HeadersInit {
   return {
@@ -62,6 +62,19 @@ export const api = {
   stipulations: {
     list: (merchantId: string) => request<Stipulation[]>(`/api/stipulations?merchant_id=${encodeURIComponent(merchantId)}`),
     create: (merchantId: string, lenderId: string, description: string) => request<Stipulation>('/api/stipulations', { method: 'POST', body: JSON.stringify({ merchant_id: merchantId, lender_id: lenderId, description }) }),
+  },
+  activities: {
+    list: (entityType: EntityType, entityId: string) => request<Activity[]>(`/api/activities?entity_type=${encodeURIComponent(entityType)}&entity_id=${encodeURIComponent(entityId)}`),
+    create: (data: { entity_type: EntityType; entity_id: string; activity_type: Extract<ActivityType, 'note' | 'call'>; body: string }) => request<Activity>('/api/activities', { method: 'POST', body: JSON.stringify(data) }),
+  },
+  tasks: {
+    list: (params?: { entity_type?: EntityType; entity_id?: string }) => {
+      const qs = params ? new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0)).toString() : ''
+      return request<Task[]>(`/api/tasks${qs ? `?${qs}` : ''}`)
+    },
+    create: (data: Pick<Task, 'entity_type' | 'entity_id' | 'title'> & Partial<Pick<Task, 'description' | 'priority' | 'assigned_to' | 'due_at'>>) => request<Task>('/api/tasks', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<Pick<Task, 'status' | 'title' | 'description' | 'priority' | 'assigned_to' | 'due_at'>>) => request<Task>(`/api/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) => request<{ success: boolean }>(`/api/tasks/${id}`, { method: 'DELETE' }),
   },
   matching: {
     list: (merchantId: string) => request<LenderMatch[]>(`/api/matching?merchant_id=${encodeURIComponent(merchantId)}`),

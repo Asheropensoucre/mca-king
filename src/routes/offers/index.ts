@@ -1,4 +1,5 @@
 import type { FormData, Offer } from '../../../types'
+import { recordActivity } from '../../lib/activity'
 import { normalizeOfferStatus, rowToMerchant, type MerchantRow, type OfferRow } from '../../lib/data-shapes'
 import { triggerOfferReceived } from '../../lib/email-triggers'
 import { requireAuth } from '../../lib/requireAuth'
@@ -137,6 +138,14 @@ export async function POST(req: Request): Promise<Response> {
   if (merchantUpdateError) return merchantUpdateError
 
   triggerOfferReceived(data.id)
+  recordActivity({
+    entity_type: 'offer',
+    entity_id: merchantId,
+    user_id: user.id,
+    activity_type: 'offer',
+    body: `Offer received from ${offer.lenderName || offer.lenderId}: $${offer.amount}`,
+    metadata: { offer_id: data.id, lender_id: offer.lenderId, amount: offer.amount, factor_rate: offer.rate },
+  })
 
   return json(rowToOffer(data), { status: 201 })
 }

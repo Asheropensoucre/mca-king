@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import type { FormData, LenderInfo, LenderMatch } from '../../../types';
+import type { AuthUser, FormData, LenderInfo, LenderMatch } from '../../../types';
 import { Card } from '../../ui/Card';
 import { SummaryItem } from './SummaryItem';
 import { DocumentsPanel } from './DocumentsPanel';
 import { api } from '../../../src/lib/api-client';
 import { PrimaryButton } from '../../../src/components/ui/PrimaryButton';
 import { MCAKingLoader } from '../../../src/components/ui/MCAKingLoader';
+import { ActivityTimeline } from './ActivityTimeline';
+import { TaskPanel } from './TaskPanel';
 
 interface MerchantDetailViewProps { 
     item: FormData, 
@@ -13,6 +15,7 @@ interface MerchantDetailViewProps {
     canDeleteDocuments?: boolean;
     canManageMatches?: boolean;
     canRemoveMatches?: boolean;
+    currentUser: AuthUser;
 }
 
 const formatDateTime = (value: string | null): string | null => {
@@ -171,7 +174,7 @@ const MatchedLendersPanel: React.FC<MatchedLendersPanelProps> = ({ merchantId, l
     );
 };
 
-export const MerchantDetailView: React.FC<MerchantDetailViewProps> = ({ item, lenders = [], canDeleteDocuments = false, canManageMatches = false, canRemoveMatches = false }) => (
+export const MerchantDetailView: React.FC<MerchantDetailViewProps> = ({ item, lenders = [], canDeleteDocuments = false, canManageMatches = false, canRemoveMatches = false, currentUser }) => (
     <div className="space-y-6">
         <Card><div className="p-6"><h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Business Information</h3><dl className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"><SummaryItem label="Legal Name" value={item.businessInfo.legalName} /><SummaryItem label="DBA Name" value={item.businessInfo.dbaName} /><SummaryItem label="Phone" value={item.businessInfo.phone} /><SummaryItem label="Tax ID" value={item.businessInfo.taxId} /><SummaryItem label="Address" value={item.businessInfo.address} /><SummaryItem label="Start Date" value={item.businessInfo.startDate} /><SummaryItem label="Requested Amount" value={`$${Number(item.requestedAmount).toLocaleString()}`} /><SummaryItem label="Avg. Monthly Revenue" value={`$${Number(item.businessInfo.monthlyRevenue).toLocaleString()}`} /><SummaryItem label="Recent NSFs" value={item.businessInfo.recentNSFs} /><SummaryItem label="Industry" value={item.businessInfo.industryType} /></dl></div></Card>
         {item.owners.map((owner, index) => (<Card key={owner.id}><div className="p-6"><h4 className="text-md font-semibold text-slate-700 dark:text-slate-300">Owner #{index + 1}</h4><dl className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"><SummaryItem label="Name" value={owner.name} /><SummaryItem label="Title" value={owner.title} /><SummaryItem label="Email" value={owner.email} /><SummaryItem label="Cell Phone" value={owner.cellPhone} /><SummaryItem label="Home Address" value={owner.homeAddress} /><SummaryItem label="DOB" value={owner.dateOfBirth} /><SummaryItem label="SSN" value={owner.ssn} /><SummaryItem label="Credit Score" value={owner.creditScore} /><SummaryItem label="Ownership" value={`${owner.ownership}%`} /></dl></div></Card>))}
@@ -180,6 +183,13 @@ export const MerchantDetailView: React.FC<MerchantDetailViewProps> = ({ item, le
 
         {(canManageMatches || lenders.length > 0) && (
             <MatchedLendersPanel merchantId={item.id} lenders={lenders} canManageMatches={canManageMatches} canRemoveMatches={canRemoveMatches} />
+        )}
+
+        {(currentUser.role === 'admin' || currentUser.role === 'sales_rep') && (
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                <ActivityTimeline entityType="merchant" entityId={item.id} currentUserRole={currentUser.role} />
+                <TaskPanel entityType="merchant" entityId={item.id} currentUser={currentUser} />
+            </div>
         )}
         
         <Card><div className="p-6"><h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Offers</h3>

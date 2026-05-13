@@ -1,5 +1,6 @@
 import type { FormData } from '../../../../types'
 import { DEFAULT_APPLICATION_STATUS } from '../../../../components/dashboards/shared/applicationStatus'
+import { recordActivity } from '../../../lib/activity'
 import { merchantToInsert } from '../../../lib/data-shapes'
 import { requireAuth } from '../../../lib/requireAuth'
 import { assertRole, badRequest, forbidden, getId, json, notFound, type RouteContext } from '../../../lib/route-utils'
@@ -81,6 +82,23 @@ export async function POST(req: Request, context?: RouteContext): Promise<Respon
     note: `Converted from lead ${id}`,
   })
   if (historyError) return badRequest(historyError.message)
+
+  recordActivity({
+    entity_type: 'lead',
+    entity_id: id,
+    user_id: user.id,
+    activity_type: 'system',
+    body: `Lead converted to merchant: ${lead.business_name}`,
+    metadata: { merchant_id: merchantId },
+  })
+  recordActivity({
+    entity_type: 'merchant',
+    entity_id: merchantId,
+    user_id: user.id,
+    activity_type: 'system',
+    body: `Merchant created from lead: ${lead.business_name}`,
+    metadata: { lead_id: id },
+  })
 
   return json({ merchant_id: merchantId }, { status: 201 })
 }

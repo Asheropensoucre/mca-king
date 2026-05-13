@@ -1,4 +1,5 @@
 import type { FormData } from '../../../types'
+import { recordActivity } from '../../lib/activity'
 import { merchantToUpdate, rowToMerchant, type MerchantRow } from '../../lib/data-shapes'
 import { displayName, toNumber, type EmailUser } from '../../lib/email-data'
 import { triggerMerchantStatusEmail } from '../../lib/email-triggers'
@@ -19,6 +20,29 @@ function canRead(userRole: string, userId: string, row: MerchantRow): boolean {
   if (userRole === 'sales_rep') return row.assigned_rep_id === userId
   if (userRole === 'merchant') return row.user_id === userId
   return false
+}
+
+function recordRepAssignmentActivity(merchantId: string, assignedRepId: string | null, userId: string): void {
+  void (async () => {
+    let repName = assignedRepId ?? 'Unassigned'
+    if (assignedRepId) {
+      const { data: rep } = await supabaseAdmin
+        .from('users')
+        .select('full_name,name,email')
+        .eq('id', assignedRepId)
+        .maybeSingle<{ full_name: string | null; name: string | null; email: string }>()
+      repName = rep?.full_name ?? rep?.name ?? rep?.email ?? assignedRepId
+    }
+
+    recordActivity({
+      entity_type: 'merchant',
+      entity_id: merchantId,
+      user_id: userId,
+      activity_type: 'system',
+      body: `Sales rep assigned: ${repName}`,
+      metadata: { assigned_rep_id: assignedRepId },
+    })
+  })()
 }
 
 function sendRepAssignmentAlert(merchant: MerchantRow): void {
@@ -109,8 +133,9 @@ export async function PATCH(req: Request, context?: RouteContext): Promise<Respo
 
   if (error) return badRequest(error.message)
 
-  if (assignmentChanged && data.assigned_rep_id) {
-    sendRepAssignmentAlert(data)
+  if (assignmentChanged) {
+    if (data.assigned_rep_id) sendRepAssignmentAlert(data)
+    recordRepAssignmentActivity(id, data.assigned_rep_id, user.id)
   }
 
   if (patch.status && patch.status !== existing.status) {
@@ -121,6 +146,15 @@ export async function PATCH(req: Request, context?: RouteContext): Promise<Respo
       new_status: patch.status,
     })
     if (history.error) return badRequest(history.error.message)
+
+    recordActivity({
+      entity_type: 'merchant',
+      entity_id: id,
+      user_id: user.id,
+      activity_type: 'status_change',
+      body: `Status changed from "${existing.status}" to "${patch.status}"`,
+      metadata: { previous_status: existing.status, new_status: patch.status },
+    })
 
     if (patch.status === 'sent to lender') {
       try {

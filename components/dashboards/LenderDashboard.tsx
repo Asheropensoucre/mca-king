@@ -85,7 +85,7 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
                         </div>
                     </div>
                     {message && <p className="mb-4 text-sm text-theme-teal">{message}</p>}
-                    <MerchantDetailView item={selectedDeal} />
+                    <MerchantDetailView item={selectedDeal} currentUser={currentUser} />
                 </div>
                 {isCreatingOffer && (
                      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">

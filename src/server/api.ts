@@ -21,6 +21,9 @@ import { GET as getMatching } from '../routes/matching/index'
 import { POST as runMatching } from '../routes/matching/run'
 import { POST as postManualMatching, DELETE as deleteManualMatching } from '../routes/matching/manual'
 import { POST as notifyMatching } from '../routes/matching/notify'
+import { GET as getActivities, POST as postActivity } from '../routes/activities/index'
+import { GET as getTasks, POST as postTask } from '../routes/tasks/index'
+import { PATCH as patchTask, DELETE as deleteTask } from '../routes/tasks/[id]'
 import { POST as aiChat } from '../routes/ai/chat'
 import type { RouteContext } from '../lib/route-utils'
 
@@ -54,6 +57,23 @@ function matchRoute(method: string, pathname: string): RouteMatch | null {
 
   if (pathname === '/api/users/sales-reps') {
     if (method === 'GET') return { handler: getSalesReps }
+  }
+
+  if (pathname === '/api/activities') {
+    if (method === 'GET') return { handler: getActivities }
+    if (method === 'POST') return { handler: postActivity }
+  }
+
+  if (pathname === '/api/tasks') {
+    if (method === 'GET') return { handler: getTasks }
+    if (method === 'POST') return { handler: postTask }
+  }
+
+  const taskMatch = pathname.match(/^\/api\/tasks\/([^/]+)$/)
+  if (taskMatch) {
+    const params = { id: decodeURIComponent(taskMatch[1]) }
+    if (method === 'PATCH') return { handler: patchTask, params }
+    if (method === 'DELETE') return { handler: deleteTask, params }
   }
 
   if (pathname === '/api/matching') {

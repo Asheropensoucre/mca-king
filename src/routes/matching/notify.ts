@@ -1,4 +1,5 @@
 import { triggerLenderNotifications } from '../../lib/email-triggers'
+import { recordActivity } from '../../lib/activity'
 import { requireAuth } from '../../lib/requireAuth'
 import { assertRole, badRequest, json } from '../../lib/route-utils'
 import { supabaseAdmin } from '../../lib/supabase-server'
@@ -26,6 +27,13 @@ export async function POST(req: Request): Promise<Response> {
   if (error) return badRequest(error.message)
 
   triggerLenderNotifications(body.merchant_id)
+  recordActivity({
+    entity_type: 'merchant',
+    entity_id: body.merchant_id,
+    user_id: user.id,
+    activity_type: 'match',
+    body: `${data?.length ?? 0} lender(s) notified`,
+  })
 
   return json({ notified: data?.length ?? 0, notified_at: notifiedAt })
 }

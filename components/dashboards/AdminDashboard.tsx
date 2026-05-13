@@ -11,6 +11,7 @@ import { APPLICATION_STATUSES } from './shared/applicationStatus';
 import { LeadManager } from './LeadManager';
 import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 import { Chatbot } from '../Chatbot';
+import { TaskPanel } from './shared/TaskPanel';
 
 interface AdminDashboardProps { 
     currentUser: AuthUser;
@@ -111,7 +112,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                     )
                 ) : (
                     isMerchant ? (
-                        <MerchantDetailView item={selectedItem as FormData} lenders={lenders} canDeleteDocuments={true} canManageMatches={true} canRemoveMatches={true} />
+                        <MerchantDetailView item={selectedItem as FormData} lenders={lenders} canDeleteDocuments={true} canManageMatches={true} canRemoveMatches={true} currentUser={currentUser} />
                     ) : (
                         <LenderDetailView item={selectedItem as LenderInfo} />
                     )
@@ -239,7 +240,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                         <p className="text-sm font-bold text-theme-maroon dark:text-theme-teal">Signed in as {currentUser.full_name ?? currentUser.name ?? currentUser.email}</p>
                         <PrimaryButton label="Create Sales Rep" size="small" onClick={() => setIsCreatingRep(true)} />
                     </div>
-                    {activeSection === 'leads' && <LeadManager isAdmin={true} salesReps={salesReps} />}
+                    <div className="mb-6">
+                        <TaskPanel currentUser={currentUser} title="Tasks Overview" overview />
+                    </div>
+                    {activeSection === 'leads' && <LeadManager isAdmin={true} salesReps={salesReps} currentUser={currentUser} />}
                     {activeSection === 'merchants' && renderMerchants()}
                     {activeSection === 'lenders' && renderLenders()}
                     {activeSection === 'pipeline' && (

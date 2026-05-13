@@ -158,6 +158,41 @@ export interface Lead {
   latest_note?: LeadNote | null;
   notes?: LeadNote[];
 }
+export type EntityType = 'lead' | 'merchant' | 'lender' | 'offer' | 'document' | 'stipulation' | 'user' | 'funding';
+export type ActivityType = 'note' | 'call' | 'email' | 'status_change' | 'upload' | 'match' | 'offer' | 'task' | 'system';
+export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type TaskStatus = 'open' | 'completed' | 'cancelled';
+
+export interface Activity {
+  id: string;
+  entity_type: EntityType;
+  entity_id: string;
+  user_id: string | null;
+  activity_type: ActivityType;
+  body: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  author_name?: string;
+}
+
+export interface Task {
+  id: string;
+  assigned_to: string | null;
+  created_by: string;
+  entity_type: EntityType;
+  entity_id: string;
+  title: string;
+  description: string | null;
+  priority: TaskPriority;
+  status: TaskStatus;
+  due_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  assignee_name?: string;
+  entity_name?: string;
+}
+
 export type DocType = 'bank_statement' | 'contract' | 'stipulation' | 'id' | 'other';
 
 export interface Document {

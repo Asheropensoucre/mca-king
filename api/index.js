@@ -35493,170 +35493,6 @@ var require_websocket_server = __commonJS((exports, module) => {
   }
 });
 
-// components/dashboards/shared/applicationStatus.ts
-var APPLICATION_STATUS_CONFIG = [
-  { id: "application-docs-in", label: "application & 3 months bank statements in", theme: "default" },
-  { id: "sent-to-lender", label: "sent to lender", theme: "default" },
-  { id: "all-lenders-decline", label: "all lenders decline", theme: "error" },
-  { id: "offer-received", label: "one or more lender's sent offer", theme: "default" },
-  { id: "merchant-accepts-offer", label: "Merchant accepts offer", theme: "default" },
-  { id: "merchant-declines-offers", label: "Merchant Declines Offer's", theme: "error" },
-  { id: "more-docs-requested", label: "more docs requested", theme: "warning" },
-  { id: "contract-sent", label: "contract sent", theme: "default" },
-  { id: "contract-signed", label: "contract signed", theme: "default" },
-  { id: "contract-declined-by-merchant", label: "contract declined by the merchant", theme: "error" },
-  { id: "declined-by-funder", label: "Declined by funder", theme: "error" },
-  { id: "funded", label: "FUNDED", theme: "success" }
-];
-var APPLICATION_STATUSES = APPLICATION_STATUS_CONFIG.map((status) => status.label);
-var DEFAULT_APPLICATION_STATUS = APPLICATION_STATUS_CONFIG[0].label;
-
-// src/lib/data-shapes.ts
-var numberOrNull = (value) => {
-  if (!value)
-    return null;
-  const parsed = Number(String(value).replace(/[^0-9.-]/g, ""));
-  return Number.isFinite(parsed) ? parsed : null;
-};
-var getStateFromAddress = (address) => {
-  if (!address)
-    return null;
-  const match = address.toUpperCase().match(/\b[A-Z]{2}\b(?!.*\b[A-Z]{2}\b)/);
-  return match?.[0] ?? null;
-};
-function merchantToInsert(merchant, userId) {
-  return {
-    id: merchant.id,
-    user_id: userId ?? null,
-    assigned_rep_id: merchant.salesRepId ?? null,
-    business_name: merchant.businessInfo.legalName || merchant.businessInfo.dbaName || "Unnamed Business",
-    industry: merchant.businessInfo.industryType || null,
-    state: getStateFromAddress(merchant.businessInfo.address),
-    monthly_revenue: numberOrNull(merchant.businessInfo.monthlyRevenue),
-    time_in_business: null,
-    credit_score: numberOrNull(merchant.owners[0]?.creditScore),
-    nsf_count: numberOrNull(merchant.businessInfo.recentNSFs),
-    requested_amount: numberOrNull(merchant.requestedAmount),
-    current_positions: null,
-    status: merchant.status || DEFAULT_APPLICATION_STATUS,
-    payload: merchant
-  };
-}
-function merchantToUpdate(merchant) {
-  return {
-    assigned_rep_id: merchant.salesRepId ?? undefined,
-    business_name: merchant.businessInfo?.legalName || merchant.businessInfo?.dbaName || undefined,
-    industry: merchant.businessInfo?.industryType || undefined,
-    state: getStateFromAddress(merchant.businessInfo?.address) ?? undefined,
-    monthly_revenue: numberOrNull(merchant.businessInfo?.monthlyRevenue),
-    credit_score: numberOrNull(merchant.owners?.[0]?.creditScore),
-    nsf_count: numberOrNull(merchant.businessInfo?.recentNSFs),
-    requested_amount: numberOrNull(merchant.requestedAmount),
-    status: merchant.status,
-    payload: merchant,
-    updated_at: new Date().toISOString()
-  };
-}
-function rowToMerchant(row) {
-  const base = row.payload;
-  if (base) {
-    return {
-      ...base,
-      id: row.id,
-      status: row.status,
-      salesRepId: row.assigned_rep_id ?? base.salesRepId,
-      updated_at: row.updated_at
-    };
-  }
-  return {
-    id: row.id,
-    businessInfo: {
-      legalName: row.business_name,
-      dbaName: "",
-      address: row.state ?? "",
-      monthlyRevenue: row.monthly_revenue ? String(row.monthly_revenue) : "",
-      phone: "",
-      taxId: "",
-      startDate: "",
-      industryType: row.industry ?? "",
-      entityType: "",
-      recentNSFs: row.nsf_count ? String(row.nsf_count) : ""
-    },
-    owners: [],
-    agreements: { creditAuth: false, signatureDataUrl: "", ipAddress: "", geolocation: null },
-    documents: [],
-    status: row.status,
-    offers: [],
-    requestedAmount: row.requested_amount ? String(row.requested_amount) : "",
-    salesRepId: row.assigned_rep_id ?? undefined,
-    matchedLenderIds: [],
-    updated_at: row.updated_at
-  };
-}
-function lenderToInsert(lender, userId) {
-  return {
-    id: lender.id,
-    user_id: userId ?? null,
-    company_name: lender.lenderName || "Unnamed Lender",
-    contact_email: lender.email || "unknown@example.com",
-    contact_name: lender.isoRep || null,
-    min_revenue: numberOrNull(lender.minRevenue),
-    max_revenue: null,
-    min_credit: numberOrNull(lender.minCreditScore),
-    max_positions: numberOrNull(lender.positions),
-    industries: lender.industryRestrictions ? lender.industryRestrictions.split(",").map((v) => v.trim()).filter(Boolean) : [],
-    states: lender.stateRestrictions ? lender.stateRestrictions.split(",").map((v) => v.trim()).filter(Boolean) : [],
-    min_amount: null,
-    max_amount: numberOrNull(lender.maxFundingAmount),
-    is_active: true,
-    payload: lender
-  };
-}
-function lenderToUpdate(lender) {
-  return {
-    company_name: lender.lenderName || undefined,
-    contact_email: lender.email || undefined,
-    contact_name: lender.isoRep || undefined,
-    min_revenue: numberOrNull(lender.minRevenue),
-    min_credit: numberOrNull(lender.minCreditScore),
-    max_positions: numberOrNull(lender.positions),
-    states: lender.stateRestrictions ? lender.stateRestrictions.split(",").map((v) => v.trim()).filter(Boolean) : undefined,
-    max_amount: numberOrNull(lender.maxFundingAmount),
-    payload: lender
-  };
-}
-function rowToLender(row) {
-  if (row.payload)
-    return { ...row.payload, id: row.id };
-  return {
-    id: row.id,
-    lenderName: row.company_name,
-    positions: row.max_positions ? String(row.max_positions) : "",
-    longestTerm: "",
-    maxFundingAmount: row.max_amount ? String(row.max_amount) : "",
-    minRevenue: row.min_revenue ? String(row.min_revenue) : "",
-    minCreditScore: row.min_credit ? String(row.min_credit) : "",
-    industryRestrictions: row.industries?.join(", ") ?? "",
-    nsfs: "",
-    timeInBusiness: "",
-    stateRestrictions: row.states?.join(", ") ?? "",
-    isoRep: row.contact_name ?? "",
-    cell: "",
-    email: row.contact_email,
-    notes: "",
-    buyRate: "",
-    fees: "",
-    trucking: ""
-  };
-}
-function normalizeOfferStatus(status) {
-  if (status === "Accepted")
-    return "accepted";
-  if (status === "Rejected")
-    return "declined";
-  return "pending";
-}
-
 // node_modules/@supabase/supabase-js/dist/index.mjs
 var exports_dist3 = {};
 __export(exports_dist3, {
@@ -38156,6 +37992,192 @@ var supabaseAdmin = new Proxy({}, {
     return typeof value === "function" ? value.bind(client) : value;
   }
 });
+
+// src/lib/activity.ts
+async function writeActivity(params) {
+  try {
+    const { error } = await supabaseAdmin.from("activities").insert({
+      entity_type: params.entity_type,
+      entity_id: params.entity_id,
+      user_id: params.user_id ?? null,
+      activity_type: params.activity_type,
+      body: params.body ?? null,
+      metadata: params.metadata ?? {}
+    });
+    if (error) {
+      console.error("[activity] Failed to write activity:", params.activity_type, error);
+    }
+  } catch (err) {
+    console.error("[activity] Failed to write activity:", params.activity_type, err);
+  }
+}
+function recordActivity(params) {
+  writeActivity(params);
+}
+
+// components/dashboards/shared/applicationStatus.ts
+var APPLICATION_STATUS_CONFIG = [
+  { id: "application-docs-in", label: "application & 3 months bank statements in", theme: "default" },
+  { id: "sent-to-lender", label: "sent to lender", theme: "default" },
+  { id: "all-lenders-decline", label: "all lenders decline", theme: "error" },
+  { id: "offer-received", label: "one or more lender's sent offer", theme: "default" },
+  { id: "merchant-accepts-offer", label: "Merchant accepts offer", theme: "default" },
+  { id: "merchant-declines-offers", label: "Merchant Declines Offer's", theme: "error" },
+  { id: "more-docs-requested", label: "more docs requested", theme: "warning" },
+  { id: "contract-sent", label: "contract sent", theme: "default" },
+  { id: "contract-signed", label: "contract signed", theme: "default" },
+  { id: "contract-declined-by-merchant", label: "contract declined by the merchant", theme: "error" },
+  { id: "declined-by-funder", label: "Declined by funder", theme: "error" },
+  { id: "funded", label: "FUNDED", theme: "success" }
+];
+var APPLICATION_STATUSES = APPLICATION_STATUS_CONFIG.map((status) => status.label);
+var DEFAULT_APPLICATION_STATUS = APPLICATION_STATUS_CONFIG[0].label;
+
+// src/lib/data-shapes.ts
+var numberOrNull = (value) => {
+  if (!value)
+    return null;
+  const parsed = Number(String(value).replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+};
+var getStateFromAddress = (address) => {
+  if (!address)
+    return null;
+  const match = address.toUpperCase().match(/\b[A-Z]{2}\b(?!.*\b[A-Z]{2}\b)/);
+  return match?.[0] ?? null;
+};
+function merchantToInsert(merchant, userId) {
+  return {
+    id: merchant.id,
+    user_id: userId ?? null,
+    assigned_rep_id: merchant.salesRepId ?? null,
+    business_name: merchant.businessInfo.legalName || merchant.businessInfo.dbaName || "Unnamed Business",
+    industry: merchant.businessInfo.industryType || null,
+    state: getStateFromAddress(merchant.businessInfo.address),
+    monthly_revenue: numberOrNull(merchant.businessInfo.monthlyRevenue),
+    time_in_business: null,
+    credit_score: numberOrNull(merchant.owners[0]?.creditScore),
+    nsf_count: numberOrNull(merchant.businessInfo.recentNSFs),
+    requested_amount: numberOrNull(merchant.requestedAmount),
+    current_positions: null,
+    status: merchant.status || DEFAULT_APPLICATION_STATUS,
+    payload: merchant
+  };
+}
+function merchantToUpdate(merchant) {
+  return {
+    assigned_rep_id: merchant.salesRepId ?? undefined,
+    business_name: merchant.businessInfo?.legalName || merchant.businessInfo?.dbaName || undefined,
+    industry: merchant.businessInfo?.industryType || undefined,
+    state: getStateFromAddress(merchant.businessInfo?.address) ?? undefined,
+    monthly_revenue: numberOrNull(merchant.businessInfo?.monthlyRevenue),
+    credit_score: numberOrNull(merchant.owners?.[0]?.creditScore),
+    nsf_count: numberOrNull(merchant.businessInfo?.recentNSFs),
+    requested_amount: numberOrNull(merchant.requestedAmount),
+    status: merchant.status,
+    payload: merchant,
+    updated_at: new Date().toISOString()
+  };
+}
+function rowToMerchant(row) {
+  const base = row.payload;
+  if (base) {
+    return {
+      ...base,
+      id: row.id,
+      status: row.status,
+      salesRepId: row.assigned_rep_id ?? base.salesRepId,
+      updated_at: row.updated_at
+    };
+  }
+  return {
+    id: row.id,
+    businessInfo: {
+      legalName: row.business_name,
+      dbaName: "",
+      address: row.state ?? "",
+      monthlyRevenue: row.monthly_revenue ? String(row.monthly_revenue) : "",
+      phone: "",
+      taxId: "",
+      startDate: "",
+      industryType: row.industry ?? "",
+      entityType: "",
+      recentNSFs: row.nsf_count ? String(row.nsf_count) : ""
+    },
+    owners: [],
+    agreements: { creditAuth: false, signatureDataUrl: "", ipAddress: "", geolocation: null },
+    documents: [],
+    status: row.status,
+    offers: [],
+    requestedAmount: row.requested_amount ? String(row.requested_amount) : "",
+    salesRepId: row.assigned_rep_id ?? undefined,
+    matchedLenderIds: [],
+    updated_at: row.updated_at
+  };
+}
+function lenderToInsert(lender, userId) {
+  return {
+    id: lender.id,
+    user_id: userId ?? null,
+    company_name: lender.lenderName || "Unnamed Lender",
+    contact_email: lender.email || "unknown@example.com",
+    contact_name: lender.isoRep || null,
+    min_revenue: numberOrNull(lender.minRevenue),
+    max_revenue: null,
+    min_credit: numberOrNull(lender.minCreditScore),
+    max_positions: numberOrNull(lender.positions),
+    industries: lender.industryRestrictions ? lender.industryRestrictions.split(",").map((v) => v.trim()).filter(Boolean) : [],
+    states: lender.stateRestrictions ? lender.stateRestrictions.split(",").map((v) => v.trim()).filter(Boolean) : [],
+    min_amount: null,
+    max_amount: numberOrNull(lender.maxFundingAmount),
+    is_active: true,
+    payload: lender
+  };
+}
+function lenderToUpdate(lender) {
+  return {
+    company_name: lender.lenderName || undefined,
+    contact_email: lender.email || undefined,
+    contact_name: lender.isoRep || undefined,
+    min_revenue: numberOrNull(lender.minRevenue),
+    min_credit: numberOrNull(lender.minCreditScore),
+    max_positions: numberOrNull(lender.positions),
+    states: lender.stateRestrictions ? lender.stateRestrictions.split(",").map((v) => v.trim()).filter(Boolean) : undefined,
+    max_amount: numberOrNull(lender.maxFundingAmount),
+    payload: lender
+  };
+}
+function rowToLender(row) {
+  if (row.payload)
+    return { ...row.payload, id: row.id };
+  return {
+    id: row.id,
+    lenderName: row.company_name,
+    positions: row.max_positions ? String(row.max_positions) : "",
+    longestTerm: "",
+    maxFundingAmount: row.max_amount ? String(row.max_amount) : "",
+    minRevenue: row.min_revenue ? String(row.min_revenue) : "",
+    minCreditScore: row.min_credit ? String(row.min_credit) : "",
+    industryRestrictions: row.industries?.join(", ") ?? "",
+    nsfs: "",
+    timeInBusiness: "",
+    stateRestrictions: row.states?.join(", ") ?? "",
+    isoRep: row.contact_name ?? "",
+    cell: "",
+    email: row.contact_email,
+    notes: "",
+    buyRate: "",
+    fees: "",
+    trucking: ""
+  };
+}
+function normalizeOfferStatus(status) {
+  if (status === "Accepted")
+    return "accepted";
+  if (status === "Rejected")
+    return "declined";
+  return "pending";
+}
 
 // src/lib/email-data.ts
 var toNumber = (value) => {
@@ -43807,6 +43829,13 @@ async function POST(req) {
   if (history.error)
     return badRequest(history.error.message);
   triggerNewMerchantAlert(created.id);
+  recordActivity({
+    entity_type: "merchant",
+    entity_id: created.id,
+    user_id: user.id,
+    activity_type: "system",
+    body: `Merchant application created: ${data.business_name}`
+  });
   return json(created, { status: 201 });
 }
 
@@ -43895,6 +43924,23 @@ function canRead(userRole, userId, row) {
     return row.user_id === userId;
   return false;
 }
+function recordRepAssignmentActivity(merchantId, assignedRepId, userId) {
+  (async () => {
+    let repName = assignedRepId ?? "Unassigned";
+    if (assignedRepId) {
+      const { data: rep } = await supabaseAdmin.from("users").select("full_name,name,email").eq("id", assignedRepId).maybeSingle();
+      repName = rep?.full_name ?? rep?.name ?? rep?.email ?? assignedRepId;
+    }
+    recordActivity({
+      entity_type: "merchant",
+      entity_id: merchantId,
+      user_id: userId,
+      activity_type: "system",
+      body: `Sales rep assigned: ${repName}`,
+      metadata: { assigned_rep_id: assignedRepId }
+    });
+  })();
+}
 function sendRepAssignmentAlert(merchant) {
   if (!merchant.assigned_rep_id)
     return;
@@ -43974,8 +44020,10 @@ async function PATCH(req, context) {
   const { data, error } = await supabaseAdmin.from("merchants").update(update).eq("id", id).select("*").single();
   if (error)
     return badRequest(error.message);
-  if (assignmentChanged && data.assigned_rep_id) {
-    sendRepAssignmentAlert(data);
+  if (assignmentChanged) {
+    if (data.assigned_rep_id)
+      sendRepAssignmentAlert(data);
+    recordRepAssignmentActivity(id, data.assigned_rep_id, user.id);
   }
   if (patch.status && patch.status !== existing.status) {
     const history = await supabaseAdmin.from("status_history").insert({
@@ -43986,6 +44034,14 @@ async function PATCH(req, context) {
     });
     if (history.error)
       return badRequest(history.error.message);
+    recordActivity({
+      entity_type: "merchant",
+      entity_id: id,
+      user_id: user.id,
+      activity_type: "status_change",
+      body: `Status changed from "${existing.status}" to "${patch.status}"`,
+      metadata: { previous_status: existing.status, new_status: patch.status }
+    });
     if (patch.status === "sent to lender") {
       try {
         await runAutoMatch(id, user.id);
@@ -44194,6 +44250,14 @@ async function POST3(req) {
   if (merchantUpdateError)
     return merchantUpdateError;
   triggerOfferReceived(data.id);
+  recordActivity({
+    entity_type: "offer",
+    entity_id: merchantId,
+    user_id: user.id,
+    activity_type: "offer",
+    body: `Offer received from ${offer.lenderName || offer.lenderId}: $${offer.amount}`,
+    metadata: { offer_id: data.id, lender_id: offer.lenderId, amount: offer.amount, factor_rate: offer.rate }
+  });
   return json(rowToOffer(data), { status: 201 });
 }
 
@@ -44263,6 +44327,14 @@ async function PATCH3(req, context) {
   if (updatedOffer.status === "Accepted") {
     triggerOfferAccepted(savedOffer.id);
   }
+  recordActivity({
+    entity_type: "offer",
+    entity_id: merchant.id,
+    user_id: user.id,
+    activity_type: "offer",
+    body: `Offer ${dbStatus} by merchant`,
+    metadata: { offer_id: id, status: dbStatus }
+  });
   const result = savedOffer.payload ? { ...savedOffer.payload, id: savedOffer.id } : updatedOffer;
   return json(result);
 }
@@ -44319,14 +44391,29 @@ async function POST4(req) {
   if (error)
     return badRequest(error.message);
   if (body.initial_note?.trim()) {
+    const noteBody = body.initial_note.trim();
     const { error: noteError } = await supabaseAdmin.from("lead_notes").insert({
       lead_id: data.id,
       written_by: user.id,
-      body: body.initial_note.trim()
+      body: noteBody
     });
     if (noteError)
       return badRequest(noteError.message);
+    recordActivity({
+      entity_type: "lead",
+      entity_id: data.id,
+      user_id: user.id,
+      activity_type: "note",
+      body: noteBody
+    });
   }
+  recordActivity({
+    entity_type: "lead",
+    entity_id: data.id,
+    user_id: user.id,
+    activity_type: "system",
+    body: `Lead created: ${data.business_name}`
+  });
   return json(data, { status: 201 });
 }
 
@@ -44428,6 +44515,13 @@ async function POST5(req, context) {
   const { data, error } = await supabaseAdmin.from("lead_notes").insert({ lead_id: id, written_by: user.id, body: body.body.trim() }).select("*").single();
   if (error)
     return badRequest(error.message);
+  recordActivity({
+    entity_type: "lead",
+    entity_id: id,
+    user_id: user.id,
+    activity_type: "note",
+    body: body.body.trim()
+  });
   return json(data, { status: 201 });
 }
 
@@ -44498,6 +44592,22 @@ async function POST6(req, context) {
   });
   if (historyError)
     return badRequest(historyError.message);
+  recordActivity({
+    entity_type: "lead",
+    entity_id: id,
+    user_id: user.id,
+    activity_type: "system",
+    body: `Lead converted to merchant: ${lead.business_name}`,
+    metadata: { merchant_id: merchantId }
+  });
+  recordActivity({
+    entity_type: "merchant",
+    entity_id: merchantId,
+    user_id: user.id,
+    activity_type: "system",
+    body: `Merchant created from lead: ${lead.business_name}`,
+    metadata: { lead_id: id }
+  });
   return json({ merchant_id: merchantId }, { status: 201 });
 }
 
@@ -44551,6 +44661,24 @@ async function POST7(req) {
     if (stipError)
       return badRequest(stipError.message);
   }
+  const activityBody = `Document uploaded: ${fileValue.name} (${docTypeValue})`;
+  const activityMetadata = { doc_type: docTypeValue, file_name: fileValue.name, document_id: data.id };
+  recordActivity({
+    entity_type: "document",
+    entity_id: merchantIdValue,
+    user_id: user.id,
+    activity_type: "upload",
+    body: activityBody,
+    metadata: activityMetadata
+  });
+  recordActivity({
+    entity_type: "merchant",
+    entity_id: merchantIdValue,
+    user_id: user.id,
+    activity_type: "upload",
+    body: activityBody,
+    metadata: activityMetadata
+  });
   return json(data, { status: 201 });
 }
 
@@ -44678,6 +44806,14 @@ async function POST8(req) {
       return badRequest(historyError.message);
   }
   triggerStipulationRequested(data.id);
+  recordActivity({
+    entity_type: "stipulation",
+    entity_id: body.merchant_id,
+    user_id: user.id,
+    activity_type: "system",
+    body: `Stipulation requested: ${body.description.trim()}`,
+    metadata: { stipulation_id: data.id, lender_id: body.lender_id }
+  });
   return json(data, { status: 201 });
 }
 
@@ -44912,7 +45048,300 @@ async function POST14(req) {
   if (error)
     return badRequest(error.message);
   triggerLenderNotifications(body.merchant_id);
+  recordActivity({
+    entity_type: "merchant",
+    entity_id: body.merchant_id,
+    user_id: user.id,
+    activity_type: "match",
+    body: `${data?.length ?? 0} lender(s) notified`
+  });
   return json({ notified: data?.length ?? 0, notified_at: notifiedAt });
+}
+
+// src/routes/activities/index.ts
+var ENTITY_TYPES = ["lead", "merchant", "lender", "offer", "document", "stipulation", "user", "funding"];
+var MANUAL_ACTIVITY_TYPES = ["note", "call"];
+var isEntityType = (value) => typeof value === "string" && ENTITY_TYPES.includes(value);
+var isManualActivityType = (value) => typeof value === "string" && MANUAL_ACTIVITY_TYPES.includes(value);
+function toActivity(row) {
+  return {
+    id: row.id,
+    entity_type: row.entity_type,
+    entity_id: row.entity_id,
+    user_id: row.user_id,
+    activity_type: row.activity_type,
+    body: row.body,
+    metadata: row.metadata ?? {},
+    created_at: row.created_at,
+    author_name: row.users?.full_name ?? row.users?.name ?? row.users?.email
+  };
+}
+async function GET13(req) {
+  const user = await requireAuth(req);
+  if (user.role === "merchant")
+    return forbidden();
+  const url = new URL(req.url);
+  const entityType = url.searchParams.get("entity_type");
+  const entityId = url.searchParams.get("entity_id");
+  if (!isEntityType(entityType))
+    return badRequest("entity_type is required");
+  if (!entityId)
+    return badRequest("entity_id is required");
+  const { data, error } = await supabaseAdmin.from("activities").select("*, users:user_id(full_name,name,email)").eq("entity_type", entityType).eq("entity_id", entityId).order("created_at", { ascending: false }).limit(100).returns();
+  if (error)
+    return badRequest(error.message);
+  return json((data ?? []).map(toActivity));
+}
+async function POST15(req) {
+  const user = await requireAuth(req);
+  const roleError = assertRole(user, ["admin", "sales_rep"]);
+  if (roleError)
+    return roleError;
+  const body = await req.json();
+  if (!isEntityType(body.entity_type))
+    return badRequest("entity_type is required");
+  if (!body.entity_id)
+    return badRequest("entity_id is required");
+  if (!isManualActivityType(body.activity_type))
+    return badRequest("activity_type must be note or call");
+  if (!body.body?.trim())
+    return badRequest("body is required");
+  const insert = {
+    entity_type: body.entity_type,
+    entity_id: body.entity_id,
+    user_id: user.id,
+    activity_type: body.activity_type,
+    body: body.body.trim(),
+    metadata: {}
+  };
+  const { data, error } = await supabaseAdmin.from("activities").insert(insert).select("*, users:user_id(full_name,name,email)").single();
+  if (error)
+    return badRequest(error.message);
+  return json(toActivity(data), { status: 201 });
+}
+
+// src/routes/tasks/index.ts
+var TASK_ENTITY_TYPES = ["lead", "merchant", "lender", "funding"];
+var PRIORITIES = ["low", "normal", "high", "urgent"];
+var isTaskEntityType = (value) => typeof value === "string" && TASK_ENTITY_TYPES.includes(value);
+var isPriority = (value) => typeof value === "string" && PRIORITIES.includes(value);
+function sortTasks(tasks) {
+  return [...tasks].sort((a, b) => {
+    if (a.status !== b.status) {
+      if (a.status === "open")
+        return -1;
+      if (b.status === "open")
+        return 1;
+    }
+    const aDue = a.due_at ? new Date(a.due_at).getTime() : Number.POSITIVE_INFINITY;
+    const bDue = b.due_at ? new Date(b.due_at).getTime() : Number.POSITIVE_INFINITY;
+    if (aDue !== bDue)
+      return aDue - bDue;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+}
+async function entityNames(tasks) {
+  const names = new Map;
+  const merchantIds = tasks.filter((task) => task.entity_type === "merchant").map((task) => task.entity_id);
+  const leadIds = tasks.filter((task) => task.entity_type === "lead").map((task) => task.entity_id);
+  if (merchantIds.length > 0) {
+    const { data, error } = await supabaseAdmin.from("merchants").select("id,business_name").in("id", merchantIds).returns();
+    if (!error)
+      (data ?? []).forEach((row) => names.set(`merchant:${row.id}`, row.business_name));
+  }
+  if (leadIds.length > 0) {
+    const { data, error } = await supabaseAdmin.from("leads").select("id,business_name").in("id", leadIds).returns();
+    if (!error)
+      (data ?? []).forEach((row) => names.set(`lead:${row.id}`, row.business_name));
+  }
+  return names;
+}
+async function mapTasks(rows) {
+  const baseTasks = rows.map((row) => ({
+    id: row.id,
+    assigned_to: row.assigned_to,
+    created_by: row.created_by,
+    entity_type: row.entity_type,
+    entity_id: row.entity_id,
+    title: row.title,
+    description: row.description,
+    priority: row.priority,
+    status: row.status,
+    due_at: row.due_at,
+    completed_at: row.completed_at,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    assignee_name: row.assignee?.full_name ?? row.assignee?.name ?? row.assignee?.email
+  }));
+  const names = await entityNames(baseTasks);
+  return sortTasks(baseTasks.map((task) => ({
+    ...task,
+    entity_name: names.get(`${task.entity_type}:${task.entity_id}`)
+  })));
+}
+async function GET14(req) {
+  const user = await requireAuth(req);
+  if (user.role === "merchant" || user.role === "lender")
+    return forbidden();
+  const url = new URL(req.url);
+  const entityType = url.searchParams.get("entity_type");
+  const entityId = url.searchParams.get("entity_id");
+  let query = supabaseAdmin.from("tasks").select("*, assignee:assigned_to(full_name,name,email)");
+  if (entityType || entityId) {
+    if (!isTaskEntityType(entityType))
+      return badRequest("entity_type is invalid");
+    if (!entityId)
+      return badRequest("entity_id is required");
+    query = query.eq("entity_type", entityType).eq("entity_id", entityId);
+  }
+  if (user.role === "sales_rep") {
+    query = query.or(`assigned_to.eq.${user.id},created_by.eq.${user.id}`);
+  }
+  const { data, error } = await query.returns();
+  if (error)
+    return badRequest(error.message);
+  return json(await mapTasks(data ?? []));
+}
+async function POST16(req) {
+  const user = await requireAuth(req);
+  const roleError = assertRole(user, ["admin", "sales_rep"]);
+  if (roleError)
+    return roleError;
+  const body = await req.json();
+  if (!isTaskEntityType(body.entity_type))
+    return badRequest("entity_type is required");
+  if (!body.entity_id)
+    return badRequest("entity_id is required");
+  if (!body.title?.trim())
+    return badRequest("title is required");
+  if (body.priority && !isPriority(body.priority))
+    return badRequest("priority is invalid");
+  const { data, error } = await supabaseAdmin.from("tasks").insert({
+    assigned_to: body.assigned_to ?? user.id,
+    created_by: user.id,
+    entity_type: body.entity_type,
+    entity_id: body.entity_id,
+    title: body.title.trim(),
+    description: body.description?.trim() || null,
+    priority: body.priority ?? "normal",
+    due_at: body.due_at ?? null
+  }).select("*, assignee:assigned_to(full_name,name,email)").single();
+  if (error)
+    return badRequest(error.message);
+  recordActivity({
+    entity_type: body.entity_type,
+    entity_id: body.entity_id,
+    user_id: user.id,
+    activity_type: "task",
+    body: `Task created: ${data.title}`,
+    metadata: { task_id: data.id, priority: data.priority, assigned_to: data.assigned_to }
+  });
+  const [task] = await mapTasks([data]);
+  return json(task, { status: 201 });
+}
+
+// src/routes/tasks/[id].ts
+var PRIORITIES2 = ["low", "normal", "high", "urgent"];
+var STATUSES = ["open", "completed", "cancelled"];
+var isPriority2 = (value) => typeof value === "string" && PRIORITIES2.includes(value);
+var isStatus = (value) => typeof value === "string" && STATUSES.includes(value);
+function toTask(row) {
+  return {
+    id: row.id,
+    assigned_to: row.assigned_to,
+    created_by: row.created_by,
+    entity_type: row.entity_type,
+    entity_id: row.entity_id,
+    title: row.title,
+    description: row.description,
+    priority: row.priority,
+    status: row.status,
+    due_at: row.due_at,
+    completed_at: row.completed_at,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    assignee_name: row.assignee?.full_name ?? row.assignee?.name ?? row.assignee?.email
+  };
+}
+async function fetchTask(id) {
+  const { data, error } = await supabaseAdmin.from("tasks").select("*, assignee:assigned_to(full_name,name,email)").eq("id", id).maybeSingle();
+  if (error)
+    return badRequest(error.message);
+  return data ?? null;
+}
+function canManageTask(userId, role, task) {
+  if (role === "admin")
+    return true;
+  if (role === "sales_rep")
+    return task.assigned_to === userId || task.created_by === userId;
+  return false;
+}
+async function PATCH5(req, context) {
+  const user = await requireAuth(req);
+  const roleError = assertRole(user, ["admin", "sales_rep"]);
+  if (roleError)
+    return roleError;
+  const id = getId(context);
+  if (!id)
+    return badRequest();
+  const task = await fetchTask(id);
+  if (task instanceof Response)
+    return task;
+  if (!task)
+    return notFound();
+  if (!canManageTask(user.id, user.role, task))
+    return forbidden();
+  const body = await req.json();
+  if (body.status !== undefined && !isStatus(body.status))
+    return badRequest("status is invalid");
+  if (body.priority !== undefined && !isPriority2(body.priority))
+    return badRequest("priority is invalid");
+  const update = {
+    updated_at: new Date().toISOString()
+  };
+  if (body.title !== undefined) {
+    if (!body.title.trim())
+      return badRequest("title cannot be empty");
+    update.title = body.title.trim();
+  }
+  if (body.description !== undefined)
+    update.description = body.description?.trim() || null;
+  if (body.priority !== undefined)
+    update.priority = body.priority;
+  if (body.assigned_to !== undefined)
+    update.assigned_to = body.assigned_to;
+  if (body.due_at !== undefined)
+    update.due_at = body.due_at;
+  if (body.status !== undefined) {
+    update.status = body.status;
+    update.completed_at = body.status === "completed" ? new Date().toISOString() : null;
+  }
+  const { data, error } = await supabaseAdmin.from("tasks").update(update).eq("id", id).select("*, assignee:assigned_to(full_name,name,email)").single();
+  if (error)
+    return badRequest(error.message);
+  const changedStatus = body.status && body.status !== task.status;
+  recordActivity({
+    entity_type: data.entity_type,
+    entity_id: data.entity_id,
+    user_id: user.id,
+    activity_type: "task",
+    body: changedStatus ? `Task ${data.status}: ${data.title}` : `Task updated: ${data.title}`,
+    metadata: { task_id: data.id, status: data.status, previous_status: task.status }
+  });
+  return json(toTask(data));
+}
+async function DELETE6(req, context) {
+  const user = await requireAuth(req);
+  const roleError = assertRole(user, ["admin"]);
+  if (roleError)
+    return roleError;
+  const id = getId(context);
+  if (!id)
+    return badRequest();
+  const { error } = await supabaseAdmin.from("tasks").delete().eq("id", id);
+  if (error)
+    return badRequest(error.message);
+  return new Response(null, { status: 204 });
 }
 
 // node_modules/@google/genai/dist/node/index.mjs
@@ -61803,7 +62232,7 @@ Role-specific guidance:
 Tone: professional, helpful, and concise. Never make up information. If unsure, say so clearly and recommend checking the actual dashboard or asking an admin.
 `.trim();
 var displayName2 = (user) => user.full_name ?? user.email;
-async function POST15(req) {
+async function POST17(req) {
   const user = await requireAuth(req);
   const body = await readJson(req);
   const message = typeof body.message === "string" ? body.message.trim() : "";
@@ -61839,7 +62268,7 @@ ${message}`,
 function matchRoute(method, pathname) {
   if (pathname === "/api/ai/chat") {
     if (method === "POST")
-      return { handler: POST15 };
+      return { handler: POST17 };
   }
   if (pathname === "/api/auth/register") {
     if (method === "POST")
@@ -61860,6 +62289,26 @@ function matchRoute(method, pathname) {
   if (pathname === "/api/users/sales-reps") {
     if (method === "GET")
       return { handler: GET11 };
+  }
+  if (pathname === "/api/activities") {
+    if (method === "GET")
+      return { handler: GET13 };
+    if (method === "POST")
+      return { handler: POST15 };
+  }
+  if (pathname === "/api/tasks") {
+    if (method === "GET")
+      return { handler: GET14 };
+    if (method === "POST")
+      return { handler: POST16 };
+  }
+  const taskMatch = pathname.match(/^\/api\/tasks\/([^/]+)$/);
+  if (taskMatch) {
+    const params = { id: decodeURIComponent(taskMatch[1]) };
+    if (method === "PATCH")
+      return { handler: PATCH5, params };
+    if (method === "DELETE")
+      return { handler: DELETE6, params };
   }
   if (pathname === "/api/matching") {
     if (method === "GET")

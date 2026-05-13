@@ -1,4 +1,5 @@
 import type { ApplicationStatus, Stipulation } from '../../../types'
+import { recordActivity } from '../../lib/activity'
 import { rowToMerchant, type MerchantRow } from '../../lib/data-shapes'
 import { triggerStipulationRequested } from '../../lib/email-triggers'
 import { requireAuth } from '../../lib/requireAuth'
@@ -75,6 +76,14 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   triggerStipulationRequested(data.id)
+  recordActivity({
+    entity_type: 'stipulation',
+    entity_id: body.merchant_id,
+    user_id: user.id,
+    activity_type: 'system',
+    body: `Stipulation requested: ${body.description.trim()}`,
+    metadata: { stipulation_id: data.id, lender_id: body.lender_id },
+  })
 
   return json(data, { status: 201 })
 }
