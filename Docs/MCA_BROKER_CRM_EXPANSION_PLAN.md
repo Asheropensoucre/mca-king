@@ -93,7 +93,7 @@ Recommended build order:
 Phase A — Activity + Tasks ✅ complete
 Phase A.1 — Lender Offer Visibility + Data Isolation ✅ complete
 Phase B — Funded Deals + Broker Revenue + Sales Rep Commissions ✅ complete
-Phase C — Merchant-File Submissions
+Phase C — Merchant-File Submissions ✅ complete
 Phase D — Search, Filters, Saved Views
 Phase E — Renewals / Refinance
 Phase F — Reporting
@@ -472,7 +472,7 @@ Sales Rep Commissions
 
 ---
 
-# Phase C — Merchant-File Submission Tracking
+# Phase C — Merchant-File Submission Tracking ✅ COMPLETE
 
 ## Goal
 
@@ -492,7 +492,7 @@ A brokerage CRM also needs to know what happened after the broker shop sent the 
 - Which lender/funder responded with an approval or offer?
 - Who has not responded?
 
-## New database table
+## Implemented database table
 
 ### `merchant_file_submissions`
 
@@ -532,23 +532,23 @@ POST   /api/merchant-file-submissions
 PATCH  /api/merchant-file-submissions/:id
 ```
 
-Update `/api/matching/notify`:
+Updated `/api/matching/notify`:
 
 - When the broker shop notifies/submits to lenders, create or update `merchant_file_submissions` rows.
 - Set `status = submitted`.
 - Store `submitted_at`.
 
-Update offer route:
+Updated offer route:
 
 - When a lender/funder responds with an offer or approval, set the corresponding merchant-file submission to `offer_received`.
 
-Update stipulation route:
+Updated stipulation route:
 
 - When a lender/funder requests stips, set the corresponding merchant-file submission to `stips_requested`.
 
-## Frontend work
+## Frontend work implemented
 
-Add to merchant detail:
+Added to merchant detail:
 
 ```txt
 Merchant-File Submissions panel
@@ -1171,14 +1171,20 @@ Completed:
 
 ---
 
-## Phase C next
+## Phase C status: complete
 
-Build merchant-file submissions.
+Merchant-file submissions have been built.
 
-Why:
+Completed:
 
-- Makes lender matching operationally complete
-- Allows broker shops to track which lenders/funders received each merchant file and how they responded: approvals, declines, stip requests, offers, and no-response outcomes
+- Created `merchant_file_submissions` with RLS enabled and public-block policy.
+- Added `GET /api/merchant-file-submissions`, `POST /api/merchant-file-submissions`, and `PATCH /api/merchant-file-submissions/:id`.
+- Updated Notify Lenders to create/update merchant-file submission rows.
+- Updated offer creation to mark that lender/funder submission as `offer_received`.
+- Updated stipulation requests to mark that lender/funder submission as `stips_requested`.
+- Added Merchant-File Submissions panel to merchant detail for admin/sales rep users.
+- Enforced lender/funder privacy so lenders can only see their own submission row if the API is called directly.
+- Did not create lender-originated deal submission, referral partner, outside broker, or ISO payout concepts.
 
 ---
 
@@ -1207,7 +1213,7 @@ MCA King has the workflow foundation. The next product layer should focus on CRM
 Activity + Tasks ✅ complete
 Lender Offer Visibility + Data Isolation ✅ complete
 Funded Deals + Broker Revenue + Sales Rep Commissions ✅ complete
-Merchant-File Submissions
+Merchant-File Submissions ✅ complete
 Search + Saved Views
 Renewals
 Reports

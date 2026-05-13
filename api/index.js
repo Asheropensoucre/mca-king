@@ -44183,6 +44183,87 @@ async function DELETE2(req, context) {
   return new Response(null, { status: 204 });
 }
 
+// src/lib/merchant-file-submissions.ts
+var SUBMISSION_STATUSES = [
+  "submitted",
+  "viewed",
+  "no_response",
+  "declined",
+  "offer_received",
+  "stips_requested",
+  "withdrawn"
+];
+function isSubmissionStatus(value) {
+  return typeof value === "string" && SUBMISSION_STATUSES.includes(value);
+}
+function toMerchantFileSubmission(row) {
+  return {
+    id: row.id,
+    merchant_id: row.merchant_id,
+    lender_id: row.lender_id,
+    match_id: row.match_id,
+    submitted_by: row.submitted_by,
+    submitted_at: row.submitted_at,
+    status: row.status,
+    response_at: row.response_at,
+    decline_reason: row.decline_reason,
+    package_version: row.package_version,
+    notes: row.notes,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    merchant_name: row.merchant?.business_name,
+    lender_name: row.lender?.company_name,
+    lender_contact_name: row.lender?.contact_name,
+    lender_contact_email: row.lender?.contact_email
+  };
+}
+async function getLenderMatch(merchantId, lenderId) {
+  const { data, error } = await supabaseAdmin.from("lender_matches").select("id").eq("merchant_id", merchantId).eq("lender_id", lenderId).maybeSingle();
+  if (error)
+    throw error;
+  return data ?? null;
+}
+async function upsertMerchantFileSubmission(params) {
+  const packageVersion = params.package_version ?? 1;
+  const { data, error } = await supabaseAdmin.from("merchant_file_submissions").upsert({
+    merchant_id: params.merchant_id,
+    lender_id: params.lender_id,
+    match_id: params.match_id ?? null,
+    submitted_by: params.submitted_by ?? null,
+    submitted_at: params.submitted_at ?? new Date().toISOString(),
+    status: params.status ?? "submitted",
+    response_at: params.response_at ?? null,
+    decline_reason: params.decline_reason ?? null,
+    package_version: packageVersion,
+    notes: params.notes ?? null,
+    updated_at: new Date().toISOString()
+  }, { onConflict: "merchant_id,lender_id,package_version" }).select("*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name,contact_name,contact_email)").single();
+  if (error)
+    throw error;
+  return data;
+}
+async function markMerchantFileSubmissionResponse(params) {
+  const now = new Date().toISOString();
+  const { data: existing, error: existingError } = await supabaseAdmin.from("merchant_file_submissions").select("id").eq("merchant_id", params.merchant_id).eq("lender_id", params.lender_id).eq("package_version", 1).maybeSingle();
+  if (existingError)
+    throw existingError;
+  if (existing) {
+    const { error } = await supabaseAdmin.from("merchant_file_submissions").update({ status: params.status, response_at: now, updated_at: now }).eq("id", existing.id);
+    if (error)
+      throw error;
+    return;
+  }
+  const match = params.match_id !== undefined ? { id: params.match_id } : await getLenderMatch(params.merchant_id, params.lender_id);
+  await upsertMerchantFileSubmission({
+    merchant_id: params.merchant_id,
+    lender_id: params.lender_id,
+    match_id: match?.id ?? null,
+    status: params.status,
+    response_at: now,
+    submitted_at: now
+  });
+}
+
 // src/routes/offers/index.ts
 var OFFER_STATUS = "one or more lender's sent offer";
 function rowToOffer(row) {
@@ -44307,6 +44388,11 @@ async function POST3(req) {
   const merchantUpdateError = await updateMerchantOffers(merchantId, offer, user.id);
   if (merchantUpdateError)
     return merchantUpdateError;
+  try {
+    await markMerchantFileSubmissionResponse({ merchant_id: merchantId, lender_id: offer.lenderId, status: "offer_received" });
+  } catch (submissionError) {
+    return badRequest(submissionError instanceof Error ? submissionError.message : "Could not update merchant-file submission");
+  }
   triggerOfferReceived(data.id);
   recordActivity({
     entity_type: "offer",
@@ -44803,6 +44889,12 @@ async function DELETE4(req, context) {
 
 // src/routes/stipulations/index.ts
 var MORE_DOCS_STATUS = "more docs requested";
+async function currentLenderId(userId) {
+  const { data, error } = await supabaseAdmin.from("lenders").select("id").eq("user_id", userId).maybeSingle();
+  if (error)
+    return badRequest(error.message);
+  return data?.id ?? null;
+}
 async function canAccessMerchant2(userId, role, merchantId) {
   if (role === "admin")
     return true;
@@ -44815,8 +44907,15 @@ async function canAccessMerchant2(userId, role, merchantId) {
     return merchant.assigned_rep_id === userId;
   if (role === "merchant")
     return merchant.user_id === userId;
-  if (role === "lender")
-    return true;
+  if (role === "lender") {
+    const lenderId = await currentLenderId(userId);
+    if (lenderId instanceof Response)
+      return lenderId;
+    if (!lenderId)
+      return false;
+    const match = await getLenderMatch(merchantId, lenderId);
+    return Boolean(match);
+  }
   return false;
 }
 async function GET9(req) {
@@ -44829,7 +44928,16 @@ async function GET9(req) {
     return allowed;
   if (!allowed)
     return forbidden();
-  const { data, error } = await supabaseAdmin.from("stipulations").select("*").eq("merchant_id", merchantId).order("created_at", { ascending: false }).returns();
+  let query = supabaseAdmin.from("stipulations").select("*").eq("merchant_id", merchantId).order("created_at", { ascending: false });
+  if (user.role === "lender") {
+    const lenderId = await currentLenderId(user.id);
+    if (lenderId instanceof Response)
+      return lenderId;
+    if (!lenderId)
+      return forbidden();
+    query = query.eq("lender_id", lenderId);
+  }
+  const { data, error } = await query.returns();
   if (error)
     return badRequest(error.message);
   return json(data ?? []);
@@ -44841,6 +44949,16 @@ async function POST8(req) {
   const body = await req.json();
   if (!body.merchant_id || !body.lender_id || !body.description?.trim())
     return badRequest("merchant_id, lender_id, and description are required");
+  if (user.role === "lender") {
+    const lenderId = await currentLenderId(user.id);
+    if (lenderId instanceof Response)
+      return lenderId;
+    if (!lenderId || lenderId !== body.lender_id)
+      return forbidden();
+    const match = await getLenderMatch(body.merchant_id, lenderId);
+    if (!match)
+      return forbidden("This merchant file has not been submitted or matched to your lender profile");
+  }
   const { data: merchantRow, error: merchantError } = await supabaseAdmin.from("merchants").select("*").eq("id", body.merchant_id).single();
   if (merchantError)
     return badRequest(merchantError.message);
@@ -44862,6 +44980,11 @@ async function POST8(req) {
     });
     if (historyError)
       return badRequest(historyError.message);
+  }
+  try {
+    await markMerchantFileSubmissionResponse({ merchant_id: body.merchant_id, lender_id: body.lender_id, status: "stips_requested" });
+  } catch (submissionError) {
+    return badRequest(submissionError instanceof Error ? submissionError.message : "Could not update merchant-file submission");
   }
   triggerStipulationRequested(data.id);
   recordActivity({
@@ -45011,14 +45134,14 @@ async function GET12(req) {
   const merchantId = url.searchParams.get("merchant_id");
   if (!merchantId)
     return badRequest("merchant_id is required");
-  let currentLenderId = null;
+  let currentLenderId2 = null;
   if (user.role === "lender") {
     const { data: lender, error: lenderError } = await supabaseAdmin.from("lenders").select("id").eq("user_id", user.id).maybeSingle();
     if (lenderError)
       return badRequest(lenderError.message);
     if (!lender)
       return forbidden();
-    currentLenderId = lender.id;
+    currentLenderId2 = lender.id;
     const { data: allowedMatch, error: allowedError } = await supabaseAdmin.from("lender_matches").select("id").eq("merchant_id", merchantId).eq("lender_id", lender.id).maybeSingle();
     if (allowedError)
       return badRequest(allowedError.message);
@@ -45026,8 +45149,8 @@ async function GET12(req) {
       return forbidden();
   }
   let query = supabaseAdmin.from("lender_matches").select("*, lender:lenders(id,company_name,contact_name,contact_email)").eq("merchant_id", merchantId).order("created_at", { ascending: false });
-  if (currentLenderId)
-    query = query.eq("lender_id", currentLenderId);
+  if (currentLenderId2)
+    query = query.eq("lender_id", currentLenderId2);
   const { data, error } = await query.returns();
   if (error)
     return badRequest(error.message);
@@ -45098,6 +45221,12 @@ async function DELETE5(req) {
 }
 
 // src/routes/matching/notify.ts
+async function salesRepCanAccessMerchant(userId, merchantId) {
+  const { data, error } = await supabaseAdmin.from("merchants").select("id").eq("id", merchantId).eq("assigned_rep_id", userId).maybeSingle();
+  if (error)
+    return badRequest(error.message);
+  return Boolean(data);
+}
 async function POST14(req) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin", "sales_rep"]);
@@ -45106,17 +45235,37 @@ async function POST14(req) {
   const body = await req.json();
   if (!body.merchant_id)
     return badRequest("merchant_id is required");
+  if (user.role === "sales_rep") {
+    const allowed = await salesRepCanAccessMerchant(user.id, body.merchant_id);
+    if (allowed instanceof Response)
+      return allowed;
+    if (!allowed)
+      return forbidden();
+  }
   const notifiedAt = new Date().toISOString();
-  const { data, error } = await supabaseAdmin.from("lender_matches").update({ notified_at: notifiedAt }).eq("merchant_id", body.merchant_id).select("id").returns();
+  const { data, error } = await supabaseAdmin.from("lender_matches").update({ notified_at: notifiedAt }).eq("merchant_id", body.merchant_id).select("id,merchant_id,lender_id").returns();
   if (error)
     return badRequest(error.message);
+  try {
+    await Promise.all((data ?? []).map((match) => upsertMerchantFileSubmission({
+      merchant_id: match.merchant_id,
+      lender_id: match.lender_id,
+      match_id: match.id,
+      submitted_by: user.id,
+      submitted_at: notifiedAt,
+      status: "submitted"
+    })));
+  } catch (submissionError) {
+    return badRequest(submissionError instanceof Error ? submissionError.message : "Could not create merchant-file submissions");
+  }
   triggerLenderNotifications(body.merchant_id);
   recordActivity({
     entity_type: "merchant",
     entity_id: body.merchant_id,
     user_id: user.id,
     activity_type: "match",
-    body: `${data?.length ?? 0} lender(s) notified`
+    body: `${data?.length ?? 0} lender(s) notified and merchant-file submission(s) created`,
+    metadata: { submission_count: data?.length ?? 0 }
   });
   return json({ notified: data?.length ?? 0, notified_at: notifiedAt });
 }
@@ -45937,6 +46086,154 @@ async function PATCH8(req, context) {
   if (error)
     return badRequest(error.message);
   return json(toCommission2(data));
+}
+
+// src/routes/merchant-file-submissions/index.ts
+async function salesRepCanAccessMerchant2(userId, merchantId) {
+  const { data, error } = await supabaseAdmin.from("merchants").select("id").eq("id", merchantId).eq("assigned_rep_id", userId).maybeSingle();
+  if (error)
+    return badRequest(error.message);
+  return Boolean(data);
+}
+async function getCurrentLenderId2(userId) {
+  const { data, error } = await supabaseAdmin.from("lenders").select("id").eq("user_id", userId).maybeSingle();
+  if (error)
+    return badRequest(error.message);
+  return data?.id ?? null;
+}
+async function GET19(req) {
+  const user = await requireAuth(req);
+  if (user.role === "merchant")
+    return forbidden();
+  const url = new URL(req.url);
+  const merchantId = url.searchParams.get("merchant_id");
+  if (!merchantId)
+    return badRequest("merchant_id is required");
+  let query = supabaseAdmin.from("merchant_file_submissions").select("*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name,contact_name,contact_email)").eq("merchant_id", merchantId).order("submitted_at", { ascending: false });
+  if (user.role === "sales_rep") {
+    const allowed = await salesRepCanAccessMerchant2(user.id, merchantId);
+    if (allowed instanceof Response)
+      return allowed;
+    if (!allowed)
+      return forbidden();
+  }
+  if (user.role === "lender") {
+    const lenderId = await getCurrentLenderId2(user.id);
+    if (lenderId instanceof Response)
+      return lenderId;
+    if (!lenderId)
+      return forbidden();
+    query = query.eq("lender_id", lenderId);
+  }
+  const { data, error } = await query.returns();
+  if (error)
+    return badRequest(error.message);
+  return json((data ?? []).map(toMerchantFileSubmission));
+}
+async function POST20(req) {
+  const user = await requireAuth(req);
+  const roleError = assertRole(user, ["admin", "sales_rep"]);
+  if (roleError)
+    return roleError;
+  const body = await req.json();
+  if (!body.merchant_id || !body.lender_id)
+    return badRequest("merchant_id and lender_id are required");
+  if (body.status && !isSubmissionStatus(body.status))
+    return badRequest("status is invalid");
+  if (user.role === "sales_rep") {
+    const allowed = await salesRepCanAccessMerchant2(user.id, body.merchant_id);
+    if (allowed instanceof Response)
+      return allowed;
+    if (!allowed)
+      return forbidden();
+  }
+  let matchId = body.match_id ?? null;
+  if (!matchId) {
+    const { data: match, error: matchError } = await supabaseAdmin.from("lender_matches").select("id").eq("merchant_id", body.merchant_id).eq("lender_id", body.lender_id).maybeSingle();
+    if (matchError)
+      return badRequest(matchError.message);
+    matchId = match?.id ?? null;
+  }
+  try {
+    const row = await upsertMerchantFileSubmission({
+      merchant_id: body.merchant_id,
+      lender_id: body.lender_id,
+      match_id: matchId,
+      submitted_by: user.id,
+      submitted_at: new Date().toISOString(),
+      status: body.status ?? "submitted",
+      notes: body.notes ?? null
+    });
+    recordActivity({
+      entity_type: "merchant",
+      entity_id: body.merchant_id,
+      user_id: user.id,
+      activity_type: "match",
+      body: `Merchant file submitted to ${row.lender?.company_name ?? "lender/funder"}`,
+      metadata: { submission_id: row.id, lender_id: body.lender_id, status: row.status }
+    });
+    return json(toMerchantFileSubmission(row), { status: 201 });
+  } catch (error) {
+    return badRequest(error instanceof Error ? error.message : "Could not create merchant-file submission");
+  }
+}
+
+// src/routes/merchant-file-submissions/[id].ts
+async function fetchSubmission(id) {
+  const { data, error } = await supabaseAdmin.from("merchant_file_submissions").select("*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name,contact_name,contact_email)").eq("id", id).maybeSingle();
+  if (error)
+    return badRequest(error.message);
+  return data ?? null;
+}
+function canManageSubmission(userId, role, submission) {
+  if (role === "admin")
+    return true;
+  if (role === "sales_rep")
+    return submission.merchant?.assigned_rep_id === userId;
+  return false;
+}
+async function PATCH9(req, context) {
+  const user = await requireAuth(req);
+  const roleError = assertRole(user, ["admin", "sales_rep"]);
+  if (roleError)
+    return roleError;
+  const id = getId(context);
+  if (!id)
+    return badRequest();
+  const submission = await fetchSubmission(id);
+  if (submission instanceof Response)
+    return submission;
+  if (!submission)
+    return notFound();
+  if (!canManageSubmission(user.id, user.role, submission))
+    return forbidden();
+  const body = await req.json();
+  if (body.status !== undefined && !isSubmissionStatus(body.status))
+    return badRequest("status is invalid");
+  const update = { updated_at: new Date().toISOString() };
+  if (body.status !== undefined) {
+    update.status = body.status;
+    if (body.status === "declined" || body.status === "no_response" || body.status === "offer_received" || body.status === "stips_requested") {
+      update.response_at = new Date().toISOString();
+    }
+  }
+  if (body.decline_reason !== undefined)
+    update.decline_reason = body.decline_reason?.trim() || null;
+  if (body.notes !== undefined)
+    update.notes = body.notes?.trim() || null;
+  const { data, error } = await supabaseAdmin.from("merchant_file_submissions").update(update).eq("id", id).select("*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name,contact_name,contact_email)").single();
+  if (error)
+    return badRequest(error.message);
+  const changedStatus = body.status && body.status !== submission.status;
+  recordActivity({
+    entity_type: "merchant",
+    entity_id: data.merchant_id,
+    user_id: user.id,
+    activity_type: "match",
+    body: changedStatus ? `Merchant-file submission to ${data.lender?.company_name ?? "lender/funder"} marked ${data.status}` : `Merchant-file submission updated for ${data.lender?.company_name ?? "lender/funder"}`,
+    metadata: { submission_id: data.id, lender_id: data.lender_id, status: data.status, previous_status: submission.status }
+  });
+  return json(toMerchantFileSubmission(data));
 }
 
 // node_modules/@google/genai/dist/node/index.mjs
@@ -62827,7 +63124,7 @@ Role-specific guidance:
 Tone: professional, helpful, and concise. Never make up information. If unsure, say so clearly and recommend checking the actual dashboard or asking an admin.
 `.trim();
 var displayName2 = (user) => user.full_name ?? user.email;
-async function POST20(req) {
+async function POST21(req) {
   const user = await requireAuth(req);
   const body = await readJson(req);
   const message = typeof body.message === "string" ? body.message.trim() : "";
@@ -62863,7 +63160,7 @@ ${message}`,
 function matchRoute(method, pathname) {
   if (pathname === "/api/ai/chat") {
     if (method === "POST")
-      return { handler: POST20 };
+      return { handler: POST21 };
   }
   if (pathname === "/api/auth/register") {
     if (method === "POST")
@@ -62942,6 +63239,18 @@ function matchRoute(method, pathname) {
     const params = { id: decodeURIComponent(salesRepCommissionMatch[1]) };
     if (method === "PATCH")
       return { handler: PATCH8, params };
+  }
+  if (pathname === "/api/merchant-file-submissions") {
+    if (method === "GET")
+      return { handler: GET19 };
+    if (method === "POST")
+      return { handler: POST20 };
+  }
+  const merchantFileSubmissionMatch = pathname.match(/^\/api\/merchant-file-submissions\/([^/]+)$/);
+  if (merchantFileSubmissionMatch) {
+    const params = { id: decodeURIComponent(merchantFileSubmissionMatch[1]) };
+    if (method === "PATCH")
+      return { handler: PATCH9, params };
   }
   if (pathname === "/api/matching") {
     if (method === "GET")

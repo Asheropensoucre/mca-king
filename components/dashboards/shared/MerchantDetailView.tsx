@@ -10,6 +10,7 @@ import { ActivityTimeline } from './ActivityTimeline';
 import { TaskPanel } from './TaskPanel';
 import { FundingSummary } from './FundingSummary';
 import { FundingModal } from './FundingModal';
+import { MerchantFileSubmissionsPanel } from './MerchantFileSubmissionsPanel';
 
 interface MerchantDetailViewProps { 
     item: FormData, 
@@ -196,6 +197,10 @@ export const MerchantDetailView: React.FC<MerchantDetailViewProps> = ({ item, le
 
         {(canManageMatches || lenders.length > 0) && (
             <MatchedLendersPanel merchantId={item.id} lenders={lenders} canManageMatches={canManageMatches} canRemoveMatches={canRemoveMatches} />
+        )}
+
+        {(currentUser.role === 'admin' || currentUser.role === 'sales_rep') && (
+            <MerchantFileSubmissionsPanel merchantId={item.id} currentUser={currentUser} />
         )}
 
         {(currentUser.role === 'admin' || currentUser.role === 'sales_rep') && (

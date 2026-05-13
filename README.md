@@ -39,6 +39,7 @@ The app is designed for MCA broker owners, broker shops, internal sales reps, me
 - **Dark/light mode** using the Corporate Tech/MCA King theme and global wallpaper background.
 - **Grace period reapply logic** for merchants after terminal statuses such as `FUNDED`, `all lenders decline`, or `Declined by funder`.
 - **Funded-deal finance tracking** for funding records, broker revenue receivable from lenders/funders, and internal sales rep commission status.
+- **Merchant-file submission tracking** for broker-to-lender/funder package submissions, response statuses, declines, no-response outcomes, offers, and stipulation requests.
 
 ## Tech Stack
 
@@ -125,7 +126,7 @@ If `.env.example` does not exist yet, create `.env.local` manually and add the v
 
 ### Supabase setup
 
-The app expects a Supabase project with Postgres tables for users, merchants, owners, lenders, lender matches, offers, documents, status history, stipulations, leads, lead notes, activities, tasks, fundings, broker revenue, sales rep commissions, and Better Auth-compatible session/account tables.
+The app expects a Supabase project with Postgres tables for users, merchants, owners, lenders, lender matches, merchant file submissions, offers, documents, status history, stipulations, leads, lead notes, activities, tasks, fundings, broker revenue, sales rep commissions, and Better Auth-compatible session/account tables.
 
 There is currently no checked-in canonical SQL schema file in this repository. The schema is reflected by:
 

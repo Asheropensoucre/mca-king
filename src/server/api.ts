@@ -30,6 +30,8 @@ import { GET as getBrokerRevenue, POST as postBrokerRevenue } from '../routes/br
 import { PATCH as patchBrokerRevenue } from '../routes/broker-revenue/[id]'
 import { GET as getSalesRepCommissions, POST as postSalesRepCommission } from '../routes/sales-rep-commissions/index'
 import { PATCH as patchSalesRepCommission } from '../routes/sales-rep-commissions/[id]'
+import { GET as getMerchantFileSubmissions, POST as postMerchantFileSubmission } from '../routes/merchant-file-submissions/index'
+import { PATCH as patchMerchantFileSubmission } from '../routes/merchant-file-submissions/[id]'
 import { POST as aiChat } from '../routes/ai/chat'
 import type { RouteContext } from '../lib/route-utils'
 
@@ -114,6 +116,17 @@ function matchRoute(method: string, pathname: string): RouteMatch | null {
   if (salesRepCommissionMatch) {
     const params = { id: decodeURIComponent(salesRepCommissionMatch[1]) }
     if (method === 'PATCH') return { handler: patchSalesRepCommission, params }
+  }
+
+  if (pathname === '/api/merchant-file-submissions') {
+    if (method === 'GET') return { handler: getMerchantFileSubmissions }
+    if (method === 'POST') return { handler: postMerchantFileSubmission }
+  }
+
+  const merchantFileSubmissionMatch = pathname.match(/^\/api\/merchant-file-submissions\/([^/]+)$/)
+  if (merchantFileSubmissionMatch) {
+    const params = { id: decodeURIComponent(merchantFileSubmissionMatch[1]) }
+    if (method === 'PATCH') return { handler: patchMerchantFileSubmission, params }
   }
 
   if (pathname === '/api/matching') {

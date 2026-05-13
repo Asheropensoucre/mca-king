@@ -1,4 +1,4 @@
-import type { Activity, ActivityType, EntityType, LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch, Task, Funding, BrokerRevenue, SalesRepCommission } from '../../types'
+import type { Activity, ActivityType, EntityType, LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch, Task, Funding, BrokerRevenue, SalesRepCommission, MerchantFileSubmission } from '../../types'
 
 function headers(extra?: HeadersInit): HeadersInit {
   return {
@@ -100,6 +100,11 @@ export const api = {
     },
     create: (data: Partial<SalesRepCommission> & { sales_rep_id: string; amount: number | string }) => request<SalesRepCommission>('/api/sales-rep-commissions', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: Partial<SalesRepCommission>) => request<SalesRepCommission>(`/api/sales-rep-commissions/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  },
+  merchantFileSubmissions: {
+    list: (params: { merchant_id: string }) => request<MerchantFileSubmission[]>(`/api/merchant-file-submissions?merchant_id=${encodeURIComponent(params.merchant_id)}`),
+    create: (data: { merchant_id: string; lender_id: string; match_id?: string | null; notes?: string | null }) => request<MerchantFileSubmission>('/api/merchant-file-submissions', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<Pick<MerchantFileSubmission, 'status' | 'decline_reason' | 'notes'>>) => request<MerchantFileSubmission>(`/api/merchant-file-submissions/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   },
   matching: {
     list: (merchantId: string) => request<LenderMatch[]>(`/api/matching?merchant_id=${encodeURIComponent(merchantId)}`),

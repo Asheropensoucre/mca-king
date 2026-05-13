@@ -2,6 +2,7 @@ import type { FormData, Offer } from '../../../types'
 import { recordActivity } from '../../lib/activity'
 import { normalizeOfferStatus, rowToMerchant, type MerchantRow, type OfferRow } from '../../lib/data-shapes'
 import { triggerOfferReceived } from '../../lib/email-triggers'
+import { markMerchantFileSubmissionResponse } from '../../lib/merchant-file-submissions'
 import { requireAuth } from '../../lib/requireAuth'
 import { assertRole, badRequest, forbidden, json } from '../../lib/route-utils'
 import { supabaseAdmin } from '../../lib/supabase-server'
@@ -168,6 +169,12 @@ export async function POST(req: Request): Promise<Response> {
 
   const merchantUpdateError = await updateMerchantOffers(merchantId, offer, user.id)
   if (merchantUpdateError) return merchantUpdateError
+
+  try {
+    await markMerchantFileSubmissionResponse({ merchant_id: merchantId, lender_id: offer.lenderId, status: 'offer_received' })
+  } catch (submissionError) {
+    return badRequest(submissionError instanceof Error ? submissionError.message : 'Could not update merchant-file submission')
+  }
 
   triggerOfferReceived(data.id)
   recordActivity({

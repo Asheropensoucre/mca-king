@@ -193,6 +193,28 @@ export interface Task {
   entity_name?: string;
 }
 
+export type MerchantFileSubmissionStatus = 'submitted' | 'viewed' | 'no_response' | 'declined' | 'offer_received' | 'stips_requested' | 'withdrawn';
+
+export interface MerchantFileSubmission {
+  id: string;
+  merchant_id: string;
+  lender_id: string;
+  match_id: string | null;
+  submitted_by: string | null;
+  submitted_at: string;
+  status: MerchantFileSubmissionStatus;
+  response_at: string | null;
+  decline_reason: string | null;
+  package_version: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  merchant_name?: string;
+  lender_name?: string;
+  lender_contact_name?: string | null;
+  lender_contact_email?: string | null;
+}
+
 export type PaymentFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly';
 export type BrokerRevenueType = 'commission' | 'points' | 'origination_fee' | 'bonus' | 'other';
 export type BrokerRevenueStatus = 'expected' | 'invoiced' | 'received' | 'short_paid' | 'disputed' | 'waived';
