@@ -8,6 +8,11 @@ import { supabaseAdmin } from '../../lib/supabase-server'
 
 const OFFER_STATUS = "one or more lender's sent offer" as const
 
+type LenderProfileRef = {
+  id: string
+  company_name: string
+}
+
 function rowToOffer(row: OfferRow): Offer {
   if (row.payload) return { ...row.payload, id: row.id }
   return {
@@ -19,6 +24,18 @@ function rowToOffer(row: OfferRow): Offer {
     term: row.term_months ? String(row.term_months) : '',
     status: row.status === 'accepted' ? 'Accepted' : row.status === 'declined' ? 'Rejected' : 'Pending',
   }
+}
+
+async function lenderIsMatchedToMerchant(lenderId: string, merchantId: string): Promise<boolean | Response> {
+  const { data, error } = await supabaseAdmin
+    .from('lender_matches')
+    .select('id')
+    .eq('lender_id', lenderId)
+    .eq('merchant_id', merchantId)
+    .maybeSingle<{ id: string }>()
+
+  if (error) return badRequest(error.message)
+  return Boolean(data)
 }
 
 async function updateMerchantOffers(merchantId: string, newOffer: Offer, changedBy: string): Promise<Response | null> {
@@ -101,15 +118,30 @@ export async function POST(req: Request): Promise<Response> {
   const merchantId = body.merchantId ?? body.merchant_id
   if (!merchantId || !body.lenderId || !body.amount) return badRequest('merchantId, lenderId, and amount are required')
 
+  let lenderName = body.lenderName
+
   if (user.role === 'lender') {
-    const { data: lender } = await supabaseAdmin.from('lenders').select('id').eq('id', body.lenderId).eq('user_id', user.id).maybeSingle<{ id: string }>()
+    const { data: lender, error: lenderError } = await supabaseAdmin
+      .from('lenders')
+      .select('id,company_name')
+      .eq('id', body.lenderId)
+      .eq('user_id', user.id)
+      .maybeSingle<LenderProfileRef>()
+
+    if (lenderError) return badRequest(lenderError.message)
     if (!lender) return forbidden()
+
+    const isMatched = await lenderIsMatchedToMerchant(lender.id, merchantId)
+    if (isMatched instanceof Response) return isMatched
+    if (!isMatched) return forbidden('This merchant file has not been submitted or matched to your lender profile')
+
+    lenderName = lender.company_name
   }
 
   const offer: Offer = {
     id: body.id || crypto.randomUUID(),
     lenderId: body.lenderId,
-    lenderName: body.lenderName,
+    lenderName,
     amount: body.amount,
     rate: body.rate,
     term: body.term,

@@ -43780,9 +43780,16 @@ async function readJson(req) {
 }
 
 // src/routes/merchants/index.ts
+function sanitizeMerchantForLender(merchant, lenderId) {
+  return {
+    ...merchant,
+    offers: (merchant.offers ?? []).filter((offer) => offer.lenderId === lenderId)
+  };
+}
 async function GET(req) {
   const user = await requireAuth(req);
   let query = supabaseAdmin.from("merchants").select("*").order("created_at", { ascending: false });
+  let currentLenderId = null;
   if (user.role === "sales_rep")
     query = query.eq("assigned_rep_id", user.id);
   if (user.role === "merchant")
@@ -43793,6 +43800,7 @@ async function GET(req) {
       return badRequest(lenderError.message);
     if (!lender)
       return json([]);
+    currentLenderId = lender.id;
     const { data: matches, error: matchError } = await supabaseAdmin.from("lender_matches").select("merchant_id").eq("lender_id", lender.id).returns();
     if (matchError)
       return badRequest(matchError.message);
@@ -43804,7 +43812,11 @@ async function GET(req) {
   const { data, error } = await query.returns();
   if (error)
     return badRequest(error.message);
-  return json((data ?? []).map(rowToMerchant));
+  const merchants = (data ?? []).map(rowToMerchant);
+  if (user.role === "lender" && currentLenderId) {
+    return json(merchants.map((merchant) => sanitizeMerchantForLender(merchant, currentLenderId)));
+  }
+  return json(merchants);
 }
 async function POST(req) {
   const user = await requireAuth(req);
@@ -43915,6 +43927,24 @@ async function fetchMerchant(id) {
     return error.code === "PGRST116" ? null : badRequest(error.message);
   return data;
 }
+async function getCurrentLenderId(userId) {
+  const { data, error } = await supabaseAdmin.from("lenders").select("id").eq("user_id", userId).maybeSingle();
+  if (error)
+    return badRequest(error.message);
+  return data?.id ?? null;
+}
+async function lenderCanReadMerchant(lenderId, merchantId) {
+  const { data, error } = await supabaseAdmin.from("lender_matches").select("id").eq("lender_id", lenderId).eq("merchant_id", merchantId).maybeSingle();
+  if (error)
+    return badRequest(error.message);
+  return Boolean(data);
+}
+function sanitizeMerchantForLender2(merchant, lenderId) {
+  return {
+    ...merchant,
+    offers: (merchant.offers ?? []).filter((offer) => offer.lenderId === lenderId)
+  };
+}
 function canRead(userRole, userId, row) {
   if (userRole === "admin")
     return true;
@@ -43974,6 +44004,19 @@ async function GET2(req, context) {
     return row;
   if (!row)
     return notFound();
+  if (user.role === "lender") {
+    const lenderId = await getCurrentLenderId(user.id);
+    if (lenderId instanceof Response)
+      return lenderId;
+    if (!lenderId)
+      return forbidden();
+    const canReadLenderMerchant = await lenderCanReadMerchant(lenderId, id);
+    if (canReadLenderMerchant instanceof Response)
+      return canReadLenderMerchant;
+    if (!canReadLenderMerchant)
+      return forbidden();
+    return json(sanitizeMerchantForLender2(rowToMerchant(row), lenderId));
+  }
   if (!canRead(user.role, user.id, row))
     return forbidden();
   return json(rowToMerchant(row));
@@ -44155,6 +44198,12 @@ function rowToOffer(row) {
     status: row.status === "accepted" ? "Accepted" : row.status === "declined" ? "Rejected" : "Pending"
   };
 }
+async function lenderIsMatchedToMerchant(lenderId, merchantId) {
+  const { data, error } = await supabaseAdmin.from("lender_matches").select("id").eq("lender_id", lenderId).eq("merchant_id", merchantId).maybeSingle();
+  if (error)
+    return badRequest(error.message);
+  return Boolean(data);
+}
 async function updateMerchantOffers(merchantId, newOffer, changedBy) {
   const { data: merchantRow, error } = await supabaseAdmin.from("merchants").select("*").eq("id", merchantId).single();
   if (error)
@@ -44219,15 +44268,24 @@ async function POST3(req) {
   const merchantId = body.merchantId ?? body.merchant_id;
   if (!merchantId || !body.lenderId || !body.amount)
     return badRequest("merchantId, lenderId, and amount are required");
+  let lenderName = body.lenderName;
   if (user.role === "lender") {
-    const { data: lender } = await supabaseAdmin.from("lenders").select("id").eq("id", body.lenderId).eq("user_id", user.id).maybeSingle();
+    const { data: lender, error: lenderError } = await supabaseAdmin.from("lenders").select("id,company_name").eq("id", body.lenderId).eq("user_id", user.id).maybeSingle();
+    if (lenderError)
+      return badRequest(lenderError.message);
     if (!lender)
       return forbidden();
+    const isMatched = await lenderIsMatchedToMerchant(lender.id, merchantId);
+    if (isMatched instanceof Response)
+      return isMatched;
+    if (!isMatched)
+      return forbidden("This merchant file has not been submitted or matched to your lender profile");
+    lenderName = lender.company_name;
   }
   const offer = {
     id: body.id || crypto.randomUUID(),
     lenderId: body.lenderId,
-    lenderName: body.lenderName,
+    lenderName,
     amount: body.amount,
     rate: body.rate,
     term: body.term,
@@ -44953,19 +45011,24 @@ async function GET12(req) {
   const merchantId = url.searchParams.get("merchant_id");
   if (!merchantId)
     return badRequest("merchant_id is required");
+  let currentLenderId = null;
   if (user.role === "lender") {
     const { data: lender, error: lenderError } = await supabaseAdmin.from("lenders").select("id").eq("user_id", user.id).maybeSingle();
     if (lenderError)
       return badRequest(lenderError.message);
     if (!lender)
       return forbidden();
+    currentLenderId = lender.id;
     const { data: allowedMatch, error: allowedError } = await supabaseAdmin.from("lender_matches").select("id").eq("merchant_id", merchantId).eq("lender_id", lender.id).maybeSingle();
     if (allowedError)
       return badRequest(allowedError.message);
     if (!allowedMatch)
       return forbidden();
   }
-  const { data, error } = await supabaseAdmin.from("lender_matches").select("*, lender:lenders(id,company_name,contact_name,contact_email)").eq("merchant_id", merchantId).order("created_at", { ascending: false }).returns();
+  let query = supabaseAdmin.from("lender_matches").select("*, lender:lenders(id,company_name,contact_name,contact_email)").eq("merchant_id", merchantId).order("created_at", { ascending: false });
+  if (currentLenderId)
+    query = query.eq("lender_id", currentLenderId);
+  const { data, error } = await query.returns();
   if (error)
     return badRequest(error.message);
   return json(data ?? []);
@@ -45078,7 +45141,7 @@ function toActivity(row) {
 }
 async function GET13(req) {
   const user = await requireAuth(req);
-  if (user.role === "merchant")
+  if (user.role === "merchant" || user.role === "lender")
     return forbidden();
   const url = new URL(req.url);
   const entityType = url.searchParams.get("entity_type");
@@ -62198,7 +62261,7 @@ function getApiKeyFromEnv() {
 var SYSTEM_PROMPT = `
 I am the MCA King Assistant, your guide to the MCA King funding platform.
 
-MCA King is a broker/ISO-centered merchant cash advance CRM. The broker shop sources merchant files, admins and sales reps manage those files, and lenders/funders sign in to review broker-submitted or broker-matched merchant files. Lenders do not originate or submit merchant deals into this CRM. They review files, approve or decline them, request stipulations, and send offers.
+MCA King is a broker-shop merchant cash advance CRM. The broker shop sources merchant files, admins and sales reps manage those files, and lenders/funders sign in to review broker-submitted or broker-matched merchant files. Lenders do not originate or submit merchant deals into this CRM. They review files, approve or decline them, request stipulations, and send offers.
 
 The 12-step Kamba pipeline:
 1. application & 3 months bank statements in — The merchant submitted the application and required bank statements; the file is waiting for review.
@@ -62225,9 +62288,9 @@ MCA terminology:
 
 Role-specific guidance:
 - Merchants: Help them apply, understand which documents to upload, read offers, understand factor rate/terms, respond to stipulations, and know that reapplication is allowed after the 5-month grace period following FUNDED, all lenders decline, or Declined by funder.
-- Lenders/Funders: Help them understand review queues, criteria, matched merchant files, approvals/declines, offers, and stipulation requests. Never imply lenders originate merchant deals in MCA King.
+- Lenders/Funders: Help them understand review queues, criteria, matched merchant files, approvals/declines, their own offers, and stipulation requests. Never imply lenders originate merchant deals in MCA King. Never reveal or infer competing lender/funder offer amounts, terms, lender names, notes, contract details, or funding outcomes.
 - Sales reps: Help them manage leads, convert leads, move deals through the Kamba pipeline, assign or submit files to lenders/funders when permitted, and explain statuses to merchants.
-- Admins: Treat admins as broker/ISO shop owners or operators. Provide full-platform guidance across users, leads, merchants, lenders/funders, matching, offers, documents, stipulations, commissions, and funding status.
+- Admins: Treat admins as broker shop owners or operators. Provide full-platform guidance across users, leads, merchants, lenders/funders, matching, offers, documents, stipulations, broker revenue, internal sales rep commissions, and funding status.
 
 Tone: professional, helpful, and concise. Never make up information. If unsure, say so clearly and recommend checking the actual dashboard or asking an admin.
 `.trim();

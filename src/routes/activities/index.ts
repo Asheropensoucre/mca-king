@@ -41,7 +41,7 @@ function toActivity(row: ActivityRow): Activity {
 
 export async function GET(req: Request): Promise<Response> {
   const user = await requireAuth(req)
-  if (user.role === 'merchant') return forbidden()
+  if (user.role === 'merchant' || user.role === 'lender') return forbidden()
 
   const url = new URL(req.url)
   const entityType = url.searchParams.get('entity_type')

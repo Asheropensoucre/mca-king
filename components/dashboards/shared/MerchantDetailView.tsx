@@ -192,12 +192,12 @@ export const MerchantDetailView: React.FC<MerchantDetailViewProps> = ({ item, le
             </div>
         )}
         
-        <Card><div className="p-6"><h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Offers</h3>
+        <Card><div className="p-6"><h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">{currentUser.role === 'lender' ? 'Your Offer' : 'Offers'}</h3>
             {item.offers && item.offers.length > 0 ? (
                 <ul className="space-y-2 mt-2">
                     {item.offers.map(o => <li key={o.id || o.lenderId} className="text-sm text-slate-700 dark:text-slate-300">{o.lenderName}: ${Number(o.amount).toLocaleString()} for {o.term} days ({o.status})</li>)}
                 </ul>
-            ) : <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">No offers yet.</p>}
+            ) : <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{currentUser.role === 'lender' ? 'You have not sent an offer for this file yet.' : 'No offers yet.'}</p>}
         </div></Card>
     </div>
 );

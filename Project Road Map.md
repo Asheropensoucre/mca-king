@@ -4,7 +4,7 @@
 >
 > **Customer-data security plan:** see [`Docs/PRODUCTION_SECURITY_HARDENING_PLAN.md`](Docs/PRODUCTION_SECURITY_HARDENING_PLAN.md) for the dedicated security hardening phase required before handling real merchant/customer data beyond MVP/demo use.
 >
-> **Business model correction:** MCA King is a broker/ISO-shop CRM. Admin users represent the broker owner/operator, sales reps are internal broker-shop users, merchants submit funding applications, and lenders/funders only review broker-submitted or broker-matched merchant files. Lenders do not originate or submit merchant deals into this CRM.
+> **Business model correction:** MCA King is a broker-shop CRM. Admin users represent the broker owner/operator, sales reps are internal broker-shop users, merchants submit funding applications, and lenders/funders only review broker-submitted or broker-matched merchant files. Lenders do not originate or submit merchant deals into this CRM. Lender-side account/relationship managers are lender contacts only; MCA King should not track payouts to them.
 
 ## Executive Summary
 

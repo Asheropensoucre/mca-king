@@ -6,9 +6,17 @@ import { requireAuth } from '../../lib/requireAuth'
 import { assertRole, badRequest, forbidden, json } from '../../lib/route-utils'
 import { supabaseAdmin } from '../../lib/supabase-server'
 
+function sanitizeMerchantForLender(merchant: FormData, lenderId: string): FormData {
+  return {
+    ...merchant,
+    offers: (merchant.offers ?? []).filter(offer => offer.lenderId === lenderId),
+  }
+}
+
 export async function GET(req: Request): Promise<Response> {
   const user = await requireAuth(req)
   let query = supabaseAdmin.from('merchants').select('*').order('created_at', { ascending: false })
+  let currentLenderId: string | null = null
 
   if (user.role === 'sales_rep') query = query.eq('assigned_rep_id', user.id)
   if (user.role === 'merchant') query = query.eq('user_id', user.id)
@@ -21,6 +29,7 @@ export async function GET(req: Request): Promise<Response> {
 
     if (lenderError) return badRequest(lenderError.message)
     if (!lender) return json([])
+    currentLenderId = lender.id
 
     const { data: matches, error: matchError } = await supabaseAdmin
       .from('lender_matches')
@@ -37,7 +46,12 @@ export async function GET(req: Request): Promise<Response> {
   const { data, error } = await query.returns<MerchantRow[]>()
   if (error) return badRequest(error.message)
 
-  return json((data ?? []).map(rowToMerchant))
+  const merchants = (data ?? []).map(rowToMerchant)
+  if (user.role === 'lender' && currentLenderId) {
+    return json(merchants.map(merchant => sanitizeMerchantForLender(merchant, currentLenderId)))
+  }
+
+  return json(merchants)
 }
 
 export async function POST(req: Request): Promise<Response> {

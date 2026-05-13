@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { AuthUser, FormData, LenderInfo, Offer } from '../../types';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
@@ -17,7 +17,12 @@ interface LenderDashboardProps {
     onUpdateMerchant: (updatedMerchant: FormData) => FormData;
 }
 
-export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, profile, merchants, onExit, themeToggle, onUpdateMerchant }) => {
+const sanitizeForCurrentLender = (merchant: FormData, lenderId: string): FormData => ({
+    ...merchant,
+    offers: (merchant.offers ?? []).filter(offer => offer.lenderId === lenderId),
+});
+
+export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, profile, merchants, onExit, themeToggle }) => {
     const [selectedDeal, setSelectedDeal] = useState<FormData | null>(null);
     const [isCreatingOffer, setIsCreatingOffer] = useState(false);
     const [isRequestingDoc, setIsRequestingDoc] = useState(false);
@@ -26,11 +31,13 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
     const [stipDescription, setStipDescription] = useState('');
     const [message, setMessage] = useState<string | null>(null);
 
-    const assignedMerchants = merchants;
+    const assignedMerchants = useMemo(() => merchants.map(merchant => sanitizeForCurrentLender(merchant, profile.id)), [merchants, profile.id]);
+    const sanitizedSelectedDeal = selectedDeal ? sanitizeForCurrentLender(selectedDeal, profile.id) : null;
 
-    const handleCreateOffer = (e: React.FormEvent) => {
+    const handleCreateOffer = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedDeal) return;
+        if (!sanitizedSelectedDeal) return;
+        setMessage(null);
 
         const newOffer: Offer = {
             id: crypto.randomUUID(),
@@ -41,28 +48,30 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
             status: 'Pending',
         };
 
-        const updatedMerchant: FormData = {
-            ...selectedDeal,
-            offers: [...(selectedDeal.offers || []), newOffer],
-            status: "one or more lender's sent offer",
-        };
-
-        void api.offers.create(selectedDeal.id, newOffer).catch(() => undefined);
-        const result = onUpdateMerchant(updatedMerchant);
-        setSelectedDeal(result);
-        setIsCreatingOffer(false);
-        setOfferAmount('');
-        setOfferTerm('');
+        try {
+            const savedOffer = await api.offers.create(sanitizedSelectedDeal.id, newOffer);
+            const updatedMerchant: FormData = {
+                ...sanitizedSelectedDeal,
+                offers: [...(sanitizedSelectedDeal.offers || []), savedOffer],
+                status: "one or more lender's sent offer",
+            };
+            setSelectedDeal(updatedMerchant);
+            setIsCreatingOffer(false);
+            setOfferAmount('');
+            setOfferTerm('');
+            setMessage('Offer sent.');
+        } catch (err) {
+            setMessage(err instanceof Error ? err.message : 'Could not send offer.');
+        }
     };
 
     const handleRequestDocument = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedDeal || !stipDescription.trim()) return;
+        if (!sanitizedSelectedDeal || !stipDescription.trim()) return;
         try {
-            await api.stipulations.create(selectedDeal.id, profile.id, stipDescription);
-            const updatedMerchant: FormData = { ...selectedDeal, status: 'more docs requested' };
-            const result = onUpdateMerchant(updatedMerchant);
-            setSelectedDeal(result);
+            await api.stipulations.create(sanitizedSelectedDeal.id, profile.id, stipDescription);
+            const updatedMerchant: FormData = { ...sanitizedSelectedDeal, status: 'more docs requested' };
+            setSelectedDeal(updatedMerchant);
             setMessage('Document request sent.');
             setStipDescription('');
             setIsRequestingDoc(false);
@@ -71,28 +80,28 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
         }
     };
 
-    if (selectedDeal) {
+    if (sanitizedSelectedDeal) {
         return (
              <>
              <div className="p-4 sm:p-6 lg:p-8">
                 <div className="max-w-4xl mx-auto">
                     <PrimaryButton label="← Back to My Deals" size="small" onClick={() => setSelectedDeal(null)} />
                     <div className="flex justify-between items-center mb-4 gap-3 flex-wrap">
-                        <h2 className="text-2xl font-black text-theme-maroon dark:text-theme-yellow">{selectedDeal.businessInfo.legalName}</h2>
+                        <h2 className="text-2xl font-black text-theme-maroon dark:text-theme-yellow">{sanitizedSelectedDeal.businessInfo.legalName}</h2>
                         <div className="flex gap-2 flex-wrap">
                             <PrimaryButton label="Request Document" variant="danger" onClick={() => setIsRequestingDoc(true)} />
                             <PrimaryButton label="Create Offer" onClick={() => setIsCreatingOffer(true)} />
                         </div>
                     </div>
                     {message && <p className="mb-4 text-sm text-theme-teal">{message}</p>}
-                    <MerchantDetailView item={selectedDeal} currentUser={currentUser} />
+                    <MerchantDetailView item={sanitizedSelectedDeal} currentUser={currentUser} />
                 </div>
                 {isCreatingOffer && (
                      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                         <Card className="w-full max-w-md">
                             <form onSubmit={handleCreateOffer}>
                                 <div className="p-6">
-                                    <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Create Offer for {selectedDeal.businessInfo.legalName}</h3>
+                                    <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Create Offer for {sanitizedSelectedDeal.businessInfo.legalName}</h3>
                                     <div className="mt-4 space-y-4">
                                         <Input label="Offer Amount ($)" name="amount" type="number" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} required />
                                         <Input label="Offer Term (Days)" name="term" type="number" value={offerTerm} onChange={e => setOfferTerm(e.target.value)} required />
@@ -130,7 +139,7 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
                 currentPage="Lender Dashboard"
                 contextData={{
                     lenderProfile: { id: profile.id, lenderName: profile.lenderName, minRevenue: profile.minRevenue, maxFundingAmount: profile.maxFundingAmount, minCreditScore: profile.minCreditScore },
-                    selectedDeal: selectedDeal ? { id: selectedDeal.id, businessName: selectedDeal.businessInfo.legalName, status: selectedDeal.status, offers: selectedDeal.offers ?? [] } : null,
+                    selectedDeal: { id: sanitizedSelectedDeal.id, businessName: sanitizedSelectedDeal.businessInfo.legalName, status: sanitizedSelectedDeal.status, yourOffers: sanitizedSelectedDeal.offers ?? [] },
                 }}
             />
             </>

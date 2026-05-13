@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-MCA King is a broker/ISO-centered Merchant Cash Advance (MCA) CRM. The broker shop sources merchant files, manages those files through internal admins and sales reps, submits qualified merchant packages to lenders/funders, and tracks the file through offers, stipulations, contracts, and funding.
+MCA King is a broker-shop Merchant Cash Advance (MCA) CRM. The broker shop sources merchant files, manages those files through internal admins and sales reps, submits qualified merchant packages to lenders/funders, and tracks the file through offers, stipulations, contracts, and funding.
 
 This is **not** a lender-originated deal marketplace. Lenders/funders are users who sign in to review merchant files submitted or matched to them by the broker shop. They can approve, decline, request stipulations, and send offers; they do not submit merchant deals into the CRM.
 
@@ -10,10 +10,11 @@ This is **not** a lender-originated deal marketplace. Lenders/funders are users 
 
 | Role | Business meaning |
 |---|---|
-| Admin | Broker/ISO shop owner or operator. Controls the shop, users, lenders, assignments, matching, and pipeline. |
+| Admin | Broker shop owner or operator. Controls the shop, users, lenders, assignments, matching, pipeline, broker revenue, and internal rep commissions. |
 | Sales Rep | Internal broker-shop rep who works leads and assigned merchant files. |
 | Merchant | Funding customer/applicant who submits an application, uploads documents, reviews offers, and responds to stipulations. |
 | Lender/Funder | Funding partner who reviews broker-submitted merchant files, approves/declines, requests documents, and sends offers. |
+| Lender-side account/relationship manager | Contact at the lender/funder company who manages the broker relationship/files from the lender side. Not a commission recipient and not a deal submitter in MCA King. |
 
 ## Phase 1: Onboarding & Intake
 
@@ -104,6 +105,7 @@ Lenders/funders can:
 - Approve/decline files through offers or response statuses
 - Request stipulations/additional documents
 - Send offers to the broker/merchant workflow
+- See only their own offers/responses; competing lender/funder offers on the same merchant file are hidden server-side
 
 ## Key Technical Requirements
 
@@ -112,4 +114,4 @@ Lenders/funders can:
 - Secure document storage and signed URL access
 - Broker-to-lender package generation and notification workflow
 - State machine for the 12-step Kamba pipeline
-- Activity history, tasks, funding records, commissions, lender submission outcomes, renewals, reporting, and compliance controls as the CRM expands
+- Activity history, tasks, funding records, broker revenue, internal sales rep commissions, merchant-file submission outcomes, renewals, reporting, and compliance controls as the CRM expands

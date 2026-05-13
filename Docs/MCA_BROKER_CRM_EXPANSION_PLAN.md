@@ -1,6 +1,6 @@
 # MCA King — Broker CRM Expansion Plan
 
-_Last updated: 2026-05-12_
+_Last updated: 2026-05-13_
 
 ## Purpose
 
@@ -20,18 +20,18 @@ MCA King already has the operating spine of the platform:
 - MCA King Assistant
 - Supabase-backed routes and storage
 
-The next stage is to turn the broker-centered workflow platform into a full daily operating CRM for MCA brokerage teams. That means adding activity history, tasks, funded deal records, commissions, lender submission outcomes, search, renewals, reporting, and compliance controls.
+The next stage is to turn the broker-centered workflow platform into a full daily operating CRM for MCA brokerage teams. That means adding activity history, tasks, funded deal records, broker revenue, internal sales rep commissions, merchant-file submission outcomes, search, renewals, reporting, and compliance controls.
 
 ---
 
 
 ## Correct Business Model and Role Definitions
 
-MCA King is a **broker/ISO CRM**, not a lender-originated deal marketplace.
+MCA King is a **broker-shop CRM**, not a lender-originated deal marketplace.
 
 | Role | Correct meaning |
 |---|---|
-| Admin | Broker/ISO shop owner or operator. Owns the brokerage workspace, manages reps, merchants, lender/funder relationships, matching, submissions, pipeline, reporting, and commissions. |
+| Admin | Broker shop owner or operator. Owns the brokerage workspace, manages reps, merchants, lender/funder relationships, matching, submissions, pipeline, reporting, broker revenue, and internal rep commissions. |
 | Sales Rep | Internal broker-shop rep. Works leads and assigned merchant files on behalf of the broker shop. |
 | Merchant | Funding customer/applicant. Submits applications, uploads documents, responds to stipulations, and reviews offers. |
 | Lender/Funder | External or partner funding user. Reviews broker-submitted or broker-matched merchant files, approves/declines, requests stipulations, and sends offers. Lenders do **not** submit merchant deals into this CRM. |
@@ -40,8 +40,9 @@ Important terminology:
 
 - **Merchant file / deal**: originated by the broker shop from a merchant application or converted lead.
 - **Lender match**: a suggested or manually selected lender/funder for a merchant file.
-- **Lender submission**: an outbound broker-shop submission of a merchant file/package to a lender/funder for review.
-- **Lender response**: approval, decline, stipulation request, no response, or offer.
+- **Merchant-file submission**: an outbound broker-shop submission of a merchant file/package to a lender/funder for review. This may also be called broker-to-lender submission in UI copy, but it is never a lender-created deal.
+- **Lender/funder response**: approval, decline, stipulation request, no response, or offer.
+- **Lender relationship manager / lender-side account/relationship manager**: a contact at the lender/funder company who manages the broker relationship. This person is not a commission recipient in MCA King and does not submit deals into the CRM.
 
 ---
 
@@ -78,8 +79,8 @@ The highest-value missing modules are:
 1. Activity timeline across merchants, leads, lenders, offers, docs, and users
 2. Tasks and follow-up reminders
 3. Funding records as first-class entities
-4. Broker-shop, sales-rep, and optional referral/ISO commission tracking
-5. Outbound broker-to-lender submission tracking beyond simple matches
+4. Funded-deal records, broker revenue receivable from lenders/funders, and internal sales rep commission tracking
+5. Outbound merchant-file submission tracking beyond simple matches
 6. Search, filters, and saved views
 7. Renewal/refinance tracking
 8. Rich offer and contract management
@@ -89,9 +90,10 @@ The highest-value missing modules are:
 Recommended build order:
 
 ```txt
-Phase A — Activity + Tasks
-Phase B — Funding + Commissions
-Phase C — Lender Submissions
+Phase A — Activity + Tasks ✅ complete
+Phase A.1 — Lender Offer Visibility + Data Isolation ✅ complete
+Phase B — Funded Deals + Broker Revenue + Sales Rep Commissions
+Phase C — Merchant-File Submissions
 Phase D — Search, Filters, Saved Views
 Phase E — Renewals / Refinance
 Phase F — Reporting
@@ -230,27 +232,128 @@ Add to:
 
 ---
 
-# Phase B — Funding + Commission Tracking
+# Phase A.1 — Lender Offer Visibility + Data Isolation ✅ COMPLETE
 
 ## Goal
 
-Track the money: funded deals, revenue, commissions, rep payouts, ISO payouts, and payment status.
+Harden offer visibility before building new money/revenue modules. Lenders/funders must be able to review merchant files submitted or matched to them and create their own offers, but they must **not** see competing lenders' offers, terms, names, notes, acceptance status, or contract details.
+
+## Correct visibility rule
+
+```txt
+Admin: sees all offers for all merchant files.
+Assigned sales rep: sees all offers for assigned merchant files.
+Merchant: sees all offers on their own merchant file.
+Lender/funder: sees only offers created by that same lender/funder profile.
+```
+
+If a merchant receives two offers from two lenders/funders, the merchant, admin, and assigned sales rep can compare both offers. Each lender/funder can only see their own offer and generic file status appropriate to their relationship with that merchant file.
 
 ## Why this matters
 
-MCA brokers care about funded volume and commissions. Once a deal funds, the CRM must answer:
+Competing lender/funder offers are confidential. A lender should not know another lender's:
+
+- Offer amount
+- Factor rate
+- Term
+- Payment frequency
+- Notes
+- Lender name/contact
+- Accepted/declined outcome, except for generic not-selected/current-file-status messaging where appropriate
+- Contract/signing/funding details unless it is that lender's accepted/funded deal
+
+This is both a workflow requirement and a security requirement. UI hiding is not enough; the API must not return competing offer data to lender users.
+
+## Backend/API work
+
+Harden merchant and offer serialization for lender users:
+
+```txt
+GET /api/merchants
+GET /api/merchants/:id, if lender detail access is enabled later
+GET /api/offers
+POST /api/offers
+PATCH /api/offers/:id
+/api/ai/chat context data
+```
+
+Required server-side behavior:
+
+1. Resolve the current lender user's `lenders.id` from `lenders.user_id`.
+2. Only return merchant files matched/submitted to that lender/funder.
+3. When returning merchant records to a lender, sanitize `merchant.offers` so it only contains offers where `offer.lenderId === currentLender.id`.
+4. Do not include competing offers inside `payload`, nested merchant data, activity metadata, AI context, or dashboard bootstrap data.
+5. Keep `/api/offers` filtered by current lender for lender users.
+6. Do not let a lender create or update an offer for another lender profile.
+7. Do not let a lender infer another lender's offer details from accepted/declined status, contract documents, activity text, or generated summaries.
+
+## Frontend work
+
+Update lender-facing UI so offer presentation is role-aware:
+
+```txt
+Lender dashboard: show "Your Offer" instead of all merchant offers.
+Merchant detail view: for lender users, display only that lender's own offer or no offer yet.
+Chatbot context for lender users: include only sanitized lender-visible offer data.
+```
+
+Admin, sales rep, and merchant views may continue to show all offers they are authorized to see.
+
+## Acceptance criteria
+
+- Merchant sees all offers on their own file.
+- Admin sees all offers.
+- Assigned sales rep sees all offers for assigned files.
+- Lender/funder sees only offers where the offer belongs to that lender/funder profile.
+- A lender/funder cannot see another lender's offer amount, terms, lender name, notes, accepted/declined status, or contract/funding details.
+- Lender merchant-list API responses do not include competing offers in `merchant.payload.offers` or returned `offers` arrays.
+- Lender AI/chat context does not include competing offers.
+- Manual test with two lenders on the same merchant proves each lender only sees their own offer.
+
+---
+
+# Phase B — Funded Deals + Broker Revenue + Sales Rep Commissions
+
+## Goal
+
+Track the money correctly for a broker-shop workflow: funded deals, the lender/funder that funded each deal, the revenue owed by the lender/funder to the brokerage, internal sales rep payouts, and payment status.
+
+## Important business-model clarification
+
+MCA King is for the broker shop. The broker shop sources or converts the merchant file, submits it to lenders/funders, and gets paid by the lender/funder when a deal funds.
+
+Lender-side account managers or relationship reps are contacts at the lender/funder company. They may manage the broker relationship and files from the lender side, but they are **not** commission recipients in this CRM and they do **not** submit deals into MCA King.
+
+The money flow this phase should model is:
+
+```txt
+Merchant file funds with lender/funder
+        ↓
+Lender/funder owes revenue/commission to the broker shop
+        ↓
+Broker shop may owe an internal payout to the assigned sales rep
+```
+
+This phase should **not** create payout logic for lender-side contacts or lender-originated deal submission logic.
+
+## Why this matters
+
+MCA brokers care about funded volume, collected revenue, and rep payouts. Once a deal funds, the CRM must answer:
 
 - How much funded?
-- Which lender funded it?
+- Which lender/funder funded it?
 - What was the factor rate?
 - What is the payback amount?
-- What commission is owed?
-- Was the commission paid?
-- Which rep or ISO gets credit?
+- What revenue/commission is owed by the lender/funder to the broker shop?
+- Has the broker shop received that payment?
+- Which internal sales rep gets credit?
+- What sales rep payout is owed, approved, paid, adjusted, or clawed back?
 
 ## New database tables
 
 ### `fundings`
+
+One row per funded merchant file. This makes `FUNDED` financially meaningful instead of being only a pipeline status.
 
 ```sql
 id                  uuid primary key default gen_random_uuid()
@@ -271,42 +374,40 @@ created_at           timestamptz default now()
 updated_at           timestamptz default now()
 ```
 
-### `isos`
+### `broker_revenue`
 
-Optional, if outside brokers/referral partners exist.
-
-```sql
-id              uuid primary key default gen_random_uuid()
-name            text not null
-contact_name    text
-email           text
-phone           text
-status          text default 'active' -- active | paused | terminated
-notes           text
-created_at      timestamptz default now()
-```
-
-### `commission_plans`
+Tracks money owed **to the broker shop** by the lender/funder.
 
 ```sql
-id                  uuid primary key default gen_random_uuid()
-name                text not null
-plan_type           text not null -- flat | percent_funded | percent_revenue
-rate                numeric not null
-applies_to_role     text -- sales_rep | iso | broker
-created_at          timestamptz default now()
+id                      uuid primary key default gen_random_uuid()
+funding_id              uuid references fundings(id) on delete cascade
+merchant_id             uuid references merchants(id) on delete cascade
+lender_id               uuid references lenders(id)
+revenue_type            text default 'commission' -- commission | points | origination_fee | bonus | other
+basis_amount            numeric                  -- usually funded amount or gross revenue basis
+rate                    numeric
+amount                  numeric not null
+status                  text default 'expected'  -- expected | invoiced | received | short_paid | disputed | waived
+expected_payment_date   date
+received_at             timestamptz
+notes                   text
+created_at              timestamptz default now()
+updated_at              timestamptz default now()
 ```
 
-### `deal_commissions`
+### `sales_rep_commissions`
+
+Tracks internal broker-shop payouts owed to sales reps. This is separate from broker revenue because the lender/funder pays the brokerage, and the brokerage may then pay its rep according to internal rules.
 
 ```sql
 id                  uuid primary key default gen_random_uuid()
 funding_id           uuid references fundings(id) on delete cascade
-recipient_user_id    uuid references users(id)
-recipient_iso_id     uuid references isos(id)
-commission_plan_id   uuid references commission_plans(id)
+sales_rep_id         uuid references users(id)
+basis_type           text default 'broker_revenue' -- broker_revenue | funded_amount | flat
+basis_amount         numeric
+rate                 numeric
 amount               numeric not null
-status               text default 'unpaid' -- unpaid | approved | paid | clawed_back
+status               text default 'unpaid' -- unpaid | approved | paid | adjusted | clawed_back | void
 paid_at              timestamptz
 notes                text
 created_at           timestamptz default now()
@@ -322,9 +423,12 @@ GET    /api/fundings
 POST   /api/fundings
 GET    /api/fundings/:id
 PATCH  /api/fundings/:id
-GET    /api/commissions
-POST   /api/commissions
-PATCH  /api/commissions/:id
+GET    /api/broker-revenue
+POST   /api/broker-revenue
+PATCH  /api/broker-revenue/:id
+GET    /api/sales-rep-commissions
+POST   /api/sales-rep-commissions
+PATCH  /api/sales-rep-commissions/:id
 ```
 
 When creating funding:
@@ -335,7 +439,8 @@ When creating funding:
 4. Create status history.
 5. Create activity event.
 6. Trigger funded email.
-7. Optionally create commission records.
+7. Optionally create broker revenue receivable.
+8. Optionally create internal sales rep commission record.
 
 ## Frontend work
 
@@ -344,14 +449,16 @@ Add:
 ```txt
 components/dashboards/shared/FundingModal.tsx
 components/dashboards/shared/FundingSummary.tsx
-components/dashboards/AdminCommissionsView.tsx
+components/dashboards/AdminRevenueView.tsx
+components/dashboards/AdminSalesRepCommissionsView.tsx
 ```
 
-Add admin section:
+Add admin sections:
 
 ```txt
-Commissions
 Funded Deals
+Broker Revenue
+Sales Rep Commissions
 ```
 
 ## Acceptance criteria
@@ -359,24 +466,27 @@ Funded Deals
 - Admin can mark a merchant funded with actual funding details.
 - Funding is stored separately from merchant status.
 - Funded deal appears in reporting base data.
-- Commission records can be created and marked paid.
+- Broker revenue owed by the lender/funder can be created and marked received/disputed/short-paid.
+- Internal sales rep commission records can be created and marked approved/paid/adjusted/clawed back.
+- No payout is created for lender-side account/relationship managers.
 - Status becomes `FUNDED` only through funding workflow or admin-controlled status change.
 
 ---
 
-# Phase C — Broker-to-Lender Submission Tracking
+# Phase C — Merchant-File Submission Tracking
 
 ## Goal
 
-Track every outbound broker-to-lender merchant-file submission outcome, not just whether a lender was matched.
+Track every outbound broker-shop merchant-file submission to lenders/funders, not just whether a lender was matched.
 
 ## Why this matters
 
 `lender_matches` answers: “Who fits this file?”
 
-A brokerage CRM also needs to know what happened after the broker shop sent the merchant file to each lender/funder:
+A brokerage CRM also needs to know what happened after the broker shop sent the merchant file/package to each lender/funder:
 
-- Who received the file?
+- Which lender/funder received the file?
+- Who at the broker shop submitted it?
 - Who opened/responded?
 - Who declined?
 - Who asked for stips?
@@ -385,9 +495,9 @@ A brokerage CRM also needs to know what happened after the broker shop sent the 
 
 ## New database table
 
-### `lender_submissions`
+### `merchant_file_submissions`
 
-Despite the table name, this represents **broker-shop outbound submissions to lenders/funders**. It is not a lender-created deal.
+This represents **broker-shop outbound submissions of merchant files to lenders/funders**. It is not a lender-created deal and it is not a deal submitted by a lender to the broker.
 
 ```sql
 id                  uuid primary key default gen_random_uuid()
@@ -409,8 +519,8 @@ updated_at           timestamptz default now()
 Recommended unique index:
 
 ```sql
-create unique index lender_submissions_unique_active
-on lender_submissions(merchant_id, lender_id, package_version);
+create unique index merchant_file_submissions_unique_active
+on merchant_file_submissions(merchant_id, lender_id, package_version);
 ```
 
 ## Backend/API work
@@ -418,36 +528,36 @@ on lender_submissions(merchant_id, lender_id, package_version);
 Create routes:
 
 ```txt
-GET    /api/lender-submissions?merchant_id=
-POST   /api/lender-submissions
-PATCH  /api/lender-submissions/:id
+GET    /api/merchant-file-submissions?merchant_id=
+POST   /api/merchant-file-submissions
+PATCH  /api/merchant-file-submissions/:id
 ```
 
 Update `/api/matching/notify`:
 
-- When the broker shop notifies/submits to lenders, create or update `lender_submissions` rows.
+- When the broker shop notifies/submits to lenders, create or update `merchant_file_submissions` rows.
 - Set `status = submitted`.
 - Store `submitted_at`.
 
 Update offer route:
 
-- When a lender/funder responds with an offer or approval, set the corresponding broker-to-lender submission to `offer_received`.
+- When a lender/funder responds with an offer or approval, set the corresponding merchant-file submission to `offer_received`.
 
 Update stipulation route:
 
-- When a lender/funder requests stips, set the corresponding broker-to-lender submission to `stips_requested`.
+- When a lender/funder requests stips, set the corresponding merchant-file submission to `stips_requested`.
 
 ## Frontend work
 
 Add to merchant detail:
 
 ```txt
-Lender Submissions panel
+Merchant-File Submissions panel
 ```
 
 Show:
 
-- Lender name
+- Lender/funder name
 - Submission status
 - Submitted date
 - Response date
@@ -458,9 +568,10 @@ Show:
 ## Acceptance criteria
 
 - Broker/admin can see every lender/funder this merchant file was submitted to.
-- Broker can mark a lender as declined/no response.
-- Offer and stip requests update lender submission status.
-- Lender response history remains even after status changes.
+- Broker can mark a lender/funder as declined/no response.
+- Offer and stip requests update merchant-file submission status.
+- Lender/funder response history remains even after status changes.
+- UI copy makes clear that the broker shop submits the file to the lender/funder, not the other way around.
 
 ---
 
@@ -659,18 +770,21 @@ Give brokerage owners visibility into volume, performance, bottlenecks, and reve
 
 ### Lender reports
 
-- Submission count by lender
+- Merchant-file submission count by lender/funder
 - Approval/offer rate
 - Decline rate
 - Average response time
 - Funded volume by lender
 
-### Commission reports
+### Broker revenue and sales rep commission reports
 
-- Commission payable
-- Commission paid
-- Unpaid commission aging
-- Clawbacks/adjustments
+- Broker revenue expected from lenders/funders
+- Broker revenue received
+- Short-paid/disputed receivables
+- Internal sales rep commissions payable
+- Internal sales rep commissions paid
+- Unpaid sales rep commission aging
+- Sales rep clawbacks/adjustments
 
 ## Backend/API work
 
@@ -681,7 +795,8 @@ GET /api/reports/pipeline
 GET /api/reports/funding
 GET /api/reports/leads
 GET /api/reports/lenders
-GET /api/reports/commissions
+GET /api/reports/broker-revenue
+GET /api/reports/sales-rep-commissions
 ```
 
 ## Frontend work
@@ -700,7 +815,8 @@ PipelineAgingReport.tsx
 FundingVolumeReport.tsx
 RepPerformanceReport.tsx
 LenderPerformanceReport.tsx
-CommissionReport.tsx
+BrokerRevenueReport.tsx
+SalesRepCommissionReport.tsx
 ```
 
 ## Acceptance criteria
@@ -708,7 +824,7 @@ CommissionReport.tsx
 - Admin can see funded volume.
 - Admin can see close rates.
 - Admin can see stale pipeline deals.
-- Admin can see commission liability.
+- Admin can see broker revenue receivables and internal sales rep commission liability.
 
 ---
 
@@ -955,9 +1071,9 @@ Supports multiple broker shops in one app.
 
 # Recommended Implementation Order
 
-## Next immediate phase: Phase A
+## Phase A status: complete
 
-Build activity and tasks first because they unlock daily CRM usage.
+Activity timelines and tasks have been built. The next immediate phase should be a security/workflow hardening pass for lender offer visibility before adding funded-deal revenue modules.
 
 ### Step A1 — Database
 
@@ -1026,26 +1142,40 @@ Add:
 
 ---
 
-## Phase B after that
+## Phase A.1 status: complete
 
-Build funding and commissions.
+Lender offer privacy hardening has been built before Phase B.
+
+Why this was required:
+
+- Lenders/funders are competitors on the same merchant file.
+- Merchant/admin/assigned rep can compare offers, but each lender/funder must only see its own offer.
+- This prevents leaking competing offer amounts, terms, statuses, notes, contract details, or funding outcomes.
+- It closes a record-level authorization gap before more revenue/funding features are added.
+
+---
+
+## Phase B next
+
+Build funded deals, broker revenue, and internal sales rep commissions.
 
 Why:
 
 - Makes `FUNDED` financially meaningful
 - Enables owner reporting
-- Tracks commission payouts
+- Tracks money owed by lenders/funders to the broker shop
+- Tracks internal sales rep payouts without creating lender-side manager payout confusion
 
 ---
 
 ## Phase C after that
 
-Build lender submissions.
+Build merchant-file submissions.
 
 Why:
 
 - Makes lender matching operationally complete
-- Allows broker shops to track lender/funder responses, approvals, declines, stip requests, offers, and no-response outcomes
+- Allows broker shops to track which lenders/funders received each merchant file and how they responded: approvals, declines, stip requests, offers, and no-response outcomes
 
 ---
 
@@ -1060,9 +1190,9 @@ MCA King becomes a complete MCA broker CRM when it can answer these questions wi
 5. Which merchants need documents?
 6. Which contracts are unsigned?
 7. Which deals funded this month?
-8. How much commission is owed and to whom?
+8. How much broker revenue is owed by lenders/funders, and what internal sales rep commissions are owed?
 9. Which funded merchants are renewal eligible?
-10. Which reps, lenders, and lead sources are performing best?
+10. Which reps, lenders, and merchant files are performing best?
 
 ---
 
@@ -1071,9 +1201,10 @@ MCA King becomes a complete MCA broker CRM when it can answer these questions wi
 MCA King has the workflow foundation. The next product layer should focus on CRM operations and revenue tracking:
 
 ```txt
-Activity + Tasks
-Funding + Commissions
-Lender Submissions
+Activity + Tasks ✅ complete
+Lender Offer Visibility + Data Isolation ✅ complete
+Funded Deals + Broker Revenue + Sales Rep Commissions
+Merchant-File Submissions
 Search + Saved Views
 Renewals
 Reports

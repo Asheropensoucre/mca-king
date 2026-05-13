@@ -18,7 +18,7 @@ Before onboarding real customer data, MCA King should be able to answer â€œyesâ€
 2. Are secrets and privileged Supabase keys only available server-side?
 3. Are login, registration, AI, and upload routes protected from abuse?
 4. Are documents private, permission-checked, size-limited, and auditable?
-5. Can the broker/ISO owner see who accessed sensitive data and when?
+5. Can the broker-shop owner see who accessed sensitive data and when?
 6. Can a compromised or terminated user be disabled and logged out everywhere?
 7. Are sensitive fields masked by default?
 8. Are production headers, cookies, CORS, and CSRF protections configured?
@@ -52,7 +52,7 @@ Already completed or mostly in place:
   - `requireAuth(req)`
   - `assertRole(...)`
 - Broker-centered role model is documented:
-  - Admin = broker/ISO shop owner/operator.
+  - Admin = broker-shop owner/operator.
   - Sales rep = internal broker-shop rep.
   - Merchant = applicant/funding customer.
   - Lender/funder = reviewer/approver of broker-submitted/matched files.
@@ -146,10 +146,10 @@ UI hiding is not security. Every permission must be enforced server-side.
 
 | Role | Allowed Access |
 |---|---|
-| `admin` | Broker/ISO-wide access to all shop data. |
+| `admin` | Broker-shop-wide access to all shop data. |
 | `sales_rep` | Assigned merchants/leads and permitted pipeline actions. |
 | `merchant` | Their own application, offers, stipulations, and documents only. |
-| `lender` | Their own lender profile and merchant files matched/submitted to them only. |
+| `lender` | Their own lender profile, merchant files matched/submitted to them, and only their own offers/responses on those merchant files. Lenders must not see competing lender/funder offers. |
 
 ## Tasks
 
@@ -167,6 +167,11 @@ UI hiding is not security. Every permission must be enforced server-side.
   - reps only see assigned merchants/leads unless admin explicitly grants broader access.
 - [ ] Enforce lender match/submission access:
   - lenders can only see merchants tied to them through `lender_matches` or future `merchant_file_submissions`.
+- [ ] Enforce lender offer isolation:
+  - lenders can only see offers where `offers.lender_id` belongs to their own lender profile.
+  - merchant API responses returned to lenders must sanitize nested `payload.offers` / `offers` arrays.
+  - lender AI/chat context must not include competing lender offers.
+  - lender-facing activity text/metadata must not reveal competing offer details.
 - [ ] Enforce document access:
   - signed URLs are generated only after permission checks.
 - [ ] Prevent lenders from creating merchant deals.
@@ -209,6 +214,8 @@ Audit and harden at minimum:
 
 - No route returns another user's sensitive data by changing an ID in the URL.
 - Lenders cannot access unmatched/unsubmitted merchant files.
+- Lenders cannot see competing lender/funder offers on the same merchant file.
+- Merchant responses to lenders only include that lender's own offers/responses.
 - Merchants cannot update pipeline/admin-only fields.
 - Sales reps cannot access unassigned merchant files unless admin policy allows it.
 - Authorization tests exist for each role.
@@ -502,7 +509,7 @@ Reduce the amount of sensitive data stored and shown.
 
 ## Goal
 
-Let the broker/ISO safely manage users over time.
+Let the broker shop safely manage users over time.
 
 ## Tasks
 

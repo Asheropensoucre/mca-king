@@ -19,15 +19,15 @@
 
 ## Overview
 
-MCA King is a broker/ISO-centered merchant cash advance CRM for managing merchant funding files from lead intake through lender submission, approvals, offers, contracts, stipulations, and final funding. The broker shop sources merchant deals; admins and sales reps manage those files; lenders/funders sign in to review broker-submitted merchant files, approve or decline them, request stipulations, and send offers.
+MCA King is a broker-shop merchant cash advance CRM for managing merchant funding files from lead intake through merchant-file submission to lenders/funders, approvals, offers, contracts, stipulations, and final funding. The broker shop sources merchant deals; admins and sales reps manage those files; lenders/funders sign in to review broker-submitted merchant files, approve or decline them, request stipulations, and send offers.
 
-The app is designed for MCA broker owners, ISO shops, internal sales reps, merchants, and lender/funder users. Admin users represent the broker/ISO shop owner or operator, not a lender marketplace operator.
+The app is designed for MCA broker owners, broker shops, internal sales reps, merchants, and lender/funder users. Admin users represent the broker shop owner or operator, not a lender marketplace operator.
 
 <!-- Add screenshots here -->
 
 ## Features
 
-- **Role-based dashboards** for broker/ISO Admins, internal Sales Reps, Merchants, and Lender/Funder users.
+- **Role-based dashboards** for broker-shop Admins, internal Sales Reps, Merchants, and Lender/Funder users.
 - **12-step Kamba pipeline** with drag-and-drop deal movement powered by `@dnd-kit`.
 - **Automated and manual lender matching engine** that helps the broker shop decide which lenders/funders should review each merchant file.
 - **Leads system** with a mini pipeline, assignment, notes/call log, and lead-to-merchant conversion.
@@ -68,10 +68,11 @@ Server routes call `requireAuth(req)` from `src/lib/requireAuth.ts`, which resol
 
 Role examples:
 
-- Admins are broker/ISO shop owners or operators who can manage merchants, lenders/funders, leads, sales reps, matching, documents, and pipeline movement.
+- Admins are broker shop owners or operators who can manage merchants, lenders/funders, leads, sales reps, matching, documents, and pipeline movement.
 - Sales reps are internal broker-shop users who manage assigned deals and leads.
 - Merchants can access their own applications, offers, stipulations, and documents.
 - Lenders/funders can access their own profile and merchant files submitted or matched to them; they do not originate merchant deals in this CRM.
+- Lender-side account/relationship managers are treated as lender contact people only; they are not broker commission recipients and do not submit deals to the brokerage.
 
 ### 12-step status machine
 
@@ -304,7 +305,7 @@ Color coding is configured in `components/dashboards/shared/applicationStatus.ts
 | Admin / Broker Owner | All merchants, lenders/funders, leads, sales reps, documents, matches, offers, stipulations, and full Kamba pipeline | Operate the broker shop: create sales reps, assign reps, edit merchants/lenders, run auto-match, add/remove manual matches, submit/notify lenders, manage leads, delete documents, move deals through the pipeline, print applications |
 | Sales Rep | Assigned merchant files, leads, lender list for matching, pipeline view for assigned deals | Work broker-shop leads, convert leads, update assigned merchant files, run matching, manually add matches, print assigned applications |
 | Merchant | Own application, own documents, own stipulations, own offers, current pipeline status | Submit application, upload documents, fulfill stipulations, accept/reject offers, edit active application, reapply after grace period |
-| Lender/Funder | Own lender profile and merchant files submitted/matched to that lender | Maintain criteria, review broker-submitted merchant files, approve/decline, send offers, request stipulations/documents |
+| Lender/Funder | Own lender profile, merchant files submitted/matched to that lender, and only that lender/funder's own offers/responses | Maintain criteria, review broker-submitted merchant files, approve/decline, send offers, request stipulations/documents. Lenders/funders must not see competing offers from other lenders on the same merchant file. |
 
 ## Contributing
 

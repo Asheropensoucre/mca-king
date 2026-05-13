@@ -11,6 +11,8 @@ export async function GET(req: Request): Promise<Response> {
   const merchantId = url.searchParams.get('merchant_id')
   if (!merchantId) return badRequest('merchant_id is required')
 
+  let currentLenderId: string | null = null
+
   if (user.role === 'lender') {
     const { data: lender, error: lenderError } = await supabaseAdmin
       .from('lenders')
@@ -20,6 +22,7 @@ export async function GET(req: Request): Promise<Response> {
 
     if (lenderError) return badRequest(lenderError.message)
     if (!lender) return forbidden()
+    currentLenderId = lender.id
 
     const { data: allowedMatch, error: allowedError } = await supabaseAdmin
       .from('lender_matches')
@@ -32,12 +35,15 @@ export async function GET(req: Request): Promise<Response> {
     if (!allowedMatch) return forbidden()
   }
 
-  const { data, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from('lender_matches')
     .select('*, lender:lenders(id,company_name,contact_name,contact_email)')
     .eq('merchant_id', merchantId)
     .order('created_at', { ascending: false })
-    .returns<LenderMatch[]>()
+
+  if (currentLenderId) query = query.eq('lender_id', currentLenderId)
+
+  const { data, error } = await query.returns<LenderMatch[]>()
 
   if (error) return badRequest(error.message)
   return json(data ?? [])

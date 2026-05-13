@@ -1,7 +1,7 @@
 # MCA King — Engineering Plan
 > This is the forward-looking build plan. For the project audit and history, see `Project_Road_Map.md`.
 >
-> **Current master expansion plan:** see [`Docs/MCA_BROKER_CRM_EXPANSION_PLAN.md`](Docs/MCA_BROKER_CRM_EXPANSION_PLAN.md) for the detailed broker CRM gap analysis, database modules, and phased build roadmap covering activities, tasks, funding, commissions, lender submissions, renewals, reporting, compliance, and communications.
+> **Current master expansion plan:** see [`Docs/MCA_BROKER_CRM_EXPANSION_PLAN.md`](Docs/MCA_BROKER_CRM_EXPANSION_PLAN.md) for the detailed broker CRM gap analysis, database modules, and phased build roadmap covering activities, tasks, funded deals, broker revenue, internal sales rep commissions, merchant-file submissions, renewals, reporting, compliance, and communications.
 >
 > **Deployment:** see [`Docs/VERCEL_DEPLOYMENT.md`](Docs/VERCEL_DEPLOYMENT.md) for the Vercel serverless API setup, environment variables, and deployment checklist.
 >
@@ -12,16 +12,16 @@
 
 ## Product Role Model
 
-MCA King is broker/ISO-shop centered.
+MCA King is broker-shop centered.
 
 | Role | Meaning |
 |---|---|
-| `admin` | Broker/ISO shop owner or operator. Admin controls users, reps, merchant files, lender/funder records, matching, submissions, and reporting. |
+| `admin` | Broker shop owner or operator. Admin controls users, reps, merchant files, lender/funder records, matching, submissions, broker revenue, internal sales rep commissions, and reporting. |
 | `sales_rep` | Internal broker-shop rep who works leads and assigned merchant files. |
 | `merchant` | Funding customer/applicant. Merchants submit applications, upload documents, respond to stipulations, and review offers. |
 | `lender` | Lender/funder reviewer. Lenders do not submit merchant deals; they review broker-submitted/matched files, approve/decline, request stipulations, and send offers. |
 
-Use “lender submission” to mean an outbound broker-shop submission of a merchant file to a lender/funder, not a lender-created deal.
+Use “merchant-file submission” to mean an outbound broker-shop submission of a merchant file to a lender/funder, not a lender-created deal. If old notes say “lender submission,” read that as broker-to-lender merchant-file submission.
 
 ---
 
@@ -266,7 +266,23 @@ export async function GET(req: Request) {
 | `admin` | Everything — all merchants, all lenders, all offers, all leads (assigned and unassigned) |
 | `sales_rep` | Only merchants where `assigned_rep_id = user.id` — only leads they created OR were assigned by admin. Cannot see or claim unassigned leads. |
 | `merchant` | Only their own row + their own offers/docs |
-| `lender` | Only merchants matched to them via `lender_matches` |
+| `lender` | Only merchants matched/submitted to them, and only their own offers/responses on those merchants. Competing lender/funder offers must be removed from lender-facing merchant payloads. |
+
+
+### Lender offer visibility rule
+
+Lenders/funders can review merchant files submitted or matched to them and can create offers for those files, but they must not see competing lenders' offers.
+
+Required rule:
+
+```txt
+Admin: all offers.
+Assigned sales rep: all offers for assigned merchant files.
+Merchant: all offers on their own file.
+Lender/funder: only offers where the offer belongs to that lender/funder profile.
+```
+
+Any route returning merchant records to a lender must sanitize nested `offers` data before responding. This includes list/detail APIs, dashboard data, activity metadata where applicable, and AI/chat context.
 
 ### Lead access rules in SQL terms
 

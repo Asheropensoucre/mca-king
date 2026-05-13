@@ -15,6 +15,36 @@ async function fetchMerchant(id: string): Promise<MerchantRow | null | Response>
   return data
 }
 
+async function getCurrentLenderId(userId: string): Promise<string | null | Response> {
+  const { data, error } = await supabaseAdmin
+    .from('lenders')
+    .select('id')
+    .eq('user_id', userId)
+    .maybeSingle<{ id: string }>()
+
+  if (error) return badRequest(error.message)
+  return data?.id ?? null
+}
+
+async function lenderCanReadMerchant(lenderId: string, merchantId: string): Promise<boolean | Response> {
+  const { data, error } = await supabaseAdmin
+    .from('lender_matches')
+    .select('id')
+    .eq('lender_id', lenderId)
+    .eq('merchant_id', merchantId)
+    .maybeSingle<{ id: string }>()
+
+  if (error) return badRequest(error.message)
+  return Boolean(data)
+}
+
+function sanitizeMerchantForLender(merchant: FormData, lenderId: string): FormData {
+  return {
+    ...merchant,
+    offers: (merchant.offers ?? []).filter(offer => offer.lenderId === lenderId),
+  }
+}
+
 function canRead(userRole: string, userId: string, row: MerchantRow): boolean {
   if (userRole === 'admin') return true
   if (userRole === 'sales_rep') return row.assigned_rep_id === userId
@@ -83,6 +113,19 @@ export async function GET(req: Request, context?: RouteContext): Promise<Respons
   const row = await fetchMerchant(id)
   if (row instanceof Response) return row
   if (!row) return notFound()
+
+  if (user.role === 'lender') {
+    const lenderId = await getCurrentLenderId(user.id)
+    if (lenderId instanceof Response) return lenderId
+    if (!lenderId) return forbidden()
+
+    const canReadLenderMerchant = await lenderCanReadMerchant(lenderId, id)
+    if (canReadLenderMerchant instanceof Response) return canReadLenderMerchant
+    if (!canReadLenderMerchant) return forbidden()
+
+    return json(sanitizeMerchantForLender(rowToMerchant(row), lenderId))
+  }
+
   if (!canRead(user.role, user.id, row)) return forbidden()
 
   return json(rowToMerchant(row))
