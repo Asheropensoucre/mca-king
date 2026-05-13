@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import type { AuthUser, Lead, LeadStatus, SalesRepresentative } from '../../types';
+import type { AuthUser, Lead, LeadStatus, SalesRepresentative, PaginatedResponse } from '../../types';
 import { api } from '../../src/lib/api-client';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
@@ -7,6 +7,7 @@ import { Textarea } from '../ui/Textarea';
 import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 import { ActivityTimeline } from './shared/ActivityTimeline';
 import { TaskPanel } from './shared/TaskPanel';
+import { FilterBar } from './shared/FilterBar';
 
 const STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
 const STATUS_OPTIONS: { value: LeadStatus; label: string }[] = [
@@ -39,26 +40,37 @@ interface LeadManagerProps {
   salesReps: SalesRepresentative[];
   onConverted?: (merchantId: string) => void;
   currentUser: AuthUser;
+  initialLeadId?: string | null;
 }
 
-export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, onConverted, currentUser }) => {
+export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, onConverted, currentUser, initialLeadId }) => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
   const [noteBody, setNoteBody] = useState('');
   const [form, setForm] = useState({ business_name: '', owner_name: '', phone: '', email: '', state: '', assigned_rep_id: '', initial_note: '' });
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const loadLeads = async () => {
     try {
       setError(null);
-      setLeads(await api.leads.list());
+      const response = await api.leads.listFiltered({ ...filters, page, per_page: 24 });
+      setLeads(response.data);
+      setTotal(response.total);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load leads');
     }
   };
 
-  useEffect(() => { void loadLeads(); }, []);
+  useEffect(() => { void loadLeads(); }, [filters, page]);
+
+  useEffect(() => {
+    if (!initialLeadId) return;
+    api.leads.get(initialLeadId).then(setSelectedLead).catch(err => setError(err instanceof Error ? err.message : 'Could not open lead'));
+  }, [initialLeadId]);
 
   const openLead = async (lead: Lead) => {
     setSelectedLead(await api.leads.get(lead.id));
@@ -104,6 +116,7 @@ export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, on
         </div>
         <PrimaryButton label="New Lead" size="small" onClick={() => setShowNewForm(true)} />
       </div>
+      <FilterBar entityType="leads" filters={filters} onFilterChange={(next) => { setFilters(next); setPage(1); }} onReset={() => { setFilters({}); setPage(1); }} salesReps={salesReps} isAdmin={isAdmin} currentUserRole={currentUser.role} />
       {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {leads.map(lead => (
@@ -124,6 +137,11 @@ export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, on
           </button>
         ))}
         {leads.length === 0 && <Card className="p-8 text-center text-sm text-slate-500 dark:text-slate-400 md:col-span-2 xl:col-span-3">No leads yet.</Card>}
+      </div>
+      <div className="mt-4 flex items-center justify-center gap-3 text-sm font-black text-theme-maroon dark:text-theme-yellow">
+        <PrimaryButton label="Previous" size="small" disabled={page <= 1} onClick={() => setPage(Math.max(1, page - 1))} />
+        <span>Page {page} of {Math.max(1, Math.ceil(total / 24))}</span>
+        <PrimaryButton label="Next" size="small" disabled={page >= Math.max(1, Math.ceil(total / 24))} onClick={() => setPage(Math.min(Math.max(1, Math.ceil(total / 24)), page + 1))} />
       </div>
 
       {(showNewForm || selectedLead) && (

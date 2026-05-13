@@ -1,4 +1,4 @@
-import type { Activity, ActivityType, EntityType, LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch, Task, Funding, BrokerRevenue, SalesRepCommission, MerchantFileSubmission } from '../../types'
+import type { Activity, ActivityType, EntityType, LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch, Task, Funding, BrokerRevenue, SalesRepCommission, MerchantFileSubmission, SavedView, SearchResults, PaginatedResponse, SavedViewEntityType } from '../../types'
 
 function headers(extra?: HeadersInit): HeadersInit {
   return {
@@ -20,18 +20,45 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return await res.json() as T
 }
 
+function toQuery(params?: Record<string, string | number | boolean | null | undefined>): string {
+  if (!params) return ''
+  return new URLSearchParams(
+    Object.entries(params)
+      .filter((entry): entry is [string, string | number | boolean] => entry[1] !== undefined && entry[1] !== null && String(entry[1]).length > 0)
+      .map(([key, value]) => [key, String(value)])
+  ).toString()
+}
+
 export const api = {
+  search: {
+    global: (q: string) => request<SearchResults>(`/api/search?q=${encodeURIComponent(q)}`),
+  },
+  savedViews: {
+    list: (entityType?: SavedViewEntityType) => request<SavedView[]>(`/api/saved-views${entityType ? `?entity_type=${encodeURIComponent(entityType)}` : ''}`),
+    create: (data: Pick<SavedView, 'name' | 'entity_type'> & Partial<Pick<SavedView, 'filters' | 'sort' | 'is_shared'>>) => request<SavedView>('/api/saved-views', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<Pick<SavedView, 'name' | 'entity_type' | 'filters' | 'sort' | 'is_shared'>>) => request<SavedView>(`/api/saved-views/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) => request<{ success: boolean }>(`/api/saved-views/${id}`, { method: 'DELETE' }),
+  },
   users: {
     salesReps: () => request<SalesRepresentative[]>('/api/users/sales-reps'),
   },
   merchants: {
     list: () => request<FormData[]>('/api/merchants'),
+    listFiltered: (params: Record<string, string | number | boolean | null | undefined>) => {
+      const qs = toQuery(params)
+      return request<PaginatedResponse<FormData>>(`/api/merchants${qs ? `?${qs}` : ''}`)
+    },
     create: (merchant: FormData) => request<FormData>('/api/merchants', { method: 'POST', body: JSON.stringify(merchant) }),
     update: (merchant: FormData) => request<FormData>(`/api/merchants/${merchant.id}`, { method: 'PATCH', body: JSON.stringify(merchant) }),
     get: (id: string) => request<FormData>(`/api/merchants/${id}`),
   },
   lenders: {
     list: () => request<LenderInfo[]>('/api/lenders'),
+    listFiltered: (params: Record<string, string | number | boolean | null | undefined>) => {
+      const qs = toQuery(params)
+      return request<PaginatedResponse<LenderInfo>>(`/api/lenders${qs ? `?${qs}` : ''}`)
+    },
+    get: (id: string) => request<LenderInfo>(`/api/lenders/${id}`),
     create: (lender: LenderInfo) => request<LenderInfo>('/api/lenders', { method: 'POST', body: JSON.stringify(lender) }),
     update: (lender: LenderInfo) => request<LenderInfo>(`/api/lenders/${lender.id}`, { method: 'PATCH', body: JSON.stringify(lender) }),
   },
@@ -41,6 +68,10 @@ export const api = {
   },
   leads: {
     list: () => request<Lead[]>('/api/leads'),
+    listFiltered: (params: Record<string, string | number | boolean | null | undefined>) => {
+      const qs = toQuery(params)
+      return request<PaginatedResponse<Lead>>(`/api/leads${qs ? `?${qs}` : ''}`)
+    },
     create: (lead: Partial<Lead> & { initial_note?: string }) => request<Lead>('/api/leads', { method: 'POST', body: JSON.stringify(lead) }),
     get: (id: string) => request<Lead>(`/api/leads/${id}`),
     update: (lead: Partial<Lead> & { id: string }) => request<Lead>(`/api/leads/${lead.id}`, { method: 'PATCH', body: JSON.stringify(lead) }),
@@ -69,8 +100,12 @@ export const api = {
   },
   tasks: {
     list: (params?: { entity_type?: EntityType; entity_id?: string }) => {
-      const qs = params ? new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0)).toString() : ''
+      const qs = toQuery(params)
       return request<Task[]>(`/api/tasks${qs ? `?${qs}` : ''}`)
+    },
+    listFiltered: (params: Record<string, string | number | boolean | null | undefined>) => {
+      const qs = toQuery(params)
+      return request<PaginatedResponse<Task>>(`/api/tasks${qs ? `?${qs}` : ''}`)
     },
     create: (data: Pick<Task, 'entity_type' | 'entity_id' | 'title'> & Partial<Pick<Task, 'description' | 'priority' | 'assigned_to' | 'due_at'>>) => request<Task>('/api/tasks', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: Partial<Pick<Task, 'status' | 'title' | 'description' | 'priority' | 'assigned_to' | 'due_at'>>) => request<Task>(`/api/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
@@ -80,6 +115,10 @@ export const api = {
     list: (params?: { merchant_id?: string }) => {
       const qs = params?.merchant_id ? `?merchant_id=${encodeURIComponent(params.merchant_id)}` : ''
       return request<Funding[]>(`/api/fundings${qs}`)
+    },
+    listFiltered: (params: Record<string, string | number | boolean | null | undefined>) => {
+      const qs = toQuery(params)
+      return request<PaginatedResponse<Funding>>(`/api/fundings${qs ? `?${qs}` : ''}`)
     },
     create: (data: Partial<Funding> & { merchant_id: string; funded_amount: number | string; broker_revenue_amount?: number | string | null; broker_revenue_rate?: number | string | null; sales_rep_commission_amount?: number | string | null; sales_rep_commission_rate?: number | string | null }) => request<Funding>('/api/fundings', { method: 'POST', body: JSON.stringify(data) }),
     get: (id: string) => request<Funding>(`/api/fundings/${id}`),

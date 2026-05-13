@@ -1,6 +1,7 @@
 import type { ApplicationStatus, BrokerRevenue, Funding, SalesRepCommission } from '../../../types'
 import { recordActivity } from '../../lib/activity'
 import { rowToMerchant, type MerchantRow, type OfferRow } from '../../lib/data-shapes'
+import { getPagination, paginatedJson, hasListParams } from '../../lib/list-query'
 import { triggerMerchantStatusEmail } from '../../lib/email-triggers'
 import { requireAuth } from '../../lib/requireAuth'
 import { assertRole, badRequest, forbidden, json } from '../../lib/route-utils'
@@ -90,14 +91,22 @@ export async function GET(req: Request): Promise<Response> {
   if (user.role === 'merchant' || user.role === 'lender') return forbidden()
 
   const url = new URL(req.url)
+  const shouldPaginate = hasListParams(url)
+  const pagination = getPagination(url)
   const merchantId = url.searchParams.get('merchant_id')
+  const from = url.searchParams.get('from')
+  const to = url.searchParams.get('to')
+  const lenderId = url.searchParams.get('lender_id')
+  const repId = url.searchParams.get('rep_id')
 
   let query = supabaseAdmin
     .from('fundings')
-    .select('*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name)')
-    .order('funded_at', { ascending: false })
+    .select('*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name)', { count: shouldPaginate ? 'exact' : undefined })
 
   if (merchantId) query = query.eq('merchant_id', merchantId)
+  if (from) query = query.gte('funded_at', from)
+  if (to) query = query.lte('funded_at', to)
+  if (lenderId) query = query.eq('lender_id', lenderId)
 
   if (user.role === 'sales_rep') {
     const { data: merchants, error } = await supabaseAdmin
@@ -107,13 +116,27 @@ export async function GET(req: Request): Promise<Response> {
       .returns<{ id: string }[]>()
     if (error) return badRequest(error.message)
     const ids = (merchants ?? []).map(merchant => merchant.id)
-    if (ids.length === 0) return json([])
+    if (ids.length === 0) return shouldPaginate ? paginatedJson([], 0, pagination.page, pagination.perPage) : json([])
+    query = query.in('merchant_id', ids)
+  } else if (repId) {
+    const { data: merchants, error } = await supabaseAdmin
+      .from('merchants')
+      .select('id')
+      .eq('assigned_rep_id', repId)
+      .returns<{ id: string }[]>()
+    if (error) return badRequest(error.message)
+    const ids = (merchants ?? []).map(merchant => merchant.id)
+    if (ids.length === 0) return shouldPaginate ? paginatedJson([], 0, pagination.page, pagination.perPage) : json([])
     query = query.in('merchant_id', ids)
   }
 
-  const { data, error } = await query.returns<FundingRow[]>()
+  query = query.order('funded_at', { ascending: false })
+  if (shouldPaginate) query = query.range(pagination.from, pagination.to)
+
+  const { data, error, count } = await query.returns<FundingRow[]>()
   if (error) return badRequest(error.message)
-  return json((data ?? []).map(toFunding))
+  const fundings = (data ?? []).map(toFunding)
+  return shouldPaginate ? paginatedJson(fundings, count, pagination.page, pagination.perPage) : json(fundings)
 }
 
 export async function POST(req: Request): Promise<Response> {

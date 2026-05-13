@@ -32,6 +32,9 @@ import { GET as getSalesRepCommissions, POST as postSalesRepCommission } from '.
 import { PATCH as patchSalesRepCommission } from '../routes/sales-rep-commissions/[id]'
 import { GET as getMerchantFileSubmissions, POST as postMerchantFileSubmission } from '../routes/merchant-file-submissions/index'
 import { PATCH as patchMerchantFileSubmission } from '../routes/merchant-file-submissions/[id]'
+import { GET as getSearch } from '../routes/search/index'
+import { GET as getSavedViews, POST as postSavedView } from '../routes/saved-views/index'
+import { PATCH as patchSavedView, DELETE as deleteSavedView } from '../routes/saved-views/[id]'
 import { POST as aiChat } from '../routes/ai/chat'
 import type { RouteContext } from '../lib/route-utils'
 
@@ -70,6 +73,22 @@ function matchRoute(method: string, pathname: string): RouteMatch | null {
   if (pathname === '/api/activities') {
     if (method === 'GET') return { handler: getActivities }
     if (method === 'POST') return { handler: postActivity }
+  }
+
+  if (pathname === '/api/search') {
+    if (method === 'GET') return { handler: getSearch }
+  }
+
+  if (pathname === '/api/saved-views') {
+    if (method === 'GET') return { handler: getSavedViews }
+    if (method === 'POST') return { handler: postSavedView }
+  }
+
+  const savedViewMatch = pathname.match(/^\/api\/saved-views\/([^/]+)$/)
+  if (savedViewMatch) {
+    const params = { id: decodeURIComponent(savedViewMatch[1]) }
+    if (method === 'PATCH') return { handler: patchSavedView, params }
+    if (method === 'DELETE') return { handler: deleteSavedView, params }
   }
 
   if (pathname === '/api/tasks') {

@@ -43779,6 +43779,26 @@ async function readJson(req) {
   }
 }
 
+// src/lib/list-query.ts
+function getPagination(url) {
+  const pageParam = Number.parseInt(url.searchParams.get("page") ?? "1", 10);
+  const perPageParam = Number.parseInt(url.searchParams.get("per_page") ?? "50", 10);
+  const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
+  const perPage = Number.isFinite(perPageParam) && perPageParam > 0 ? Math.min(100, perPageParam) : 50;
+  const from = (page - 1) * perPage;
+  const to = from + perPage - 1;
+  return { page, perPage, from, to };
+}
+function cleanSearchTerm(value) {
+  return (value ?? "").replace(/[%,()]/g, " ").trim();
+}
+function hasListParams(url) {
+  return Array.from(url.searchParams.keys()).length > 0;
+}
+function paginatedJson(data, total, page, perPage) {
+  return Response.json({ data, total: total ?? data.length, page, per_page: perPage });
+}
+
 // src/routes/merchants/index.ts
 function sanitizeMerchantForLender(merchant, lenderId) {
   return {
@@ -43788,7 +43808,18 @@ function sanitizeMerchantForLender(merchant, lenderId) {
 }
 async function GET(req) {
   const user = await requireAuth(req);
-  let query = supabaseAdmin.from("merchants").select("*").order("created_at", { ascending: false });
+  const url = new URL(req.url);
+  const shouldPaginate = hasListParams(url);
+  const pagination = getPagination(url);
+  const search = cleanSearchTerm(url.searchParams.get("search"));
+  const status = url.searchParams.get("status");
+  const repId = url.searchParams.get("rep_id");
+  const state = url.searchParams.get("state");
+  const industry = url.searchParams.get("industry");
+  const minRevenue = url.searchParams.get("min_revenue");
+  const maxRevenue = url.searchParams.get("max_revenue");
+  const stale = url.searchParams.get("stale");
+  let query = supabaseAdmin.from("merchants").select("*", { count: shouldPaginate ? "exact" : undefined });
   let currentLenderId = null;
   if (user.role === "sales_rep")
     query = query.eq("assigned_rep_id", user.id);
@@ -43799,24 +43830,43 @@ async function GET(req) {
     if (lenderError)
       return badRequest(lenderError.message);
     if (!lender)
-      return json([]);
+      return shouldPaginate ? paginatedJson([], 0, pagination.page, pagination.perPage) : json([]);
     currentLenderId = lender.id;
     const { data: matches, error: matchError } = await supabaseAdmin.from("lender_matches").select("merchant_id").eq("lender_id", lender.id).returns();
     if (matchError)
       return badRequest(matchError.message);
     const merchantIds = (matches ?? []).map((match) => match.merchant_id);
     if (merchantIds.length === 0)
-      return json([]);
+      return shouldPaginate ? paginatedJson([], 0, pagination.page, pagination.perPage) : json([]);
     query = query.in("id", merchantIds);
   }
-  const { data, error } = await query.returns();
+  if (search)
+    query = query.or(`business_name.ilike.%${search}%,state.ilike.%${search}%,industry.ilike.%${search}%`);
+  if (status)
+    query = query.eq("status", status);
+  if (repId && user.role === "admin")
+    query = query.eq("assigned_rep_id", repId);
+  if (state)
+    query = query.eq("state", state);
+  if (industry)
+    query = query.ilike("industry", `%${industry}%`);
+  if (minRevenue)
+    query = query.gte("monthly_revenue", Number(minRevenue));
+  if (maxRevenue)
+    query = query.lte("monthly_revenue", Number(maxRevenue));
+  if (stale === "true") {
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+    query = query.lte("updated_at", threeDaysAgo);
+  }
+  query = query.order("created_at", { ascending: false });
+  if (shouldPaginate)
+    query = query.range(pagination.from, pagination.to);
+  const { data, error, count } = await query.returns();
   if (error)
     return badRequest(error.message);
   const merchants = (data ?? []).map(rowToMerchant);
-  if (user.role === "lender" && currentLenderId) {
-    return json(merchants.map((merchant) => sanitizeMerchantForLender(merchant, currentLenderId)));
-  }
-  return json(merchants);
+  const visibleMerchants = user.role === "lender" && currentLenderId ? merchants.map((merchant) => sanitizeMerchantForLender(merchant, currentLenderId)) : merchants;
+  return shouldPaginate ? paginatedJson(visibleMerchants, count, pagination.page, pagination.perPage) : json(visibleMerchants);
 }
 async function POST(req) {
   const user = await requireAuth(req);
@@ -44114,13 +44164,34 @@ async function GET3(req) {
   const user = await requireAuth(req);
   if (user.role === "merchant")
     return forbidden();
-  let query = supabaseAdmin.from("lenders").select("*").order("company_name");
+  const url = new URL(req.url);
+  const shouldPaginate = hasListParams(url);
+  const pagination = getPagination(url);
+  const search = cleanSearchTerm(url.searchParams.get("search"));
+  const active = url.searchParams.get("active");
+  const industry = url.searchParams.get("industry");
+  const state = url.searchParams.get("state");
+  let query = supabaseAdmin.from("lenders").select("*", { count: shouldPaginate ? "exact" : undefined });
   if (user.role === "lender")
     query = query.eq("user_id", user.id);
-  const { data, error } = await query.returns();
+  if (search)
+    query = query.or(`company_name.ilike.%${search}%,contact_name.ilike.%${search}%,contact_email.ilike.%${search}%`);
+  if (active === "true")
+    query = query.eq("is_active", true);
+  if (active === "false")
+    query = query.eq("is_active", false);
+  if (industry)
+    query = query.contains("industries", [industry]);
+  if (state)
+    query = query.contains("states", [state]);
+  query = query.order("company_name");
+  if (shouldPaginate)
+    query = query.range(pagination.from, pagination.to);
+  const { data, error, count } = await query.returns();
   if (error)
     return badRequest(error.message);
-  return json((data ?? []).map(rowToLender));
+  const lenders = (data ?? []).map(rowToLender);
+  return shouldPaginate ? paginatedJson(lenders, count, pagination.page, pagination.perPage) : json(lenders);
 }
 async function POST2(req) {
   const user = await requireAuth(req);
@@ -44501,17 +44572,32 @@ async function GET6(req) {
   const user = await requireAuth(req);
   if (user.role === "merchant" || user.role === "lender")
     return forbidden();
-  let query = supabaseAdmin.from("leads").select("*").order("updated_at", { ascending: false });
+  const url = new URL(req.url);
+  const shouldPaginate = hasListParams(url);
+  const pagination = getPagination(url);
+  const search = cleanSearchTerm(url.searchParams.get("search"));
+  const status = url.searchParams.get("status");
+  const assignedRepId = url.searchParams.get("assigned_rep_id");
+  let query = supabaseAdmin.from("leads").select("*", { count: shouldPaginate ? "exact" : undefined });
   if (user.role === "sales_rep") {
     query = query.or(`assigned_rep_id.eq.${user.id},created_by.eq.${user.id}`);
   }
-  const { data, error } = await query.returns();
+  if (search)
+    query = query.or(`business_name.ilike.%${search}%,owner_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
+  if (status)
+    query = query.eq("status", status);
+  if (assignedRepId && user.role === "admin")
+    query = query.eq("assigned_rep_id", assignedRepId);
+  query = query.order("updated_at", { ascending: false });
+  if (shouldPaginate)
+    query = query.range(pagination.from, pagination.to);
+  const { data, error, count } = await query.returns();
   if (error)
     return badRequest(error.message);
   const leads = await withLatestNotes(data ?? []);
   if (leads instanceof Response)
     return leads;
-  return json(leads);
+  return shouldPaginate ? paginatedJson(leads, count, pagination.page, pagination.perPage) : json(leads);
 }
 async function POST4(req) {
   const user = await requireAuth(req);
@@ -45396,9 +45482,17 @@ async function GET14(req) {
   if (user.role === "merchant" || user.role === "lender")
     return forbidden();
   const url = new URL(req.url);
+  const paramKeys = Array.from(url.searchParams.keys());
+  const shouldPaginate = hasListParams(url) && !(paramKeys.length <= 2 && url.searchParams.has("entity_type") && url.searchParams.has("entity_id"));
+  const pagination = getPagination(url);
   const entityType = url.searchParams.get("entity_type");
   const entityId = url.searchParams.get("entity_id");
-  let query = supabaseAdmin.from("tasks").select("*, assignee:assigned_to(full_name,name,email)");
+  const status = url.searchParams.get("status");
+  const priority = url.searchParams.get("priority");
+  const assignedTo = url.searchParams.get("assigned_to");
+  const dueBefore = url.searchParams.get("due_before");
+  const overdue = url.searchParams.get("overdue");
+  let query = supabaseAdmin.from("tasks").select("*, assignee:assigned_to(full_name,name,email)", { count: shouldPaginate ? "exact" : undefined });
   if (entityType || entityId) {
     if (!isTaskEntityType(entityType))
       return badRequest("entity_type is invalid");
@@ -45409,10 +45503,27 @@ async function GET14(req) {
   if (user.role === "sales_rep") {
     query = query.or(`assigned_to.eq.${user.id},created_by.eq.${user.id}`);
   }
-  const { data, error } = await query.returns();
+  if (status)
+    query = query.eq("status", status);
+  if (priority) {
+    if (!isPriority(priority))
+      return badRequest("priority is invalid");
+    query = query.eq("priority", priority);
+  }
+  if (assignedTo && user.role === "admin")
+    query = query.eq("assigned_to", assignedTo);
+  if (dueBefore)
+    query = query.lte("due_at", dueBefore);
+  if (overdue === "true")
+    query = query.eq("status", "open").lt("due_at", new Date().toISOString());
+  query = query.order("due_at", { ascending: true, nullsFirst: false }).order("created_at", { ascending: false });
+  if (shouldPaginate)
+    query = query.range(pagination.from, pagination.to);
+  const { data, error, count } = await query.returns();
   if (error)
     return badRequest(error.message);
-  return json(await mapTasks(data ?? []));
+  const tasks = await mapTasks(data ?? []);
+  return shouldPaginate ? paginatedJson(tasks, count, pagination.page, pagination.perPage) : json(tasks);
 }
 async function POST16(req) {
   const user = await requireAuth(req);
@@ -45599,23 +45710,47 @@ async function GET15(req) {
   if (user.role === "merchant" || user.role === "lender")
     return forbidden();
   const url = new URL(req.url);
+  const shouldPaginate = hasListParams(url);
+  const pagination = getPagination(url);
   const merchantId = url.searchParams.get("merchant_id");
-  let query = supabaseAdmin.from("fundings").select("*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name)").order("funded_at", { ascending: false });
+  const from = url.searchParams.get("from");
+  const to = url.searchParams.get("to");
+  const lenderId = url.searchParams.get("lender_id");
+  const repId = url.searchParams.get("rep_id");
+  let query = supabaseAdmin.from("fundings").select("*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name)", { count: shouldPaginate ? "exact" : undefined });
   if (merchantId)
     query = query.eq("merchant_id", merchantId);
+  if (from)
+    query = query.gte("funded_at", from);
+  if (to)
+    query = query.lte("funded_at", to);
+  if (lenderId)
+    query = query.eq("lender_id", lenderId);
   if (user.role === "sales_rep") {
     const { data: merchants, error: error2 } = await supabaseAdmin.from("merchants").select("id").eq("assigned_rep_id", user.id).returns();
     if (error2)
       return badRequest(error2.message);
     const ids = (merchants ?? []).map((merchant) => merchant.id);
     if (ids.length === 0)
-      return json([]);
+      return shouldPaginate ? paginatedJson([], 0, pagination.page, pagination.perPage) : json([]);
+    query = query.in("merchant_id", ids);
+  } else if (repId) {
+    const { data: merchants, error: error2 } = await supabaseAdmin.from("merchants").select("id").eq("assigned_rep_id", repId).returns();
+    if (error2)
+      return badRequest(error2.message);
+    const ids = (merchants ?? []).map((merchant) => merchant.id);
+    if (ids.length === 0)
+      return shouldPaginate ? paginatedJson([], 0, pagination.page, pagination.perPage) : json([]);
     query = query.in("merchant_id", ids);
   }
-  const { data, error } = await query.returns();
+  query = query.order("funded_at", { ascending: false });
+  if (shouldPaginate)
+    query = query.range(pagination.from, pagination.to);
+  const { data, error, count } = await query.returns();
   if (error)
     return badRequest(error.message);
-  return json((data ?? []).map(toFunding));
+  const fundings = (data ?? []).map(toFunding);
+  return shouldPaginate ? paginatedJson(fundings, count, pagination.page, pagination.perPage) : json(fundings);
 }
 async function POST17(req) {
   const user = await requireAuth(req);
@@ -46234,6 +46369,168 @@ async function PATCH9(req, context) {
     metadata: { submission_id: data.id, lender_id: data.lender_id, status: data.status, previous_status: submission.status }
   });
   return json(toMerchantFileSubmission(data));
+}
+
+// src/routes/search/index.ts
+async function GET20(req) {
+  const user = await requireAuth(req);
+  if (user.role === "merchant" || user.role === "lender")
+    return forbidden();
+  const url = new URL(req.url);
+  const searchTerm = cleanSearchTerm(url.searchParams.get("q"));
+  if (!searchTerm)
+    return json({ merchants: [], leads: [], lenders: [], query: "" });
+  if (searchTerm.length > 100)
+    return badRequest("Search term is too long");
+  const q = `%${searchTerm}%`;
+  let merchantsQuery = supabaseAdmin.from("merchants").select("id,business_name,status,state,assigned_rep_id").or(`business_name.ilike.${q},state.ilike.${q},industry.ilike.${q}`);
+  let leadsQuery = supabaseAdmin.from("leads").select("id,business_name,owner_name,status,assigned_rep_id").or(`business_name.ilike.${q},owner_name.ilike.${q},email.ilike.${q}`);
+  if (user.role === "sales_rep") {
+    merchantsQuery = merchantsQuery.eq("assigned_rep_id", user.id);
+    leadsQuery = leadsQuery.or(`assigned_rep_id.eq.${user.id},created_by.eq.${user.id}`);
+  }
+  const merchantsRequest = merchantsQuery.limit(10).returns();
+  const leadsRequest = leadsQuery.limit(10).returns();
+  const lendersQuery = supabaseAdmin.from("lenders").select("id,company_name,contact_name,contact_email").or(`company_name.ilike.${q},contact_name.ilike.${q},contact_email.ilike.${q}`).limit(10).returns();
+  const [merchants, leads, lenders] = await Promise.all([merchantsRequest, leadsRequest, lendersQuery]);
+  if (merchants.error)
+    return badRequest(merchants.error.message);
+  if (leads.error)
+    return badRequest(leads.error.message);
+  if (lenders.error)
+    return badRequest(lenders.error.message);
+  return json({
+    merchants: merchants.data ?? [],
+    leads: leads.data ?? [],
+    lenders: lenders.data ?? [],
+    query: searchTerm
+  });
+}
+
+// src/routes/saved-views/index.ts
+var ENTITY_TYPES2 = ["merchants", "leads", "lenders", "tasks", "fundings"];
+var isSavedViewEntityType = (value) => typeof value === "string" && ENTITY_TYPES2.includes(value);
+function toSavedView(row) {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    name: row.name,
+    entity_type: row.entity_type,
+    filters: row.filters ?? {},
+    sort: row.sort ?? {},
+    is_shared: Boolean(row.is_shared),
+    created_at: row.created_at,
+    updated_at: row.updated_at
+  };
+}
+async function GET21(req) {
+  const user = await requireAuth(req);
+  const roleError = assertRole(user, ["admin", "sales_rep"]);
+  if (roleError)
+    return roleError;
+  const url = new URL(req.url);
+  const entityType = url.searchParams.get("entity_type");
+  if (entityType && !isSavedViewEntityType(entityType))
+    return badRequest("entity_type is invalid");
+  let query = supabaseAdmin.from("saved_views").select("*").or(`user_id.eq.${user.id},is_shared.eq.true`).order("is_shared", { ascending: false }).order("name", { ascending: true });
+  if (entityType)
+    query = query.eq("entity_type", entityType);
+  const { data, error } = await query.returns();
+  if (error)
+    return badRequest(error.message);
+  return json((data ?? []).map(toSavedView));
+}
+async function POST21(req) {
+  const user = await requireAuth(req);
+  const roleError = assertRole(user, ["admin", "sales_rep"]);
+  if (roleError)
+    return roleError;
+  const body = await req.json();
+  if (!body.name?.trim())
+    return badRequest("name is required");
+  if (!isSavedViewEntityType(body.entity_type))
+    return badRequest("entity_type is required");
+  if (body.is_shared && user.role !== "admin")
+    return forbidden("Only admins can create shared saved views");
+  const { data, error } = await supabaseAdmin.from("saved_views").insert({
+    user_id: user.id,
+    name: body.name.trim(),
+    entity_type: body.entity_type,
+    filters: body.filters ?? {},
+    sort: body.sort ?? {},
+    is_shared: user.role === "admin" ? Boolean(body.is_shared) : false
+  }).select("*").single();
+  if (error)
+    return badRequest(error.message);
+  return json(toSavedView(data), { status: 201 });
+}
+
+// src/routes/saved-views/[id].ts
+async function getSavedView(id) {
+  const { data, error } = await supabaseAdmin.from("saved_views").select("*").eq("id", id).maybeSingle();
+  if (error)
+    return badRequest(error.message);
+  if (!data)
+    return notFound("Saved view not found");
+  return data;
+}
+function canModify(user, view) {
+  return user.role === "admin" || view.user_id === user.id;
+}
+async function PATCH10(req, context) {
+  const user = await requireAuth(req);
+  const roleError = assertRole(user, ["admin", "sales_rep"]);
+  if (roleError)
+    return roleError;
+  const id = getId(context);
+  if (!id)
+    return badRequest("id is required");
+  const existing = await getSavedView(id);
+  if (existing instanceof Response)
+    return existing;
+  if (!canModify(user, existing))
+    return forbidden();
+  const body = await req.json();
+  if (body.entity_type && !isSavedViewEntityType(body.entity_type))
+    return badRequest("entity_type is invalid");
+  if (body.is_shared && user.role !== "admin")
+    return forbidden("Only admins can create shared saved views");
+  const update = { updated_at: new Date().toISOString() };
+  if (body.name !== undefined) {
+    if (!body.name.trim())
+      return badRequest("name cannot be blank");
+    update.name = body.name.trim();
+  }
+  if (body.entity_type !== undefined)
+    update.entity_type = body.entity_type;
+  if (body.filters !== undefined)
+    update.filters = body.filters;
+  if (body.sort !== undefined)
+    update.sort = body.sort;
+  if (body.is_shared !== undefined)
+    update.is_shared = user.role === "admin" ? Boolean(body.is_shared) : false;
+  const { data, error } = await supabaseAdmin.from("saved_views").update(update).eq("id", id).select("*").single();
+  if (error)
+    return badRequest(error.message);
+  return json(toSavedView(data));
+}
+async function DELETE7(_req, context) {
+  const user = await requireAuth(_req);
+  const roleError = assertRole(user, ["admin", "sales_rep"]);
+  if (roleError)
+    return roleError;
+  const id = getId(context);
+  if (!id)
+    return badRequest("id is required");
+  const existing = await getSavedView(id);
+  if (existing instanceof Response)
+    return existing;
+  if (!canModify(user, existing))
+    return forbidden();
+  const { error } = await supabaseAdmin.from("saved_views").delete().eq("id", id);
+  if (error)
+    return badRequest(error.message);
+  return json({ success: true });
 }
 
 // node_modules/@google/genai/dist/node/index.mjs
@@ -63124,7 +63421,7 @@ Role-specific guidance:
 Tone: professional, helpful, and concise. Never make up information. If unsure, say so clearly and recommend checking the actual dashboard or asking an admin.
 `.trim();
 var displayName2 = (user) => user.full_name ?? user.email;
-async function POST21(req) {
+async function POST22(req) {
   const user = await requireAuth(req);
   const body = await readJson(req);
   const message = typeof body.message === "string" ? body.message.trim() : "";
@@ -63160,7 +63457,7 @@ ${message}`,
 function matchRoute(method, pathname) {
   if (pathname === "/api/ai/chat") {
     if (method === "POST")
-      return { handler: POST21 };
+      return { handler: POST22 };
   }
   if (pathname === "/api/auth/register") {
     if (method === "POST")
@@ -63187,6 +63484,24 @@ function matchRoute(method, pathname) {
       return { handler: GET13 };
     if (method === "POST")
       return { handler: POST15 };
+  }
+  if (pathname === "/api/search") {
+    if (method === "GET")
+      return { handler: GET20 };
+  }
+  if (pathname === "/api/saved-views") {
+    if (method === "GET")
+      return { handler: GET21 };
+    if (method === "POST")
+      return { handler: POST21 };
+  }
+  const savedViewMatch = pathname.match(/^\/api\/saved-views\/([^/]+)$/);
+  if (savedViewMatch) {
+    const params = { id: decodeURIComponent(savedViewMatch[1]) };
+    if (method === "PATCH")
+      return { handler: PATCH10, params };
+    if (method === "DELETE")
+      return { handler: DELETE7, params };
   }
   if (pathname === "/api/tasks") {
     if (method === "GET")

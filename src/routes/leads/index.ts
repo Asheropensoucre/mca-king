@@ -1,5 +1,6 @@
 import type { Lead, LeadNote, LeadStatus } from '../../../types'
 import { recordActivity } from '../../lib/activity'
+import { getPagination, paginatedJson, cleanSearchTerm, hasListParams } from '../../lib/list-query'
 import { requireAuth } from '../../lib/requireAuth'
 import { assertRole, badRequest, forbidden, json } from '../../lib/route-utils'
 import { supabaseAdmin } from '../../lib/supabase-server'
@@ -41,17 +42,34 @@ export async function GET(req: Request): Promise<Response> {
   const user = await requireAuth(req)
   if (user.role === 'merchant' || user.role === 'lender') return forbidden()
 
-  let query = supabaseAdmin.from('leads').select('*').order('updated_at', { ascending: false })
+  const url = new URL(req.url)
+  const shouldPaginate = hasListParams(url)
+  const pagination = getPagination(url)
+  const search = cleanSearchTerm(url.searchParams.get('search'))
+  const status = url.searchParams.get('status')
+  const assignedRepId = url.searchParams.get('assigned_rep_id')
+
+  let query = supabaseAdmin
+    .from('leads')
+    .select('*', { count: shouldPaginate ? 'exact' : undefined })
+
   if (user.role === 'sales_rep') {
     query = query.or(`assigned_rep_id.eq.${user.id},created_by.eq.${user.id}`)
   }
 
-  const { data, error } = await query.returns<LeadRow[]>()
+  if (search) query = query.or(`business_name.ilike.%${search}%,owner_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`)
+  if (status) query = query.eq('status', status)
+  if (assignedRepId && user.role === 'admin') query = query.eq('assigned_rep_id', assignedRepId)
+
+  query = query.order('updated_at', { ascending: false })
+  if (shouldPaginate) query = query.range(pagination.from, pagination.to)
+
+  const { data, error, count } = await query.returns<LeadRow[]>()
   if (error) return badRequest(error.message)
 
   const leads = await withLatestNotes(data ?? [])
   if (leads instanceof Response) return leads
-  return json(leads)
+  return shouldPaginate ? paginatedJson(leads, count, pagination.page, pagination.perPage) : json(leads)
 }
 
 export async function POST(req: Request): Promise<Response> {

@@ -40,6 +40,7 @@ The app is designed for MCA broker owners, broker shops, internal sales reps, me
 - **Grace period reapply logic** for merchants after terminal statuses such as `FUNDED`, `all lenders decline`, or `Declined by funder`.
 - **Funded-deal finance tracking** for funding records, broker revenue receivable from lenders/funders, and internal sales rep commission status.
 - **Merchant-file submission tracking** for broker-to-lender/funder package submissions, response statuses, declines, no-response outcomes, offers, and stipulation requests.
+- **Search, filters, pagination, and saved views** so admins and sales reps can find merchants, leads, lenders, tasks, and funded records at scale.
 
 ## Tech Stack
 
@@ -126,7 +127,7 @@ If `.env.example` does not exist yet, create `.env.local` manually and add the v
 
 ### Supabase setup
 
-The app expects a Supabase project with Postgres tables for users, merchants, owners, lenders, lender matches, merchant file submissions, offers, documents, status history, stipulations, leads, lead notes, activities, tasks, fundings, broker revenue, sales rep commissions, and Better Auth-compatible session/account tables.
+The app expects a Supabase project with Postgres tables for users, merchants, owners, lenders, lender matches, merchant file submissions, offers, documents, status history, stipulations, leads, lead notes, activities, tasks, fundings, broker revenue, sales rep commissions, saved views, and Better Auth-compatible session/account tables.
 
 There is currently no checked-in canonical SQL schema file in this repository. The schema is reflected by:
 
@@ -224,13 +225,16 @@ Brokerage CRM/
 │       ├── SalesRepDashboard.tsx   # Sales rep leads/deals/pipeline dashboard
 │       ├── MerchantDashboard.tsx   # Merchant application, docs, stips, offers, reapply logic
 │       ├── LenderDashboard.tsx     # Lender matched merchants, offers, stip requests
-│       ├── LeadManager.tsx         # Lead list/detail/notes/conversion UI
+│       ├── LeadManager.tsx         # Lead list/detail/notes/conversion UI with filters and saved views
 │       └── shared/
 │           ├── DashboardShell.tsx  # Shared dashboard layout/sidebar shell
 │           ├── KanbanPipelineView.tsx # 12-step Kamba drag-and-drop board and fullscreen views
 │           ├── DocumentsPanel.tsx  # Server-backed document list/upload/delete panel
 │           ├── MerchantDetailView.tsx # Merchant detail, documents, matches, offers
 │           ├── LenderDetailView.tsx   # Lender detail summary
+│           ├── SearchBar.tsx       # Admin/rep global search across merchants, leads, lenders
+│           ├── FilterBar.tsx       # Shared list filters for merchants, leads, lenders, tasks
+│           ├── SavedViewsMenu.tsx  # Saved filter/work-queue dropdown
 │           ├── EditMerchantForm.tsx   # Merchant edit form
 │           ├── EditLenderForm.tsx     # Lender edit form
 │           ├── SummaryItem.tsx        # Detail key/value row
@@ -255,6 +259,7 @@ Brokerage CRM/
     │   ├── supabase.ts             # Browser Supabase client
     │   ├── supabase-server.ts      # Server Supabase service-role client
     │   ├── data-shapes.ts          # Frontend/DB row mapping
+    │   ├── list-query.ts           # Pagination/search query helpers
     │   ├── matching.ts             # Auto lender matching engine
     │   ├── route-utils.ts          # Route response/access helpers
     │   ├── email.ts                # Resend client/env validation
@@ -273,6 +278,8 @@ Brokerage CRM/
         ├── documents/              # uploads, signed URLs, delete
         ├── stipulations/           # stipulation list/create
         ├── matching/               # auto/manual matching and lender notify
+        ├── search/                 # global admin/rep search
+        ├── saved-views/            # saved filters/work queues
         └── users/                  # sales rep lookup
 ```
 

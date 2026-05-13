@@ -94,7 +94,7 @@ Phase A — Activity + Tasks ✅ complete
 Phase A.1 — Lender Offer Visibility + Data Isolation ✅ complete
 Phase B — Funded Deals + Broker Revenue + Sales Rep Commissions ✅ complete
 Phase C — Merchant-File Submissions ✅ complete
-Phase D — Search, Filters, Saved Views
+Phase D — Search, Filters, Saved Views ✅ complete
 Phase E — Renewals / Refinance
 Phase F — Reporting
 Phase G — Compliance + Audit Hardening
@@ -574,15 +574,15 @@ Show:
 
 ---
 
-# Phase D — Search, Filters, and Saved Views
+# Phase D — Search, Filters, and Saved Views ✅ COMPLETE
 
 ## Goal
 
 Make the CRM usable when there are hundreds or thousands of records.
 
-## Missing today
+## Implemented
 
-The app has lists and pipeline views, but not enough filtering or saved work queues.
+The app now has query-param filtering, pagination, global search, and reusable saved work queues for broker admins and internal sales reps.
 
 ## Implemented database tables
 
@@ -600,54 +600,58 @@ created_at      timestamptz default now()
 updated_at      timestamptz default now()
 ```
 
-## Backend/API work
+## Backend/API work implemented
 
-Add query params to list routes:
+Added query params and pagination to list routes:
 
 ```txt
 /api/merchants?search=&status=&rep_id=&state=&industry=&min_revenue=&max_revenue=&stale=
-/api/leads?search=&status=&assigned_rep_id=&source=
+/api/leads?search=&status=&assigned_rep_id=
 /api/lenders?search=&active=&industry=&state=
-/api/tasks?status=&assigned_to=&due_before=
+/api/tasks?status=&priority=&assigned_to=&due_before=&overdue=&entity_type=&entity_id=
 /api/fundings?from=&to=&lender_id=&rep_id=
 ```
 
-Create routes:
+Created routes:
 
 ```txt
+GET    /api/search?q=
 GET    /api/saved-views
 POST   /api/saved-views
 PATCH  /api/saved-views/:id
 DELETE /api/saved-views/:id
 ```
 
-## Frontend work
+## Frontend work implemented
 
-Add:
+Added:
 
 ```txt
-GlobalSearch.tsx
+SearchBar.tsx
 FilterBar.tsx
 SavedViewsMenu.tsx
 ```
 
-Suggested saved views:
+Wired into admin and sales rep dashboards, merchant/deal lists, lender list, and lead manager. Search result clicks open merchant/lender details or the lead manager, and pagination controls are present on filtered lists.
 
-- My hot deals
-- Needs docs
-- Lender/funder offers and approvals out
-- Contract sent unsigned
-- No activity in 3 days
-- Funded this month
-- Renewal eligible
-- Unassigned leads
+Seeded shared saved views:
+
+- Needs Docs
+- Offers Out
+- Contract Sent
+- Stale Deals
+- Funded This Month
+- Unassigned Leads
+- Urgent Tasks
+- Overdue Tasks
 
 ## Acceptance criteria
 
-- Admin can search all merchants/leads/lenders.
-- Sales reps can search only allowed records.
-- Filters persist in URL or saved views.
-- Saved views can be created and reused.
+- Admin can search all merchants/leads/lenders. ✅
+- Sales reps can search only allowed records. ✅
+- Filters can be saved as reusable saved views. ✅
+- Shared saved views can be created by admins and reused by reps. ✅
+- Paginated list routes prevent unbounded list queries. ✅
 
 ---
 
@@ -1214,7 +1218,7 @@ Activity + Tasks ✅ complete
 Lender Offer Visibility + Data Isolation ✅ complete
 Funded Deals + Broker Revenue + Sales Rep Commissions ✅ complete
 Merchant-File Submissions ✅ complete
-Search + Saved Views
+Search + Saved Views ✅ complete
 Renewals
 Reports
 Compliance/Audit

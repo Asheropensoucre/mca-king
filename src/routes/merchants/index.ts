@@ -4,6 +4,7 @@ import { merchantToInsert, rowToMerchant, type MerchantRow } from '../../lib/dat
 import { triggerNewMerchantAlert } from '../../lib/email-triggers'
 import { requireAuth } from '../../lib/requireAuth'
 import { assertRole, badRequest, forbidden, json } from '../../lib/route-utils'
+import { getPagination, paginatedJson, cleanSearchTerm, hasListParams } from '../../lib/list-query'
 import { supabaseAdmin } from '../../lib/supabase-server'
 
 function sanitizeMerchantForLender(merchant: FormData, lenderId: string): FormData {
@@ -15,7 +16,21 @@ function sanitizeMerchantForLender(merchant: FormData, lenderId: string): FormDa
 
 export async function GET(req: Request): Promise<Response> {
   const user = await requireAuth(req)
-  let query = supabaseAdmin.from('merchants').select('*').order('created_at', { ascending: false })
+  const url = new URL(req.url)
+  const shouldPaginate = hasListParams(url)
+  const pagination = getPagination(url)
+  const search = cleanSearchTerm(url.searchParams.get('search'))
+  const status = url.searchParams.get('status')
+  const repId = url.searchParams.get('rep_id')
+  const state = url.searchParams.get('state')
+  const industry = url.searchParams.get('industry')
+  const minRevenue = url.searchParams.get('min_revenue')
+  const maxRevenue = url.searchParams.get('max_revenue')
+  const stale = url.searchParams.get('stale')
+
+  let query = supabaseAdmin
+    .from('merchants')
+    .select('*', { count: shouldPaginate ? 'exact' : undefined })
   let currentLenderId: string | null = null
 
   if (user.role === 'sales_rep') query = query.eq('assigned_rep_id', user.id)
@@ -28,7 +43,7 @@ export async function GET(req: Request): Promise<Response> {
       .maybeSingle<{ id: string }>()
 
     if (lenderError) return badRequest(lenderError.message)
-    if (!lender) return json([])
+    if (!lender) return shouldPaginate ? paginatedJson([], 0, pagination.page, pagination.perPage) : json([])
     currentLenderId = lender.id
 
     const { data: matches, error: matchError } = await supabaseAdmin
@@ -39,19 +54,36 @@ export async function GET(req: Request): Promise<Response> {
 
     if (matchError) return badRequest(matchError.message)
     const merchantIds = (matches ?? []).map(match => match.merchant_id)
-    if (merchantIds.length === 0) return json([])
+    if (merchantIds.length === 0) return shouldPaginate ? paginatedJson([], 0, pagination.page, pagination.perPage) : json([])
     query = query.in('id', merchantIds)
   }
 
-  const { data, error } = await query.returns<MerchantRow[]>()
+  if (search) query = query.or(`business_name.ilike.%${search}%,state.ilike.%${search}%,industry.ilike.%${search}%`)
+  if (status) query = query.eq('status', status)
+  if (repId && user.role === 'admin') query = query.eq('assigned_rep_id', repId)
+  if (state) query = query.eq('state', state)
+  if (industry) query = query.ilike('industry', `%${industry}%`)
+  if (minRevenue) query = query.gte('monthly_revenue', Number(minRevenue))
+  if (maxRevenue) query = query.lte('monthly_revenue', Number(maxRevenue))
+  if (stale === 'true') {
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+    query = query.lte('updated_at', threeDaysAgo)
+  }
+
+  query = query.order('created_at', { ascending: false })
+  if (shouldPaginate) query = query.range(pagination.from, pagination.to)
+
+  const { data, error, count } = await query.returns<MerchantRow[]>()
   if (error) return badRequest(error.message)
 
   const merchants = (data ?? []).map(rowToMerchant)
-  if (user.role === 'lender' && currentLenderId) {
-    return json(merchants.map(merchant => sanitizeMerchantForLender(merchant, currentLenderId)))
-  }
+  const visibleMerchants = user.role === 'lender' && currentLenderId
+    ? merchants.map(merchant => sanitizeMerchantForLender(merchant, currentLenderId as string))
+    : merchants
 
-  return json(merchants)
+  return shouldPaginate
+    ? paginatedJson(visibleMerchants, count, pagination.page, pagination.perPage)
+    : json(visibleMerchants)
 }
 
 export async function POST(req: Request): Promise<Response> {

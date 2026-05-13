@@ -301,3 +301,31 @@ export interface Stipulation {
   fulfilled_at: string | null;
   created_at: string;
 }
+
+export type SavedViewEntityType = 'merchants' | 'leads' | 'lenders' | 'tasks' | 'fundings';
+
+export interface SavedView {
+  id: string;
+  user_id: string;
+  name: string;
+  entity_type: SavedViewEntityType;
+  filters: Record<string, string>;
+  sort: { field?: string; direction?: 'asc' | 'desc' };
+  is_shared: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SearchResults {
+  merchants: Array<{ id: string; business_name: string; status: string; state: string | null; assigned_rep_id?: string | null }>;
+  leads: Array<{ id: string; business_name: string; owner_name: string | null; status: string; assigned_rep_id?: string | null }>;
+  lenders: Array<{ id: string; company_name: string; contact_name: string | null; contact_email: string }>;
+  query: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  per_page: number;
+}

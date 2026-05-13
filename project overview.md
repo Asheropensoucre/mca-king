@@ -114,4 +114,4 @@ Lenders/funders can:
 - Secure document storage and signed URL access
 - Broker-to-lender package generation and notification workflow
 - State machine for the 12-step Kamba pipeline
-- Activity history and tasks are implemented. Funding records, broker revenue, internal sales rep commissions, and merchant-file submission outcomes are implemented. Renewals, reporting, and compliance controls remain future expansion areas.
+- Activity history and tasks are implemented. Funding records, broker revenue, internal sales rep commissions, merchant-file submission outcomes, and search/filter/saved-view work queues are implemented. Renewals, reporting, and compliance controls remain future expansion areas.

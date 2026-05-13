@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import type { AuthUser, FormData, LenderInfo, ApplicationStatus, SalesRepresentative } from '../../types';
+import React, { useEffect, useState } from 'react';
+import type { AuthUser, FormData, LenderInfo, ApplicationStatus, SalesRepresentative, PaginatedResponse } from '../../types';
 import { Card } from '../ui/Card';
 import { MerchantDetailView } from './shared/MerchantDetailView';
 import { LenderDetailView } from './shared/LenderDetailView';
@@ -13,6 +13,9 @@ import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 import { Chatbot } from '../Chatbot';
 import { TaskPanel } from './shared/TaskPanel';
 import { AdminFinanceView } from './AdminFinanceView';
+import { FilterBar } from './shared/FilterBar';
+import { SearchBar, type SearchResultSelection } from './shared/SearchBar';
+import { api } from '../../src/lib/api-client';
 
 interface AdminDashboardProps { 
     currentUser: AuthUser;
@@ -38,6 +41,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
     const [isEditing, setIsEditing] = useState(false);
     const [isCreatingRep, setIsCreatingRep] = useState(false);
     const [repError, setRepError] = useState<string | null>(null);
+    const [merchantRows, setMerchantRows] = useState<FormData[]>(merchants);
+    const [lenderRows, setLenderRows] = useState<LenderInfo[]>(lenders);
+    const [merchantFilters, setMerchantFilters] = useState<Record<string, string>>({});
+    const [lenderFilters, setLenderFilters] = useState<Record<string, string>>({});
+    const [merchantPage, setMerchantPage] = useState(1);
+    const [lenderPage, setLenderPage] = useState(1);
+    const [merchantTotal, setMerchantTotal] = useState(merchants.length);
+    const [lenderTotal, setLenderTotal] = useState(lenders.length);
+    const [listError, setListError] = useState<string | null>(null);
+    const [leadSearchId, setLeadSearchId] = useState<string | null>(null);
+
+    useEffect(() => setMerchantRows(merchants), [merchants]);
+    useEffect(() => setLenderRows(lenders), [lenders]);
+
+    useEffect(() => {
+        const params = { ...merchantFilters, page: merchantPage, per_page: 25 };
+        api.merchants.listFiltered(params)
+            .then((response: PaginatedResponse<FormData>) => { setMerchantRows(response.data); setMerchantTotal(response.total); setListError(null); })
+            .catch(err => setListError(err instanceof Error ? err.message : 'Could not load merchants'));
+    }, [merchantFilters, merchantPage]);
+
+    useEffect(() => {
+        const params = { ...lenderFilters, page: lenderPage, per_page: 25 };
+        api.lenders.listFiltered(params)
+            .then((response: PaginatedResponse<LenderInfo>) => { setLenderRows(response.data); setLenderTotal(response.total); setListError(null); })
+            .catch(err => setListError(err instanceof Error ? err.message : 'Could not load lenders'));
+    }, [lenderFilters, lenderPage]);
 
     const handleSelectItem = (item: FormData | LenderInfo) => {
         setSelectedItem(item);
@@ -46,14 +76,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
     
     const handleSaveMerchant = (data: FormData) => {
         const updatedData = onUpdateMerchant(data);
+        setMerchantRows(prev => prev.map(item => item.id === updatedData.id ? updatedData : item));
         setSelectedItem(updatedData);
         setIsEditing(false);
     };
 
     const handleSaveLender = (data: LenderInfo) => {
         const updatedData = onUpdateLenderInfo(data);
+        setLenderRows(prev => prev.map(item => item.id === updatedData.id ? updatedData : item));
         setSelectedItem(updatedData);
         setIsEditing(false);
+    };
+
+    const handleSearchSelect = async (selection: SearchResultSelection) => {
+        try {
+            if (selection.type === 'merchant') {
+                const merchant = await api.merchants.get(selection.id);
+                setActiveSection('merchants');
+                setSelectedItem(merchant);
+            } else if (selection.type === 'lender') {
+                const lender = await api.lenders.get(selection.id);
+                setActiveSection('lenders');
+                setSelectedItem(lender);
+            } else {
+                setLeadSearchId(selection.id);
+                setActiveSection('leads');
+            }
+        } catch (err) {
+            setListError(err instanceof Error ? err.message : 'Could not open search result');
+        }
     };
 
     const handleCreateSalesRep = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -122,8 +173,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
         );
     };
 
+    const renderPagination = (page: number, total: number, onPage: (page: number) => void) => {
+        const totalPages = Math.max(1, Math.ceil(total / 25));
+        return (
+            <div className="mt-4 flex items-center justify-center gap-3 text-sm font-black text-theme-maroon dark:text-theme-yellow">
+                <PrimaryButton label="Previous" size="small" disabled={page <= 1} onClick={() => onPage(Math.max(1, page - 1))} />
+                <span>Page {page} of {totalPages}</span>
+                <PrimaryButton label="Next" size="small" disabled={page >= totalPages} onClick={() => onPage(Math.min(totalPages, page + 1))} />
+            </div>
+        );
+    };
+
     const renderMerchants = () => (
         <div className="space-y-4">
+            <FilterBar entityType="merchants" filters={merchantFilters} onFilterChange={(next) => { setMerchantFilters(next); setMerchantPage(1); }} onReset={() => { setMerchantFilters({}); setMerchantPage(1); }} salesReps={salesReps} isAdmin currentUserRole={currentUser.role} />
             <div className="grid grid-cols-12 gap-4 px-4 text-xs font-black uppercase tracking-wider text-theme-yellow">
                 <div className="col-span-12 md:col-span-3">Business Name</div>
                 <div className="col-span-12 md:col-span-2">Sales Rep</div>
@@ -131,7 +194,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                 <div className="col-span-12 md:col-span-3">Status</div>
                 <div className="col-span-12 md:col-span-2 text-right">Action</div>
             </div>
-            {merchants.length > 0 ? merchants.map((sub) => (
+            {merchantRows.length > 0 ? merchantRows.map((sub) => (
                 <div key={sub.id} className="grid grid-cols-12 items-center gap-4 rounded-xl border-2 border-theme-maroon/80 bg-white/95 p-4 shadow-[6px_6px_0_var(--ct-primary)] dark:border-theme-yellow/80 dark:bg-dark-card/95 dark:shadow-[6px_6px_0_var(--ct-secondary-fixed-dim)]">
                     <div className="col-span-12 md:col-span-3">
                         <p className="text-sm font-black text-theme-maroon dark:text-theme-yellow">{sub.businessInfo.legalName}</p>
@@ -162,6 +225,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
             )) : (
                 <Card className="p-8 text-center text-sm font-semibold text-slate-500 dark:text-slate-300">No merchant submissions yet.</Card>
             )}
+            {renderPagination(merchantPage, merchantTotal, setMerchantPage)}
         </div>
     );
 
@@ -198,25 +262,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
     );
 
     const renderLenders = () => (
-        <Card>
-            <div className="overflow-x-auto p-4">
-                <table className="min-w-full border-separate border-spacing-y-3">
-                    <thead><tr><th className={headerClass}>Lender</th><th className={headerClass}>Contact</th><th className={headerClass}>Min Revenue</th><th className="relative"><span className="sr-only">View</span></th></tr></thead>
-                    <tbody>
-                        {lenders.length > 0 ? lenders.map((sub) => (
-                            <tr key={sub.id} className="rounded-xl bg-slate-950/5 dark:bg-slate-950/40">
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-theme-maroon dark:text-theme-yellow">{sub.lenderName}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{sub.email}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{sub.minRevenue}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><PrimaryButton label="View Details" size="small" onClick={() => handleSelectItem(sub)} /></td>
-                            </tr>
-                        )) : (
-                            <tr><td colSpan={4} className="px-6 py-12 text-center text-sm text-slate-500 dark:text-slate-400">No lender submissions yet.</td></tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
-        </Card>
+        <div className="space-y-4">
+            <FilterBar entityType="lenders" filters={lenderFilters} onFilterChange={(next) => { setLenderFilters(next); setLenderPage(1); }} onReset={() => { setLenderFilters({}); setLenderPage(1); }} currentUserRole={currentUser.role} />
+            <Card>
+                <div className="overflow-x-auto p-4">
+                    <table className="min-w-full border-separate border-spacing-y-3">
+                        <thead><tr><th className={headerClass}>Lender</th><th className={headerClass}>Contact</th><th className={headerClass}>Min Revenue</th><th className="relative"><span className="sr-only">View</span></th></tr></thead>
+                        <tbody>
+                            {lenderRows.length > 0 ? lenderRows.map((sub) => (
+                                <tr key={sub.id} className="rounded-xl bg-slate-950/5 dark:bg-slate-950/40">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-theme-maroon dark:text-theme-yellow">{sub.lenderName}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{sub.email}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{sub.minRevenue}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><PrimaryButton label="View Details" size="small" onClick={() => handleSelectItem(sub)} /></td>
+                                </tr>
+                            )) : (
+                                <tr><td colSpan={4} className="px-6 py-12 text-center text-sm text-slate-500 dark:text-slate-400">No lender submissions yet.</td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </Card>
+            {renderPagination(lenderPage, lenderTotal, setLenderPage)}
+        </div>
     );
 
     return (
@@ -238,14 +306,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
         >
             {selectedItem ? renderSelectedItem() : (
                 <div className={activeSection === 'pipeline' ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}>
-                    <div className="mb-5 rounded-xl border-2 border-theme-maroon/80 bg-white/95 p-4 shadow-[6px_6px_0_var(--ct-primary)] dark:border-theme-yellow/80 dark:bg-dark-card/95 dark:shadow-[6px_6px_0_var(--ct-secondary-fixed-dim)] flex justify-between items-center gap-3">
-                        <p className="text-sm font-bold text-theme-maroon dark:text-theme-teal">Signed in as {currentUser.full_name ?? currentUser.name ?? currentUser.email}</p>
+                    <div className="mb-5 rounded-xl border-2 border-theme-maroon/80 bg-white/95 p-4 shadow-[6px_6px_0_var(--ct-primary)] dark:border-theme-yellow/80 dark:bg-dark-card/95 dark:shadow-[6px_6px_0_var(--ct-secondary-fixed-dim)] flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <p className="text-sm font-bold text-theme-maroon dark:text-theme-teal">Signed in as {currentUser.full_name ?? currentUser.name ?? currentUser.email}</p>
+                            {listError && <p className="mt-1 text-xs font-bold text-red-600 dark:text-red-300">{listError}</p>}
+                        </div>
+                        <SearchBar onSelectResult={handleSearchSelect} />
                         <PrimaryButton label="Create Sales Rep" size="small" onClick={() => setIsCreatingRep(true)} />
                     </div>
                     <div className="mb-6">
                         <TaskPanel currentUser={currentUser} title="Tasks Overview" overview />
                     </div>
-                    {activeSection === 'leads' && <LeadManager isAdmin={true} salesReps={salesReps} currentUser={currentUser} />}
+                    {activeSection === 'leads' && <LeadManager isAdmin={true} salesReps={salesReps} currentUser={currentUser} initialLeadId={leadSearchId} />}
                     {activeSection === 'merchants' && renderMerchants()}
                     {activeSection === 'lenders' && renderLenders()}
                     {activeSection === 'pipeline' && (

@@ -1,5 +1,6 @@
 import type { EntityType, Task, TaskPriority } from '../../../types'
 import { recordActivity } from '../../lib/activity'
+import { getPagination, paginatedJson, hasListParams } from '../../lib/list-query'
 import { requireAuth } from '../../lib/requireAuth'
 import { assertRole, badRequest, forbidden, json } from '../../lib/route-utils'
 import { supabaseAdmin } from '../../lib/supabase-server'
@@ -100,12 +101,20 @@ export async function GET(req: Request): Promise<Response> {
   if (user.role === 'merchant' || user.role === 'lender') return forbidden()
 
   const url = new URL(req.url)
+  const paramKeys = Array.from(url.searchParams.keys())
+  const shouldPaginate = hasListParams(url) && !(paramKeys.length <= 2 && url.searchParams.has('entity_type') && url.searchParams.has('entity_id'))
+  const pagination = getPagination(url)
   const entityType = url.searchParams.get('entity_type')
   const entityId = url.searchParams.get('entity_id')
+  const status = url.searchParams.get('status')
+  const priority = url.searchParams.get('priority')
+  const assignedTo = url.searchParams.get('assigned_to')
+  const dueBefore = url.searchParams.get('due_before')
+  const overdue = url.searchParams.get('overdue')
 
   let query = supabaseAdmin
     .from('tasks')
-    .select('*, assignee:assigned_to(full_name,name,email)')
+    .select('*, assignee:assigned_to(full_name,name,email)', { count: shouldPaginate ? 'exact' : undefined })
 
   if (entityType || entityId) {
     if (!isTaskEntityType(entityType)) return badRequest('entity_type is invalid')
@@ -117,10 +126,23 @@ export async function GET(req: Request): Promise<Response> {
     query = query.or(`assigned_to.eq.${user.id},created_by.eq.${user.id}`)
   }
 
-  const { data, error } = await query.returns<TaskRow[]>()
+  if (status) query = query.eq('status', status)
+  if (priority) {
+    if (!isPriority(priority)) return badRequest('priority is invalid')
+    query = query.eq('priority', priority)
+  }
+  if (assignedTo && user.role === 'admin') query = query.eq('assigned_to', assignedTo)
+  if (dueBefore) query = query.lte('due_at', dueBefore)
+  if (overdue === 'true') query = query.eq('status', 'open').lt('due_at', new Date().toISOString())
+
+  query = query.order('due_at', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false })
+  if (shouldPaginate) query = query.range(pagination.from, pagination.to)
+
+  const { data, error, count } = await query.returns<TaskRow[]>()
   if (error) return badRequest(error.message)
 
-  return json(await mapTasks(data ?? []))
+  const tasks = await mapTasks(data ?? [])
+  return shouldPaginate ? paginatedJson(tasks, count, pagination.page, pagination.perPage) : json(tasks)
 }
 
 export async function POST(req: Request): Promise<Response> {
