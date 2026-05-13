@@ -8,6 +8,8 @@ import { PrimaryButton } from '../../../src/components/ui/PrimaryButton';
 import { MCAKingLoader } from '../../../src/components/ui/MCAKingLoader';
 import { ActivityTimeline } from './ActivityTimeline';
 import { TaskPanel } from './TaskPanel';
+import { FundingSummary } from './FundingSummary';
+import { FundingModal } from './FundingModal';
 
 interface MerchantDetailViewProps { 
     item: FormData, 
@@ -16,6 +18,7 @@ interface MerchantDetailViewProps {
     canManageMatches?: boolean;
     canRemoveMatches?: boolean;
     currentUser: AuthUser;
+    onMerchantFunded?: (updatedMerchant: FormData) => void;
 }
 
 const formatDateTime = (value: string | null): string | null => {
@@ -174,7 +177,17 @@ const MatchedLendersPanel: React.FC<MatchedLendersPanelProps> = ({ merchantId, l
     );
 };
 
-export const MerchantDetailView: React.FC<MerchantDetailViewProps> = ({ item, lenders = [], canDeleteDocuments = false, canManageMatches = false, canRemoveMatches = false, currentUser }) => (
+export const MerchantDetailView: React.FC<MerchantDetailViewProps> = ({ item, lenders = [], canDeleteDocuments = false, canManageMatches = false, canRemoveMatches = false, currentUser, onMerchantFunded }) => {
+    const [showFundingModal, setShowFundingModal] = useState(false);
+    const [fundingRefreshKey, setFundingRefreshKey] = useState(0);
+    const canMarkFunded = currentUser.role === 'admin' || currentUser.role === 'sales_rep';
+
+    const handleFunded = (updatedMerchant: FormData) => {
+        setFundingRefreshKey(key => key + 1);
+        onMerchantFunded?.(updatedMerchant);
+    };
+
+    return (
     <div className="space-y-6">
         <Card><div className="p-6"><h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Business Information</h3><dl className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"><SummaryItem label="Legal Name" value={item.businessInfo.legalName} /><SummaryItem label="DBA Name" value={item.businessInfo.dbaName} /><SummaryItem label="Phone" value={item.businessInfo.phone} /><SummaryItem label="Tax ID" value={item.businessInfo.taxId} /><SummaryItem label="Address" value={item.businessInfo.address} /><SummaryItem label="Start Date" value={item.businessInfo.startDate} /><SummaryItem label="Requested Amount" value={`$${Number(item.requestedAmount).toLocaleString()}`} /><SummaryItem label="Avg. Monthly Revenue" value={`$${Number(item.businessInfo.monthlyRevenue).toLocaleString()}`} /><SummaryItem label="Recent NSFs" value={item.businessInfo.recentNSFs} /><SummaryItem label="Industry" value={item.businessInfo.industryType} /></dl></div></Card>
         {item.owners.map((owner, index) => (<Card key={owner.id}><div className="p-6"><h4 className="text-md font-semibold text-slate-700 dark:text-slate-300">Owner #{index + 1}</h4><dl className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"><SummaryItem label="Name" value={owner.name} /><SummaryItem label="Title" value={owner.title} /><SummaryItem label="Email" value={owner.email} /><SummaryItem label="Cell Phone" value={owner.cellPhone} /><SummaryItem label="Home Address" value={owner.homeAddress} /><SummaryItem label="DOB" value={owner.dateOfBirth} /><SummaryItem label="SSN" value={owner.ssn} /><SummaryItem label="Credit Score" value={owner.creditScore} /><SummaryItem label="Ownership" value={`${owner.ownership}%`} /></dl></div></Card>))}
@@ -186,10 +199,16 @@ export const MerchantDetailView: React.FC<MerchantDetailViewProps> = ({ item, le
         )}
 
         {(currentUser.role === 'admin' || currentUser.role === 'sales_rep') && (
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                <ActivityTimeline entityType="merchant" entityId={item.id} currentUserRole={currentUser.role} />
-                <TaskPanel entityType="merchant" entityId={item.id} currentUser={currentUser} />
-            </div>
+            <>
+                <FundingSummary merchantId={item.id} currentUser={currentUser} refreshKey={fundingRefreshKey} />
+                <div className="flex justify-end">
+                    <PrimaryButton label={item.status === 'FUNDED' ? 'Add Funding Record' : 'Mark Funded'} variant="funded" onClick={() => setShowFundingModal(true)} disabled={!canMarkFunded} />
+                </div>
+                <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                    <ActivityTimeline entityType="merchant" entityId={item.id} currentUserRole={currentUser.role} />
+                    <TaskPanel entityType="merchant" entityId={item.id} currentUser={currentUser} />
+                </div>
+            </>
         )}
         
         <Card><div className="p-6"><h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">{currentUser.role === 'lender' ? 'Your Offer' : 'Offers'}</h3>
@@ -199,5 +218,10 @@ export const MerchantDetailView: React.FC<MerchantDetailViewProps> = ({ item, le
                 </ul>
             ) : <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{currentUser.role === 'lender' ? 'You have not sent an offer for this file yet.' : 'No offers yet.'}</p>}
         </div></Card>
+
+        {showFundingModal && (
+            <FundingModal merchant={item} lenders={lenders} currentUser={currentUser} onClose={() => setShowFundingModal(false)} onFunded={handleFunded} />
+        )}
     </div>
-);
+    );
+};

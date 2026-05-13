@@ -114,4 +114,4 @@ Lenders/funders can:
 - Secure document storage and signed URL access
 - Broker-to-lender package generation and notification workflow
 - State machine for the 12-step Kamba pipeline
-- Activity history, tasks, funding records, broker revenue, internal sales rep commissions, merchant-file submission outcomes, renewals, reporting, and compliance controls as the CRM expands
+- Activity history and tasks are implemented. Funding records, broker revenue, and internal sales rep commissions are implemented. Merchant-file submission outcomes, renewals, reporting, and compliance controls remain future expansion areas.

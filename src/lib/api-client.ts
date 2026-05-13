@@ -1,4 +1,4 @@
-import type { Activity, ActivityType, EntityType, LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch, Task } from '../../types'
+import type { Activity, ActivityType, EntityType, LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch, Task, Funding, BrokerRevenue, SalesRepCommission } from '../../types'
 
 function headers(extra?: HeadersInit): HeadersInit {
   return {
@@ -75,6 +75,31 @@ export const api = {
     create: (data: Pick<Task, 'entity_type' | 'entity_id' | 'title'> & Partial<Pick<Task, 'description' | 'priority' | 'assigned_to' | 'due_at'>>) => request<Task>('/api/tasks', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: Partial<Pick<Task, 'status' | 'title' | 'description' | 'priority' | 'assigned_to' | 'due_at'>>) => request<Task>(`/api/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     delete: (id: string) => request<{ success: boolean }>(`/api/tasks/${id}`, { method: 'DELETE' }),
+  },
+  fundings: {
+    list: (params?: { merchant_id?: string }) => {
+      const qs = params?.merchant_id ? `?merchant_id=${encodeURIComponent(params.merchant_id)}` : ''
+      return request<Funding[]>(`/api/fundings${qs}`)
+    },
+    create: (data: Partial<Funding> & { merchant_id: string; funded_amount: number | string; broker_revenue_amount?: number | string | null; broker_revenue_rate?: number | string | null; sales_rep_commission_amount?: number | string | null; sales_rep_commission_rate?: number | string | null }) => request<Funding>('/api/fundings', { method: 'POST', body: JSON.stringify(data) }),
+    get: (id: string) => request<Funding>(`/api/fundings/${id}`),
+    update: (id: string, data: Partial<Funding>) => request<Funding>(`/api/fundings/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  },
+  brokerRevenue: {
+    list: (params?: { funding_id?: string; merchant_id?: string }) => {
+      const qs = params ? new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0)).toString() : ''
+      return request<BrokerRevenue[]>(`/api/broker-revenue${qs ? `?${qs}` : ''}`)
+    },
+    create: (data: Partial<BrokerRevenue> & { amount: number | string }) => request<BrokerRevenue>('/api/broker-revenue', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<BrokerRevenue>) => request<BrokerRevenue>(`/api/broker-revenue/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  },
+  salesRepCommissions: {
+    list: (params?: { funding_id?: string }) => {
+      const qs = params?.funding_id ? `?funding_id=${encodeURIComponent(params.funding_id)}` : ''
+      return request<SalesRepCommission[]>(`/api/sales-rep-commissions${qs}`)
+    },
+    create: (data: Partial<SalesRepCommission> & { sales_rep_id: string; amount: number | string }) => request<SalesRepCommission>('/api/sales-rep-commissions', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<SalesRepCommission>) => request<SalesRepCommission>(`/api/sales-rep-commissions/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   },
   matching: {
     list: (merchantId: string) => request<LenderMatch[]>(`/api/matching?merchant_id=${encodeURIComponent(merchantId)}`),

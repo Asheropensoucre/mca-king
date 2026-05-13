@@ -92,7 +92,7 @@ Recommended build order:
 ```txt
 Phase A — Activity + Tasks ✅ complete
 Phase A.1 — Lender Offer Visibility + Data Isolation ✅ complete
-Phase B — Funded Deals + Broker Revenue + Sales Rep Commissions
+Phase B — Funded Deals + Broker Revenue + Sales Rep Commissions ✅ complete
 Phase C — Merchant-File Submissions
 Phase D — Search, Filters, Saved Views
 Phase E — Renewals / Refinance
@@ -121,7 +121,7 @@ A broker CRM without tasks and activity history is just a pipeline. Brokers need
 - Next follow-up
 - Who owns the next action
 
-## New database tables
+## Implemented database tables
 
 ### `activities`
 
@@ -173,9 +173,9 @@ create index tasks_assigned_status_due_idx on tasks(assigned_to, status, due_at)
 create index tasks_entity_idx on tasks(entity_type, entity_id);
 ```
 
-## Backend/API work
+## Backend/API work implemented
 
-Create routes:
+Created routes:
 
 ```txt
 GET    /api/activities?entity_type=&entity_id=
@@ -312,7 +312,7 @@ Admin, sales rep, and merchant views may continue to show all offers they are au
 
 ---
 
-# Phase B — Funded Deals + Broker Revenue + Sales Rep Commissions
+# Phase B — Funded Deals + Broker Revenue + Sales Rep Commissions ✅ COMPLETE
 
 ## Goal
 
@@ -349,7 +349,7 @@ MCA brokers care about funded volume, collected revenue, and rep payouts. Once a
 - Which internal sales rep gets credit?
 - What sales rep payout is owed, approved, paid, adjusted, or clawed back?
 
-## New database tables
+## Implemented database tables
 
 ### `fundings`
 
@@ -414,9 +414,9 @@ created_at           timestamptz default now()
 updated_at           timestamptz default now()
 ```
 
-## Backend/API work
+## Backend/API work implemented
 
-Create routes:
+Created routes:
 
 ```txt
 GET    /api/fundings
@@ -442,15 +442,14 @@ When creating funding:
 7. Optionally create broker revenue receivable.
 8. Optionally create internal sales rep commission record.
 
-## Frontend work
+## Frontend work implemented
 
-Add:
+Added:
 
 ```txt
 components/dashboards/shared/FundingModal.tsx
 components/dashboards/shared/FundingSummary.tsx
-components/dashboards/AdminRevenueView.tsx
-components/dashboards/AdminSalesRepCommissionsView.tsx
+components/dashboards/AdminFinanceView.tsx
 ```
 
 Add admin sections:
@@ -523,9 +522,9 @@ create unique index merchant_file_submissions_unique_active
 on merchant_file_submissions(merchant_id, lender_id, package_version);
 ```
 
-## Backend/API work
+## Backend/API work implemented
 
-Create routes:
+Created routes:
 
 ```txt
 GET    /api/merchant-file-submissions?merchant_id=
@@ -585,7 +584,7 @@ Make the CRM usable when there are hundreds or thousands of records.
 
 The app has lists and pipeline views, but not enough filtering or saved work queues.
 
-## New database tables
+## Implemented database tables
 
 ### `saved_views`
 
@@ -662,7 +661,7 @@ Capture post-funding revenue by tracking renewal eligibility and payoff/consolid
 
 Renewals are one of the largest revenue sources in MCA. Brokers need a queue of merchants ready for renewal.
 
-## New database tables
+## Implemented database tables
 
 ### `renewals`
 
@@ -695,9 +694,9 @@ status               text default 'requested' -- requested | received | expired 
 created_at           timestamptz default now()
 ```
 
-## Backend/API work
+## Backend/API work implemented
 
-Create routes:
+Created routes:
 
 ```txt
 GET    /api/renewals
@@ -786,9 +785,9 @@ Give brokerage owners visibility into volume, performance, bottlenecks, and reve
 - Unpaid sales rep commission aging
 - Sales rep clawbacks/adjustments
 
-## Backend/API work
+## Backend/API work implemented
 
-Create routes:
+Created routes:
 
 ```txt
 GET /api/reports/pipeline
@@ -1155,20 +1154,24 @@ Why this was required:
 
 ---
 
-## Phase B next
+## Phase B status: complete
 
-Build funded deals, broker revenue, and internal sales rep commissions.
+Funded deals, broker revenue, and internal sales rep commissions have been built.
 
-Why:
+Completed:
 
-- Makes `FUNDED` financially meaningful
-- Enables owner reporting
-- Tracks money owed by lenders/funders to the broker shop
-- Tracks internal sales rep payouts without creating lender-side manager payout confusion
+- Created `fundings`, `broker_revenue`, and `sales_rep_commissions` tables with RLS enabled and public-block policies.
+- Added funding, broker revenue, and sales rep commission API routes.
+- Added Mark Funded workflow from merchant detail.
+- Added funding summary cards on merchant detail for admin/sales rep users.
+- Added admin Finance section for funded deals, broker revenue, and sales rep commission tracking.
+- Kept merchants and lenders blocked from broker finance routes.
+- Kept sales reps limited to assigned funded deals and their own commission records.
+- Did not create referral partner, ISO payout, outside broker payout, or lender-side manager payout logic.
 
 ---
 
-## Phase C after that
+## Phase C next
 
 Build merchant-file submissions.
 
@@ -1203,7 +1206,7 @@ MCA King has the workflow foundation. The next product layer should focus on CRM
 ```txt
 Activity + Tasks ✅ complete
 Lender Offer Visibility + Data Isolation ✅ complete
-Funded Deals + Broker Revenue + Sales Rep Commissions
+Funded Deals + Broker Revenue + Sales Rep Commissions ✅ complete
 Merchant-File Submissions
 Search + Saved Views
 Renewals

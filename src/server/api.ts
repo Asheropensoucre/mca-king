@@ -24,6 +24,12 @@ import { POST as notifyMatching } from '../routes/matching/notify'
 import { GET as getActivities, POST as postActivity } from '../routes/activities/index'
 import { GET as getTasks, POST as postTask } from '../routes/tasks/index'
 import { PATCH as patchTask, DELETE as deleteTask } from '../routes/tasks/[id]'
+import { GET as getFundings, POST as postFunding } from '../routes/fundings/index'
+import { GET as getFunding, PATCH as patchFunding } from '../routes/fundings/[id]'
+import { GET as getBrokerRevenue, POST as postBrokerRevenue } from '../routes/broker-revenue/index'
+import { PATCH as patchBrokerRevenue } from '../routes/broker-revenue/[id]'
+import { GET as getSalesRepCommissions, POST as postSalesRepCommission } from '../routes/sales-rep-commissions/index'
+import { PATCH as patchSalesRepCommission } from '../routes/sales-rep-commissions/[id]'
 import { POST as aiChat } from '../routes/ai/chat'
 import type { RouteContext } from '../lib/route-utils'
 
@@ -74,6 +80,40 @@ function matchRoute(method: string, pathname: string): RouteMatch | null {
     const params = { id: decodeURIComponent(taskMatch[1]) }
     if (method === 'PATCH') return { handler: patchTask, params }
     if (method === 'DELETE') return { handler: deleteTask, params }
+  }
+
+  if (pathname === '/api/fundings') {
+    if (method === 'GET') return { handler: getFundings }
+    if (method === 'POST') return { handler: postFunding }
+  }
+
+  const fundingMatch = pathname.match(/^\/api\/fundings\/([^/]+)$/)
+  if (fundingMatch) {
+    const params = { id: decodeURIComponent(fundingMatch[1]) }
+    if (method === 'GET') return { handler: getFunding, params }
+    if (method === 'PATCH') return { handler: patchFunding, params }
+  }
+
+  if (pathname === '/api/broker-revenue') {
+    if (method === 'GET') return { handler: getBrokerRevenue }
+    if (method === 'POST') return { handler: postBrokerRevenue }
+  }
+
+  const brokerRevenueMatch = pathname.match(/^\/api\/broker-revenue\/([^/]+)$/)
+  if (brokerRevenueMatch) {
+    const params = { id: decodeURIComponent(brokerRevenueMatch[1]) }
+    if (method === 'PATCH') return { handler: patchBrokerRevenue, params }
+  }
+
+  if (pathname === '/api/sales-rep-commissions') {
+    if (method === 'GET') return { handler: getSalesRepCommissions }
+    if (method === 'POST') return { handler: postSalesRepCommission }
+  }
+
+  const salesRepCommissionMatch = pathname.match(/^\/api\/sales-rep-commissions\/([^/]+)$/)
+  if (salesRepCommissionMatch) {
+    const params = { id: decodeURIComponent(salesRepCommissionMatch[1]) }
+    if (method === 'PATCH') return { handler: patchSalesRepCommission, params }
   }
 
   if (pathname === '/api/matching') {

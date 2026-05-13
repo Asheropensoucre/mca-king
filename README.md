@@ -38,6 +38,7 @@ The app is designed for MCA broker owners, broker shops, internal sales reps, me
 - **AI Assistant with page-aware context** through the MCA King Assistant powered by Gemini.
 - **Dark/light mode** using the Corporate Tech/MCA King theme and global wallpaper background.
 - **Grace period reapply logic** for merchants after terminal statuses such as `FUNDED`, `all lenders decline`, or `Declined by funder`.
+- **Funded-deal finance tracking** for funding records, broker revenue receivable from lenders/funders, and internal sales rep commission status.
 
 ## Tech Stack
 
@@ -124,7 +125,7 @@ If `.env.example` does not exist yet, create `.env.local` manually and add the v
 
 ### Supabase setup
 
-The app expects a Supabase project with Postgres tables for users, merchants, owners, lenders, lender matches, offers, documents, status history, stipulations, leads, lead notes, and Better Auth-compatible session/account tables.
+The app expects a Supabase project with Postgres tables for users, merchants, owners, lenders, lender matches, offers, documents, status history, stipulations, leads, lead notes, activities, tasks, fundings, broker revenue, sales rep commissions, and Better Auth-compatible session/account tables.
 
 There is currently no checked-in canonical SQL schema file in this repository. The schema is reflected by:
 

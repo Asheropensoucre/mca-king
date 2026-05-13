@@ -12,6 +12,7 @@ import { LeadManager } from './LeadManager';
 import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 import { Chatbot } from '../Chatbot';
 import { TaskPanel } from './shared/TaskPanel';
+import { AdminFinanceView } from './AdminFinanceView';
 
 interface AdminDashboardProps { 
     currentUser: AuthUser;
@@ -26,7 +27,7 @@ interface AdminDashboardProps {
     onPrint?: (submission: FormData) => void;
 }
 
-type AdminSection = 'leads' | 'merchants' | 'lenders' | 'pipeline';
+type AdminSection = 'leads' | 'merchants' | 'lenders' | 'pipeline' | 'finance';
 
 const themedSelectClass = 'w-full rounded-lg border-2 border-theme-yellow bg-slate-950 px-3 py-2 text-sm font-bold text-theme-teal shadow-[4px_4px_0_var(--ct-tertiary-container)] outline-none transition focus:border-theme-teal focus:shadow-[4px_4px_0_var(--ct-secondary-fixed-dim)]';
 const headerClass = 'text-left text-xs font-black uppercase tracking-wider text-theme-yellow';
@@ -112,7 +113,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                     )
                 ) : (
                     isMerchant ? (
-                        <MerchantDetailView item={selectedItem as FormData} lenders={lenders} canDeleteDocuments={true} canManageMatches={true} canRemoveMatches={true} currentUser={currentUser} />
+                        <MerchantDetailView item={selectedItem as FormData} lenders={lenders} canDeleteDocuments={true} canManageMatches={true} canRemoveMatches={true} currentUser={currentUser} onMerchantFunded={handleSaveMerchant} />
                     ) : (
                         <LenderDetailView item={selectedItem as LenderInfo} />
                     )
@@ -227,6 +228,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                 { id: 'merchants', label: 'Merchant Directory' },
                 { id: 'lenders', label: 'Lender Directory' },
                 { id: 'pipeline', label: 'Kamba Pipeline' },
+                { id: 'finance', label: 'Finance' },
             ]}
             activeSection={activeSection}
             onSectionChange={(section) => { setActiveSection(section); setSelectedItem(null); setIsEditing(false); }}
@@ -249,6 +251,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                     {activeSection === 'pipeline' && (
                         <KanbanPipelineView merchants={merchants} lenders={lenders} onUpdateMerchant={onUpdateMerchant} onSelectMerchant={handleSelectItem} />
                     )}
+                    {activeSection === 'finance' && <AdminFinanceView />}
                 </div>
             )}
         </DashboardShell>

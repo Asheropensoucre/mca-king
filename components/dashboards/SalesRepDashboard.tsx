@@ -53,7 +53,7 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
                             <PrimaryButton label="Download PDF" size="small" onClick={() => onPrint(selectedDealCurrent)} />
                         )}
                     </div>
-                    <MerchantDetailView item={selectedDealCurrent} lenders={lenders} canManageMatches={true} currentUser={currentUser} />
+                    <MerchantDetailView item={selectedDealCurrent} lenders={lenders} canManageMatches={true} currentUser={currentUser} onMerchantFunded={(updatedMerchant) => { onUpdateMerchant(updatedMerchant); setSelectedDeal(updatedMerchant); }} />
                 </div>
             ) : (
                 <div className={activeSection === 'pipeline' ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}>

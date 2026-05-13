@@ -45407,6 +45407,538 @@ async function DELETE6(req, context) {
   return new Response(null, { status: 204 });
 }
 
+// src/routes/fundings/index.ts
+var FUNDED_STATUS = "FUNDED";
+var PAYMENT_FREQUENCIES = ["daily", "weekly", "biweekly", "monthly"];
+function toNumber3(value) {
+  if (value === null || value === undefined || value === "")
+    return null;
+  const parsed = Number(String(value).replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+function toInt(value) {
+  const parsed = toNumber3(value);
+  return parsed === null ? null : Math.trunc(parsed);
+}
+function isPaymentFrequency(value) {
+  return typeof value === "string" && PAYMENT_FREQUENCIES.includes(value);
+}
+function toFunding(row) {
+  return {
+    id: row.id,
+    merchant_id: row.merchant_id,
+    lender_id: row.lender_id,
+    offer_id: row.offer_id,
+    funded_amount: row.funded_amount,
+    payback_amount: row.payback_amount,
+    factor_rate: row.factor_rate,
+    buy_rate: row.buy_rate,
+    sell_rate: row.sell_rate,
+    payment_frequency: row.payment_frequency,
+    term_days: row.term_days,
+    funded_at: row.funded_at,
+    created_by: row.created_by,
+    notes: row.notes,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    merchant_name: row.merchant?.business_name,
+    lender_name: row.lender?.company_name
+  };
+}
+async function GET15(req) {
+  const user = await requireAuth(req);
+  if (user.role === "merchant" || user.role === "lender")
+    return forbidden();
+  const url = new URL(req.url);
+  const merchantId = url.searchParams.get("merchant_id");
+  let query = supabaseAdmin.from("fundings").select("*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name)").order("funded_at", { ascending: false });
+  if (merchantId)
+    query = query.eq("merchant_id", merchantId);
+  if (user.role === "sales_rep") {
+    const { data: merchants, error: error2 } = await supabaseAdmin.from("merchants").select("id").eq("assigned_rep_id", user.id).returns();
+    if (error2)
+      return badRequest(error2.message);
+    const ids = (merchants ?? []).map((merchant) => merchant.id);
+    if (ids.length === 0)
+      return json([]);
+    query = query.in("merchant_id", ids);
+  }
+  const { data, error } = await query.returns();
+  if (error)
+    return badRequest(error.message);
+  return json((data ?? []).map(toFunding));
+}
+async function POST17(req) {
+  const user = await requireAuth(req);
+  const roleError = assertRole(user, ["admin", "sales_rep"]);
+  if (roleError)
+    return roleError;
+  const body = await req.json();
+  if (!body.merchant_id)
+    return badRequest("merchant_id is required");
+  const fundedAmount = toNumber3(body.funded_amount);
+  if (fundedAmount === null || fundedAmount <= 0)
+    return badRequest("funded_amount is required");
+  if (body.payment_frequency && !isPaymentFrequency(body.payment_frequency))
+    return badRequest("payment_frequency is invalid");
+  const { data: merchantRow, error: merchantError } = await supabaseAdmin.from("merchants").select("*").eq("id", body.merchant_id).single();
+  if (merchantError)
+    return badRequest(merchantError.message);
+  if (user.role === "sales_rep" && merchantRow.assigned_rep_id !== user.id)
+    return forbidden();
+  let lenderId = body.lender_id ?? null;
+  let offerId = body.offer_id ?? null;
+  let factorRate = toNumber3(body.factor_rate);
+  if (offerId) {
+    const { data: offer, error: offerError } = await supabaseAdmin.from("offers").select("*").eq("id", offerId).single();
+    if (offerError)
+      return badRequest(offerError.message);
+    if (offer.merchant_id !== body.merchant_id)
+      return badRequest("offer does not belong to merchant");
+    lenderId = offer.lender_id;
+    factorRate = factorRate ?? toNumber3(offer.factor_rate);
+  }
+  const { data: fundingRow, error: fundingError } = await supabaseAdmin.from("fundings").insert({
+    merchant_id: body.merchant_id,
+    lender_id: lenderId,
+    offer_id: offerId,
+    funded_amount: fundedAmount,
+    payback_amount: toNumber3(body.payback_amount),
+    factor_rate: factorRate,
+    buy_rate: toNumber3(body.buy_rate),
+    sell_rate: toNumber3(body.sell_rate),
+    payment_frequency: body.payment_frequency ?? null,
+    term_days: toInt(body.term_days),
+    funded_at: body.funded_at || new Date().toISOString(),
+    created_by: user.id,
+    notes: body.notes?.trim() || null
+  }).select("*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name)").single();
+  if (fundingError)
+    return badRequest(fundingError.message);
+  const merchant = rowToMerchant(merchantRow);
+  const updatedMerchant = { ...merchant, status: FUNDED_STATUS };
+  const { error: merchantUpdateError } = await supabaseAdmin.from("merchants").update({ status: FUNDED_STATUS, payload: updatedMerchant, updated_at: new Date().toISOString() }).eq("id", body.merchant_id);
+  if (merchantUpdateError)
+    return badRequest(merchantUpdateError.message);
+  if (merchantRow.status !== FUNDED_STATUS) {
+    const { error: historyError } = await supabaseAdmin.from("status_history").insert({
+      merchant_id: body.merchant_id,
+      changed_by: user.id,
+      previous_status: merchantRow.status,
+      new_status: FUNDED_STATUS,
+      note: "Deal marked funded"
+    });
+    if (historyError)
+      return badRequest(historyError.message);
+  }
+  const brokerRevenueAmount = toNumber3(body.broker_revenue_amount);
+  if (user.role === "admin" && brokerRevenueAmount !== null && brokerRevenueAmount >= 0) {
+    const { error } = await supabaseAdmin.from("broker_revenue").insert({
+      funding_id: fundingRow.id,
+      merchant_id: body.merchant_id,
+      lender_id: lenderId,
+      revenue_type: "commission",
+      basis_amount: fundedAmount,
+      rate: toNumber3(body.broker_revenue_rate),
+      amount: brokerRevenueAmount,
+      status: body.broker_revenue_status ?? "expected"
+    });
+    if (error)
+      return badRequest(error.message);
+  }
+  const repCommissionAmount = toNumber3(body.sales_rep_commission_amount);
+  if (user.role === "admin" && repCommissionAmount !== null && repCommissionAmount >= 0 && merchantRow.assigned_rep_id) {
+    const { error } = await supabaseAdmin.from("sales_rep_commissions").insert({
+      funding_id: fundingRow.id,
+      sales_rep_id: merchantRow.assigned_rep_id,
+      basis_type: "broker_revenue",
+      basis_amount: brokerRevenueAmount ?? fundedAmount,
+      rate: toNumber3(body.sales_rep_commission_rate),
+      amount: repCommissionAmount,
+      status: body.sales_rep_commission_status ?? "unpaid"
+    });
+    if (error)
+      return badRequest(error.message);
+  }
+  recordActivity({
+    entity_type: "funding",
+    entity_id: fundingRow.id,
+    user_id: user.id,
+    activity_type: "system",
+    body: `Deal funded: ${fundingRow.merchant?.business_name ?? body.merchant_id} for $${fundedAmount.toLocaleString()}`,
+    metadata: { merchant_id: body.merchant_id, lender_id: lenderId, funding_id: fundingRow.id, funded_amount: fundedAmount }
+  });
+  recordActivity({
+    entity_type: "merchant",
+    entity_id: body.merchant_id,
+    user_id: user.id,
+    activity_type: "system",
+    body: `Deal funded for $${fundedAmount.toLocaleString()}`,
+    metadata: { funding_id: fundingRow.id, lender_id: lenderId, funded_amount: fundedAmount }
+  });
+  triggerMerchantStatusEmail(body.merchant_id, FUNDED_STATUS);
+  return json(toFunding(fundingRow), { status: 201 });
+}
+
+// src/routes/fundings/[id].ts
+function toNumber4(value) {
+  if (value === null || value === undefined || value === "")
+    return null;
+  const parsed = Number(String(value).replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+function toInt2(value) {
+  const parsed = toNumber4(value);
+  return parsed === null ? null : Math.trunc(parsed);
+}
+function toFunding2(row) {
+  return {
+    id: row.id,
+    merchant_id: row.merchant_id,
+    lender_id: row.lender_id,
+    offer_id: row.offer_id,
+    funded_amount: row.funded_amount,
+    payback_amount: row.payback_amount,
+    factor_rate: row.factor_rate,
+    buy_rate: row.buy_rate,
+    sell_rate: row.sell_rate,
+    payment_frequency: row.payment_frequency,
+    term_days: row.term_days,
+    funded_at: row.funded_at,
+    created_by: row.created_by,
+    notes: row.notes,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    merchant_name: row.merchant?.business_name,
+    lender_name: row.lender?.company_name
+  };
+}
+async function fetchFunding(id) {
+  const { data, error } = await supabaseAdmin.from("fundings").select("*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name)").eq("id", id).maybeSingle();
+  if (error)
+    return badRequest(error.message);
+  return data ?? null;
+}
+function canReadFunding(userId, role, funding) {
+  if (role === "admin")
+    return true;
+  if (role === "sales_rep")
+    return funding.merchant?.assigned_rep_id === userId;
+  return false;
+}
+async function GET16(req, context) {
+  const user = await requireAuth(req);
+  const id = getId(context);
+  if (!id)
+    return badRequest();
+  const funding = await fetchFunding(id);
+  if (funding instanceof Response)
+    return funding;
+  if (!funding)
+    return notFound();
+  if (!canReadFunding(user.id, user.role, funding))
+    return forbidden();
+  return json(toFunding2(funding));
+}
+async function PATCH6(req, context) {
+  const user = await requireAuth(req);
+  const roleError = assertRole(user, ["admin"]);
+  if (roleError)
+    return roleError;
+  const id = getId(context);
+  if (!id)
+    return badRequest();
+  const body = await req.json();
+  const update = { updated_at: new Date().toISOString() };
+  if (body.funded_amount !== undefined) {
+    const value = toNumber4(body.funded_amount);
+    if (value === null || value <= 0)
+      return badRequest("funded_amount is invalid");
+    update.funded_amount = value;
+  }
+  if (body.payback_amount !== undefined)
+    update.payback_amount = toNumber4(body.payback_amount);
+  if (body.factor_rate !== undefined)
+    update.factor_rate = toNumber4(body.factor_rate);
+  if (body.buy_rate !== undefined)
+    update.buy_rate = toNumber4(body.buy_rate);
+  if (body.sell_rate !== undefined)
+    update.sell_rate = toNumber4(body.sell_rate);
+  if (body.payment_frequency !== undefined)
+    update.payment_frequency = body.payment_frequency;
+  if (body.term_days !== undefined)
+    update.term_days = toInt2(body.term_days);
+  if (body.funded_at !== undefined)
+    update.funded_at = body.funded_at;
+  if (body.notes !== undefined)
+    update.notes = body.notes?.trim() || null;
+  const { data, error } = await supabaseAdmin.from("fundings").update(update).eq("id", id).select("*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name)").single();
+  if (error)
+    return badRequest(error.message);
+  return json(toFunding2(data));
+}
+
+// src/routes/broker-revenue/index.ts
+function toNumber5(value) {
+  if (value === null || value === undefined || value === "")
+    return null;
+  const parsed = Number(String(value).replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+function toBrokerRevenue(row) {
+  return {
+    id: row.id,
+    funding_id: row.funding_id,
+    merchant_id: row.merchant_id,
+    lender_id: row.lender_id,
+    revenue_type: row.revenue_type,
+    basis_amount: row.basis_amount,
+    rate: row.rate,
+    amount: row.amount,
+    status: row.status,
+    expected_payment_date: row.expected_payment_date,
+    received_at: row.received_at,
+    notes: row.notes,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    merchant_name: row.merchant?.business_name,
+    lender_name: row.lender?.company_name
+  };
+}
+async function GET17(req) {
+  const user = await requireAuth(req);
+  if (user.role === "merchant" || user.role === "lender" || user.role === "sales_rep")
+    return forbidden();
+  const url = new URL(req.url);
+  const fundingId = url.searchParams.get("funding_id");
+  const merchantId = url.searchParams.get("merchant_id");
+  let query = supabaseAdmin.from("broker_revenue").select("*, merchant:merchants(business_name), lender:lenders(company_name)").order("created_at", { ascending: false });
+  if (fundingId)
+    query = query.eq("funding_id", fundingId);
+  if (merchantId)
+    query = query.eq("merchant_id", merchantId);
+  const { data, error } = await query.returns();
+  if (error)
+    return badRequest(error.message);
+  return json((data ?? []).map(toBrokerRevenue));
+}
+async function POST18(req) {
+  const user = await requireAuth(req);
+  const roleError = assertRole(user, ["admin"]);
+  if (roleError)
+    return roleError;
+  const body = await req.json();
+  const amount = toNumber5(body.amount);
+  if (amount === null || amount < 0)
+    return badRequest("amount is required");
+  const { data, error } = await supabaseAdmin.from("broker_revenue").insert({
+    funding_id: body.funding_id ?? null,
+    merchant_id: body.merchant_id ?? null,
+    lender_id: body.lender_id ?? null,
+    revenue_type: body.revenue_type ?? "commission",
+    basis_amount: toNumber5(body.basis_amount),
+    rate: toNumber5(body.rate),
+    amount,
+    status: body.status ?? "expected",
+    expected_payment_date: body.expected_payment_date ?? null,
+    received_at: body.received_at ?? null,
+    notes: body.notes?.trim() || null
+  }).select("*, merchant:merchants(business_name), lender:lenders(company_name)").single();
+  if (error)
+    return badRequest(error.message);
+  return json(toBrokerRevenue(data), { status: 201 });
+}
+
+// src/routes/broker-revenue/[id].ts
+function toNumber6(value) {
+  if (value === null || value === undefined || value === "")
+    return null;
+  const parsed = Number(String(value).replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+function toBrokerRevenue2(row) {
+  return {
+    id: row.id,
+    funding_id: row.funding_id,
+    merchant_id: row.merchant_id,
+    lender_id: row.lender_id,
+    revenue_type: row.revenue_type,
+    basis_amount: row.basis_amount,
+    rate: row.rate,
+    amount: row.amount,
+    status: row.status,
+    expected_payment_date: row.expected_payment_date,
+    received_at: row.received_at,
+    notes: row.notes,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    merchant_name: row.merchant?.business_name,
+    lender_name: row.lender?.company_name
+  };
+}
+async function PATCH7(req, context) {
+  const user = await requireAuth(req);
+  const roleError = assertRole(user, ["admin"]);
+  if (roleError)
+    return roleError;
+  const id = getId(context);
+  if (!id)
+    return badRequest();
+  const body = await req.json();
+  const update = { updated_at: new Date().toISOString() };
+  if (body.revenue_type !== undefined)
+    update.revenue_type = body.revenue_type;
+  if (body.basis_amount !== undefined)
+    update.basis_amount = toNumber6(body.basis_amount);
+  if (body.rate !== undefined)
+    update.rate = toNumber6(body.rate);
+  if (body.amount !== undefined) {
+    const amount = toNumber6(body.amount);
+    if (amount === null || amount < 0)
+      return badRequest("amount is invalid");
+    update.amount = amount;
+  }
+  if (body.status !== undefined)
+    update.status = body.status;
+  if (body.expected_payment_date !== undefined)
+    update.expected_payment_date = body.expected_payment_date;
+  if (body.received_at !== undefined)
+    update.received_at = body.received_at;
+  if (body.notes !== undefined)
+    update.notes = body.notes?.trim() || null;
+  const { data, error } = await supabaseAdmin.from("broker_revenue").update(update).eq("id", id).select("*, merchant:merchants(business_name), lender:lenders(company_name)").single();
+  if (error)
+    return badRequest(error.message);
+  return json(toBrokerRevenue2(data));
+}
+
+// src/routes/sales-rep-commissions/index.ts
+function toNumber7(value) {
+  if (value === null || value === undefined || value === "")
+    return null;
+  const parsed = Number(String(value).replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+function toCommission(row) {
+  return {
+    id: row.id,
+    funding_id: row.funding_id,
+    sales_rep_id: row.sales_rep_id,
+    basis_type: row.basis_type,
+    basis_amount: row.basis_amount,
+    rate: row.rate,
+    amount: row.amount,
+    status: row.status,
+    paid_at: row.paid_at,
+    notes: row.notes,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    merchant_name: row.funding?.merchant?.business_name,
+    sales_rep_name: row.sales_rep?.full_name ?? row.sales_rep?.name ?? row.sales_rep?.email
+  };
+}
+async function GET18(req) {
+  const user = await requireAuth(req);
+  if (user.role === "merchant" || user.role === "lender")
+    return forbidden();
+  const url = new URL(req.url);
+  const fundingId = url.searchParams.get("funding_id");
+  let query = supabaseAdmin.from("sales_rep_commissions").select("*, sales_rep:sales_rep_id(full_name,name,email), funding:fundings(merchant:merchants(business_name))").order("created_at", { ascending: false });
+  if (fundingId)
+    query = query.eq("funding_id", fundingId);
+  if (user.role === "sales_rep")
+    query = query.eq("sales_rep_id", user.id);
+  const { data, error } = await query.returns();
+  if (error)
+    return badRequest(error.message);
+  return json((data ?? []).map(toCommission));
+}
+async function POST19(req) {
+  const user = await requireAuth(req);
+  const roleError = assertRole(user, ["admin"]);
+  if (roleError)
+    return roleError;
+  const body = await req.json();
+  const amount = toNumber7(body.amount);
+  if (amount === null || amount < 0)
+    return badRequest("amount is required");
+  if (!body.sales_rep_id)
+    return badRequest("sales_rep_id is required");
+  const { data, error } = await supabaseAdmin.from("sales_rep_commissions").insert({
+    funding_id: body.funding_id ?? null,
+    sales_rep_id: body.sales_rep_id,
+    basis_type: body.basis_type ?? "broker_revenue",
+    basis_amount: toNumber7(body.basis_amount),
+    rate: toNumber7(body.rate),
+    amount,
+    status: body.status ?? "unpaid",
+    paid_at: body.paid_at ?? null,
+    notes: body.notes?.trim() || null
+  }).select("*, sales_rep:sales_rep_id(full_name,name,email), funding:fundings(merchant:merchants(business_name))").single();
+  if (error)
+    return badRequest(error.message);
+  return json(toCommission(data), { status: 201 });
+}
+
+// src/routes/sales-rep-commissions/[id].ts
+function toNumber8(value) {
+  if (value === null || value === undefined || value === "")
+    return null;
+  const parsed = Number(String(value).replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+function toCommission2(row) {
+  return {
+    id: row.id,
+    funding_id: row.funding_id,
+    sales_rep_id: row.sales_rep_id,
+    basis_type: row.basis_type,
+    basis_amount: row.basis_amount,
+    rate: row.rate,
+    amount: row.amount,
+    status: row.status,
+    paid_at: row.paid_at,
+    notes: row.notes,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    merchant_name: row.funding?.merchant?.business_name,
+    sales_rep_name: row.sales_rep?.full_name ?? row.sales_rep?.name ?? row.sales_rep?.email
+  };
+}
+async function PATCH8(req, context) {
+  const user = await requireAuth(req);
+  const roleError = assertRole(user, ["admin"]);
+  if (roleError)
+    return roleError;
+  const id = getId(context);
+  if (!id)
+    return badRequest();
+  const body = await req.json();
+  const update = { updated_at: new Date().toISOString() };
+  if (body.basis_type !== undefined)
+    update.basis_type = body.basis_type;
+  if (body.basis_amount !== undefined)
+    update.basis_amount = toNumber8(body.basis_amount);
+  if (body.rate !== undefined)
+    update.rate = toNumber8(body.rate);
+  if (body.amount !== undefined) {
+    const amount = toNumber8(body.amount);
+    if (amount === null || amount < 0)
+      return badRequest("amount is invalid");
+    update.amount = amount;
+  }
+  if (body.status !== undefined)
+    update.status = body.status;
+  if (body.paid_at !== undefined)
+    update.paid_at = body.paid_at;
+  if (body.notes !== undefined)
+    update.notes = body.notes?.trim() || null;
+  const { data, error } = await supabaseAdmin.from("sales_rep_commissions").update(update).eq("id", id).select("*, sales_rep:sales_rep_id(full_name,name,email), funding:fundings(merchant:merchants(business_name))").single();
+  if (error)
+    return badRequest(error.message);
+  return json(toCommission2(data));
+}
+
 // node_modules/@google/genai/dist/node/index.mjs
 var import_p_retry = __toESM(require_p_retry(), 1);
 var import_google_auth_library = __toESM(require_src5(), 1);
@@ -62295,7 +62827,7 @@ Role-specific guidance:
 Tone: professional, helpful, and concise. Never make up information. If unsure, say so clearly and recommend checking the actual dashboard or asking an admin.
 `.trim();
 var displayName2 = (user) => user.full_name ?? user.email;
-async function POST17(req) {
+async function POST20(req) {
   const user = await requireAuth(req);
   const body = await readJson(req);
   const message = typeof body.message === "string" ? body.message.trim() : "";
@@ -62331,7 +62863,7 @@ ${message}`,
 function matchRoute(method, pathname) {
   if (pathname === "/api/ai/chat") {
     if (method === "POST")
-      return { handler: POST17 };
+      return { handler: POST20 };
   }
   if (pathname === "/api/auth/register") {
     if (method === "POST")
@@ -62372,6 +62904,44 @@ function matchRoute(method, pathname) {
       return { handler: PATCH5, params };
     if (method === "DELETE")
       return { handler: DELETE6, params };
+  }
+  if (pathname === "/api/fundings") {
+    if (method === "GET")
+      return { handler: GET15 };
+    if (method === "POST")
+      return { handler: POST17 };
+  }
+  const fundingMatch = pathname.match(/^\/api\/fundings\/([^/]+)$/);
+  if (fundingMatch) {
+    const params = { id: decodeURIComponent(fundingMatch[1]) };
+    if (method === "GET")
+      return { handler: GET16, params };
+    if (method === "PATCH")
+      return { handler: PATCH6, params };
+  }
+  if (pathname === "/api/broker-revenue") {
+    if (method === "GET")
+      return { handler: GET17 };
+    if (method === "POST")
+      return { handler: POST18 };
+  }
+  const brokerRevenueMatch = pathname.match(/^\/api\/broker-revenue\/([^/]+)$/);
+  if (brokerRevenueMatch) {
+    const params = { id: decodeURIComponent(brokerRevenueMatch[1]) };
+    if (method === "PATCH")
+      return { handler: PATCH7, params };
+  }
+  if (pathname === "/api/sales-rep-commissions") {
+    if (method === "GET")
+      return { handler: GET18 };
+    if (method === "POST")
+      return { handler: POST19 };
+  }
+  const salesRepCommissionMatch = pathname.match(/^\/api\/sales-rep-commissions\/([^/]+)$/);
+  if (salesRepCommissionMatch) {
+    const params = { id: decodeURIComponent(salesRepCommissionMatch[1]) };
+    if (method === "PATCH")
+      return { handler: PATCH8, params };
   }
   if (pathname === "/api/matching") {
     if (method === "GET")

@@ -193,6 +193,69 @@ export interface Task {
   entity_name?: string;
 }
 
+export type PaymentFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly';
+export type BrokerRevenueType = 'commission' | 'points' | 'origination_fee' | 'bonus' | 'other';
+export type BrokerRevenueStatus = 'expected' | 'invoiced' | 'received' | 'short_paid' | 'disputed' | 'waived';
+export type CommissionBasisType = 'broker_revenue' | 'funded_amount' | 'flat';
+export type SalesRepCommissionStatus = 'unpaid' | 'approved' | 'paid' | 'adjusted' | 'clawed_back' | 'void';
+
+export interface Funding {
+  id: string;
+  merchant_id: string;
+  lender_id: string | null;
+  offer_id: string | null;
+  funded_amount: number | string;
+  payback_amount: number | string | null;
+  factor_rate: number | string | null;
+  buy_rate: number | string | null;
+  sell_rate: number | string | null;
+  payment_frequency: PaymentFrequency | null;
+  term_days: number | null;
+  funded_at: string;
+  created_by: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  merchant_name?: string;
+  lender_name?: string;
+}
+
+export interface BrokerRevenue {
+  id: string;
+  funding_id: string | null;
+  merchant_id: string | null;
+  lender_id: string | null;
+  revenue_type: BrokerRevenueType;
+  basis_amount: number | string | null;
+  rate: number | string | null;
+  amount: number | string;
+  status: BrokerRevenueStatus;
+  expected_payment_date: string | null;
+  received_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  merchant_name?: string;
+  lender_name?: string;
+}
+
+export interface SalesRepCommission {
+  id: string;
+  funding_id: string | null;
+  sales_rep_id: string | null;
+  basis_type: CommissionBasisType;
+  basis_amount: number | string | null;
+  rate: number | string | null;
+  amount: number | string;
+  status: SalesRepCommissionStatus;
+  paid_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  merchant_name?: string;
+  sales_rep_name?: string;
+}
+
 export type DocType = 'bank_statement' | 'contract' | 'stipulation' | 'id' | 'other';
 
 export interface Document {
