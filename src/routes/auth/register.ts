@@ -9,8 +9,8 @@ type RegisterBody = {
   full_name?: string
 }
 
-function isUserRole(value: string | undefined): value is UserRole {
-  return value === 'admin' || value === 'sales_rep' || value === 'merchant' || value === 'lender'
+function isSelfRegisterRole(value: string | undefined): value is Extract<UserRole, 'merchant' | 'lender'> {
+  return value === 'merchant' || value === 'lender'
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -32,7 +32,7 @@ export async function POST(req: Request): Promise<Response> {
     const user = await createUserWithCredential({
       email: normalizedEmail,
       passwordHash: await hashPassword(password),
-      role: isUserRole(role) ? role : 'merchant',
+      role: isSelfRegisterRole(role) ? role : 'merchant',
       fullName: full_name?.trim() || normalizedEmail,
     })
 

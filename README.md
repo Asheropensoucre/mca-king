@@ -41,6 +41,7 @@ The app is designed for MCA broker owners, broker shops, internal sales reps, me
 - **Funded-deal finance tracking** for funding records, broker revenue receivable from lenders/funders, and internal sales rep commission status.
 - **Merchant-file submission tracking** for broker-to-lender/funder package submissions, response statuses, declines, no-response outcomes, offers, and stipulation requests.
 - **Search, filters, pagination, and saved views** so admins and sales reps can find merchants, leads, lenders, tasks, and funded records at scale.
+- **Account settings and admin user management** where users can change only their own password, while admins manage emails, roles, resets, account disable/close actions, and sales rep creation from a dedicated Settings area.
 
 ## Tech Stack
 
@@ -127,7 +128,7 @@ If `.env.example` does not exist yet, create `.env.local` manually and add the v
 
 ### Supabase setup
 
-The app expects a Supabase project with Postgres tables for users, merchants, owners, lenders, lender matches, merchant file submissions, offers, documents, status history, stipulations, leads, lead notes, activities, tasks, fundings, broker revenue, sales rep commissions, saved views, and Better Auth-compatible session/account tables.
+The app expects a Supabase project with Postgres tables for users, merchants, owners, lenders, lender matches, merchant file submissions, offers, documents, status history, stipulations, leads, lead notes, activities, tasks, fundings, broker revenue, sales rep commissions, saved views, account-status fields on users, and Better Auth-compatible session/account tables.
 
 There is currently no checked-in canonical SQL schema file in this repository. The schema is reflected by:
 
@@ -222,6 +223,7 @@ Brokerage CRM/
 │   └── dashboards/
 │       ├── DashboardController.tsx # Loads data and routes users to role dashboards
 │       ├── AdminDashboard.tsx      # Admin dashboard, directories, reps, pipeline
+│       ├── AdminSettingsPage.tsx   # Admin user management and sales rep creation
 │       ├── SalesRepDashboard.tsx   # Sales rep leads/deals/pipeline dashboard
 │       ├── MerchantDashboard.tsx   # Merchant application, docs, stips, offers, reapply logic
 │       ├── LenderDashboard.tsx     # Lender matched merchants, offers, stip requests
@@ -235,6 +237,7 @@ Brokerage CRM/
 │           ├── SearchBar.tsx       # Admin/rep global search across merchants, leads, lenders
 │           ├── FilterBar.tsx       # Shared list filters for merchants, leads, lenders, tasks
 │           ├── SavedViewsMenu.tsx  # Saved filter/work-queue dropdown
+│           ├── UserSettingsPage.tsx # User self-service password settings
 │           ├── EditMerchantForm.tsx   # Merchant edit form
 │           ├── EditLenderForm.tsx     # Lender edit form
 │           ├── SummaryItem.tsx        # Detail key/value row
@@ -260,6 +263,8 @@ Brokerage CRM/
     │   ├── supabase-server.ts      # Server Supabase service-role client
     │   ├── data-shapes.ts          # Frontend/DB row mapping
     │   ├── list-query.ts           # Pagination/search query helpers
+    │   ├── account-users.ts        # Safe account user shape/query helpers
+    │   ├── revoke-sessions.ts      # Session revocation for account security actions
     │   ├── matching.ts             # Auto lender matching engine
     │   ├── route-utils.ts          # Route response/access helpers
     │   ├── email.ts                # Resend client/env validation
@@ -280,6 +285,8 @@ Brokerage CRM/
         ├── matching/               # auto/manual matching and lender notify
         ├── search/                 # global admin/rep search
         ├── saved-views/            # saved filters/work queues
+        ├── settings/               # own-account settings and password change
+        ├── admin/users/            # admin-only user management
         └── users/                  # sales rep lookup
 ```
 
@@ -311,10 +318,10 @@ Color coding is configured in `components/dashboards/shared/applicationStatus.ts
 
 | Role | Can See | Can Do |
 |---|---|---|
-| Admin / Broker Owner | All merchants, lenders/funders, leads, sales reps, documents, matches, offers, stipulations, and full Kamba pipeline | Operate the broker shop: create sales reps, assign reps, edit merchants/lenders, run auto-match, add/remove manual matches, submit/notify lenders, manage leads, delete documents, move deals through the pipeline, print applications |
-| Sales Rep | Assigned merchant files, leads, lender list for matching, pipeline view for assigned deals | Work broker-shop leads, convert leads, update assigned merchant files, run matching, manually add matches, print assigned applications |
-| Merchant | Own application, own documents, own stipulations, own offers, current pipeline status | Submit application, upload documents, fulfill stipulations, accept/reject offers, edit active application, reapply after grace period |
-| Lender/Funder | Own lender profile, merchant files submitted/matched to that lender, and only that lender/funder's own offers/responses | Maintain criteria, review broker-submitted merchant files, approve/decline, send offers, request stipulations/documents. Lenders/funders must not see competing offers from other lenders on the same merchant file. |
+| Admin / Broker Owner | All merchants, lenders/funders, leads, sales reps, documents, matches, offers, stipulations, and full Kamba pipeline | Operate the broker shop: create sales reps from Settings, assign reps, edit merchants/lenders, run auto-match, add/remove manual matches, submit/notify lenders, manage leads, delete documents, move deals through the pipeline, print applications, and manage user account emails/status/password reset flows |
+| Sales Rep | Assigned merchant files, leads, lender list for matching, pipeline view for assigned deals | Work broker-shop leads, convert leads, update assigned merchant files, run matching, manually add matches, print assigned applications, and change only their own password in User Settings |
+| Merchant | Own application, own documents, own stipulations, own offers, current pipeline status | Submit application, upload documents, fulfill stipulations, accept/reject offers, edit active application, reapply after grace period, and change only their own password in User Settings |
+| Lender/Funder | Own lender profile, merchant files submitted/matched to that lender, and only that lender/funder's own offers/responses | Maintain criteria, review broker-submitted merchant files, approve/decline, send offers, request stipulations/documents, and change only their own password in User Settings. Lenders/funders must not see competing offers from other lenders on the same merchant file. |
 
 ## Contributing
 

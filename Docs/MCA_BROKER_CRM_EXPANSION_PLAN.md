@@ -82,10 +82,11 @@ The highest-value missing modules are:
 4. Funded-deal records, broker revenue receivable from lenders/funders, and internal sales rep commission tracking
 5. Outbound merchant-file submission tracking beyond simple matches
 6. Search, filters, and saved views
-7. Renewal/refinance tracking
-8. Rich offer and contract management
-9. Document review/checklist workflows
-10. Compliance, audit, and sensitive-data controls
+7. Account settings and admin user management
+8. Renewal/refinance tracking
+9. Rich offer and contract management
+10. Document review/checklist workflows
+11. Compliance, audit, and sensitive-data controls
 
 Recommended build order:
 
@@ -95,10 +96,11 @@ Phase A.1 — Lender Offer Visibility + Data Isolation ✅ complete
 Phase B — Funded Deals + Broker Revenue + Sales Rep Commissions ✅ complete
 Phase C — Merchant-File Submissions ✅ complete
 Phase D — Search, Filters, Saved Views ✅ complete
-Phase E — Renewals / Refinance
-Phase F — Reporting
-Phase G — Compliance + Audit Hardening
-Phase H — Advanced Communications
+Phase E — Account Settings + Admin User Management ✅ complete
+Phase F — Renewals / Refinance
+Phase G — Reporting
+Phase H — Compliance + Audit Hardening
+Phase I — Advanced Communications
 ```
 
 ---
@@ -655,7 +657,148 @@ Seeded shared saved views:
 
 ---
 
-# Phase E — Renewal / Refinance Module
+# Phase E — Account Settings + Admin User Management ✅ COMPLETE
+
+## Goal
+
+Create a clean settings area so account and user-management actions are not floating on every dashboard tab. ✅ Complete. Admin settings and regular user settings must be separate because they have different permissions and risk levels.
+
+## Why this matters
+
+The admin dashboard currently has operational actions such as creating sales reps in the main dashboard area. Account management belongs in a dedicated settings section so the CRM stays clean and so sensitive actions are controlled, audited, and permissioned correctly.
+
+## Core rule
+
+Regular users can manage only their own password and safe personal preferences. Admins manage user accounts for the broker shop.
+
+```txt
+Users must not be able to change their own email address.
+Users must not be able to change their own role.
+Users must not be able to close/delete their own account in a way that breaks CRM history.
+Only admins can change account email, role, status, or close/disable accounts.
+Passwords are never visible to admins; admins can only trigger or set a reset flow.
+```
+
+## User Settings
+
+Available to logged-in users where appropriate:
+
+- Change own password.
+- View own email address, but not edit it.
+- View own role, but not edit it.
+- Basic display preferences such as theme/default dashboard later if needed.
+- For lender/funder users, lender profile edits remain separate from account identity and must still respect lender ownership.
+- For merchant users, merchant application/profile edits remain governed by application status and existing merchant rules.
+
+Not allowed for normal users:
+
+- Change email address.
+- Change role.
+- Create users.
+- Disable/close accounts.
+- Reassign records.
+- View other users.
+
+## Admin Settings
+
+Admin-only account and system controls:
+
+- Create sales rep accounts.
+- Move the current floating `Create Sales Rep` action into Admin Settings.
+- View user list by role: admin, sales rep, merchant, lender/funder.
+- Change user email when needed.
+- Trigger password reset or set temporary password/reset link flow.
+- Disable/reactivate user accounts.
+- Close account safely without deleting required CRM/audit history.
+- Change role only when explicitly allowed and audited.
+- Link/unlink lender user accounts to lender/funder profiles where appropriate.
+- Review account status and last login/session state.
+
+## Close/disable account rules
+
+Account closure should be designed as a safe disable/deactivate flow, not a destructive delete by default.
+
+- Disable login/session access.
+- Preserve historical records, activities, submissions, offers, fundings, commissions, and audit logs.
+- Do not orphan merchant files, lender submissions, or funded-deal finance records.
+- Allow admin reactivation only when safe.
+- Hard delete, if ever added, should be restricted, audited, and not available for accounts tied to financial/history records.
+
+## Backend/API work implemented
+
+Created routes:
+
+```txt
+GET    /api/settings/me
+PATCH  /api/settings/me/password
+GET    /api/admin/users
+POST   /api/admin/users
+PATCH  /api/admin/users/:id
+POST   /api/admin/users/:id/reset-password
+POST   /api/admin/users/:id/disable
+POST   /api/admin/users/:id/reactivate
+POST   /api/admin/users/:id/close
+```
+
+Required server-side rules:
+
+- All account-management routes require `requireAuth`.
+- `/api/settings/me/password` is allowed for the logged-in user only.
+- `/api/admin/users/*` is admin-only.
+- Never trust client-provided role/email changes without admin authorization.
+- Do not expose password hashes or secrets.
+- Invalidate/revoke sessions on password reset, disable, close, or suspicious admin action.
+
+## Frontend work implemented
+
+Added dashboard settings sections:
+
+```txt
+Admin Settings
+User Settings
+```
+
+Admin Settings includes:
+
+- User Management tab.
+- Create Sales Rep form/button.
+- User list with role/status.
+- Reset password action.
+- Change email action.
+- Disable/reactivate/close account actions.
+
+User Settings includes:
+
+- Change password form.
+- Read-only email.
+- Read-only role.
+- Safe personal preferences later.
+
+## Audit and compliance requirements
+
+These actions must write audit/activity records, and can connect into the later compliance phase:
+
+- User created.
+- Email changed.
+- Role changed.
+- Password reset triggered.
+- Account disabled/reactivated/closed.
+- Session revoked.
+
+## Acceptance criteria
+
+- Admin has a dedicated Settings section. ✅
+- `Create Sales Rep` no longer floats globally in all admin tabs. ✅
+- All logged-in users have a User Settings area for password changes. ✅
+- Normal users cannot change their own email or role. ✅
+- Only admin can change user email, role, or account status. ✅
+- Disabled/closed accounts cannot log in. ✅
+- Historical CRM records are preserved when accounts are disabled/closed. ✅
+- Sensitive account-management actions are written to activity records. ✅
+
+---
+
+# Phase F — Renewal / Refinance Module
 
 ## Goal
 
@@ -716,9 +859,9 @@ Add scheduled or computed renewal logic:
 - Renewal eligible after configured days/months from funding.
 - Merchant reapply grace logic should align with renewal/refi rules.
 
-## Frontend work
+## Frontend work implemented
 
-Add dashboard sections:
+Added dashboard settings sections:
 
 ```txt
 Renewals
@@ -739,7 +882,7 @@ Add merchant view:
 
 ---
 
-# Phase F — Reporting and Analytics
+# Phase G — Reporting and Analytics
 
 ## Goal
 
@@ -831,7 +974,7 @@ SalesRepCommissionReport.tsx
 
 ---
 
-# Phase G — Compliance, Audit, and Sensitive Data Hardening
+# Phase H — Compliance, Audit, and Sensitive Data Hardening
 > Detailed customer-data readiness checklist: see [`PRODUCTION_SECURITY_HARDENING_PLAN.md`](PRODUCTION_SECURITY_HARDENING_PLAN.md).
 
 
@@ -900,7 +1043,7 @@ created_at      timestamptz default now()
 
 ---
 
-# Phase H — Advanced Communications
+# Phase I — Advanced Communications
 
 ## Goal
 
@@ -1219,6 +1362,7 @@ Lender Offer Visibility + Data Isolation ✅ complete
 Funded Deals + Broker Revenue + Sales Rep Commissions ✅ complete
 Merchant-File Submissions ✅ complete
 Search + Saved Views ✅ complete
+Account Settings + Admin User Management ✅ complete
 Renewals
 Reports
 Compliance/Audit

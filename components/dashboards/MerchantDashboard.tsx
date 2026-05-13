@@ -8,6 +8,7 @@ import { EditMerchantForm } from './shared/EditMerchantForm';
 import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 import { api } from '../../src/lib/api-client';
 import { Chatbot } from '../Chatbot';
+import { UserSettingsPage } from './shared/UserSettingsPage';
 
 interface MerchantDashboardProps { 
     currentUser: AuthUser;
@@ -93,6 +94,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
     const [refreshDocuments, setRefreshDocuments] = useState(0);
     const [isEditingApplication, setIsEditingApplication] = useState(false);
     const [applicationMessage, setApplicationMessage] = useState<string | null>(null);
+    const [showSettings, setShowSettings] = useState(false);
     const formState = useMemo(() => getMerchantFormState(submission), [submission]);
     const monthsUntilReapply = useMemo(() => getMonthsUntilReapply(submission), [submission]);
 
@@ -164,14 +166,17 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
             <div className="max-w-5xl mx-auto">
                 <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-6">
                     <div>
-                        <h1 className="text-3xl font-black text-theme-maroon dark:text-theme-yellow">My Application Dashboard</h1>
+                        <h1 className="text-3xl font-black text-theme-maroon dark:text-theme-yellow">{showSettings ? 'Settings' : 'My Application Dashboard'}</h1>
                         <p className="text-slate-500 dark:text-slate-400">Welcome, {currentUser.full_name ?? currentUser.name ?? submission.owners[0]?.name ?? 'Valued Client'}</p>
                     </div>
                     <div className="flex items-center gap-3 self-start sm:self-auto">
                         {themeToggle}
+                        <PrimaryButton label={showSettings ? 'Back to Dashboard' : '⚙ Settings'} size="small" onClick={() => setShowSettings(prev => !prev)} />
                         <PrimaryButton label="Logout" size="small" onClick={onExit} />
                     </div>
                 </div>
+
+                {showSettings ? <UserSettingsPage currentUser={currentUser} onLogout={onExit} /> : <>
 
                 <Card className="mb-6">
                     <div className="p-6">
@@ -259,6 +264,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
                         ) : <p className="text-sm text-slate-500 dark:text-slate-400">No offers have been made yet. You will be notified when an offer is available.</p>}
                     </div>
                 </Card>
+                </>}
             </div>
         </div>
         <Chatbot

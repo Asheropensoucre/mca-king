@@ -323,6 +323,18 @@ export interface SearchResults {
   query: string;
 }
 
+export interface UserProfile {
+  id: string;
+  email: string;
+  role: UserRole;
+  full_name: string | null;
+  is_disabled: boolean;
+  disabled_at: string | null;
+  closed_at: string | null;
+  last_login_at: string | null;
+  created_at: string;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;

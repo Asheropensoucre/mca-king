@@ -15,12 +15,17 @@ function sessionCookieAttributes(maxAge: number): string {
   ].join('; ')
 }
 
-type UserRow = {
+export type UserRow = {
   id: string
   email: string
   role: UserRole
   full_name: string | null
   name: string | null
+  is_disabled?: boolean
+  disabled_at?: string | null
+  closed_at?: string | null
+  last_login_at?: string | null
+  created_at?: string | null
 }
 
 type AccountRow = {
@@ -73,7 +78,7 @@ export function toAuthUser(row: UserRow): AuthUser {
 export async function findUserByEmail(email: string): Promise<UserRow | null> {
   const { data, error } = await supabaseAdmin
     .from('users')
-    .select('id,email,role,full_name,name')
+    .select('id,email,role,full_name,name,is_disabled,disabled_at,closed_at,last_login_at,created_at')
     .eq('email', email.toLowerCase())
     .maybeSingle<UserRow>()
 
@@ -119,7 +124,7 @@ export async function createUserWithCredential(params: {
       createdAt: now,
       updatedAt: now,
     })
-    .select('id,email,role,full_name,name')
+    .select('id,email,role,full_name,name,is_disabled,disabled_at,closed_at,last_login_at,created_at')
     .single<UserRow>()
 
   if (userError) throw new Error(userError.message)
@@ -176,7 +181,7 @@ export async function getUserFromSessionToken(token: string | null): Promise<Aut
 
   const { data, error } = await supabaseAdmin
     .from('session')
-    .select('id,token,expiresAt, users:userId(id,email,role,full_name,name)')
+    .select('id,token,expiresAt, users:userId(id,email,role,full_name,name,is_disabled,disabled_at,closed_at,last_login_at,created_at)')
     .eq('token', token)
     .maybeSingle<SessionRow>()
 
@@ -184,6 +189,11 @@ export async function getUserFromSessionToken(token: string | null): Promise<Aut
   if (!data?.users) return null
 
   if (new Date(data.expiresAt).getTime() <= Date.now()) {
+    await deleteSession(token)
+    return null
+  }
+
+  if (data.users.is_disabled || data.users.closed_at) {
     await deleteSession(token)
     return null
   }

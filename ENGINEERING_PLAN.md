@@ -1,7 +1,7 @@
 # MCA King — Engineering Plan
 > This is the forward-looking build plan. For the project audit and history, see `Project_Road_Map.md`.
 >
-> **Current master expansion plan:** see [`Docs/MCA_BROKER_CRM_EXPANSION_PLAN.md`](Docs/MCA_BROKER_CRM_EXPANSION_PLAN.md) for the detailed broker CRM gap analysis, database modules, and phased build roadmap covering activities, tasks, funded deals, broker revenue, internal sales rep commissions, merchant-file submissions, renewals, reporting, compliance, and communications.
+> **Current master expansion plan:** see [`Docs/MCA_BROKER_CRM_EXPANSION_PLAN.md`](Docs/MCA_BROKER_CRM_EXPANSION_PLAN.md) for the detailed broker CRM gap analysis, database modules, and phased build roadmap covering activities, tasks, funded deals, broker revenue, internal sales rep commissions, merchant-file submissions, account settings/admin user management, renewals, reporting, compliance, and communications.
 >
 > **Deployment:** see [`Docs/VERCEL_DEPLOYMENT.md`](Docs/VERCEL_DEPLOYMENT.md) for the Vercel serverless API setup, environment variables, and deployment checklist.
 >
@@ -466,7 +466,7 @@ Replace the profile selector mockup with real login and registration screens bac
 - [ ] Remove profile selector mockup and demo-header bridge from `DashboardController.tsx`
 - [ ] `DashboardController` routes to correct dashboard based on `user.role` from real session
 - [ ] Protected route wrapper — any dashboard route without a valid session redirects to login
-- [ ] Admin-only user management — admin can create sales_rep accounts from the admin dashboard
+- [ ] Admin-only user management — admin can create sales_rep accounts from a dedicated Settings area; only admin can change user email, role, or account status; users can change only their own password
 
 ### Phase 5 — Matching Engine (2–3 days)
 - [ ] Move matching logic to server route

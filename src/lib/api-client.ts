@@ -1,4 +1,4 @@
-import type { Activity, ActivityType, EntityType, LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch, Task, Funding, BrokerRevenue, SalesRepCommission, MerchantFileSubmission, SavedView, SearchResults, PaginatedResponse, SavedViewEntityType } from '../../types'
+import type { Activity, ActivityType, EntityType, LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch, Task, Funding, BrokerRevenue, SalesRepCommission, MerchantFileSubmission, SavedView, SearchResults, PaginatedResponse, SavedViewEntityType, UserProfile, UserRole } from '../../types'
 
 function headers(extra?: HeadersInit): HeadersInit {
   return {
@@ -30,6 +30,23 @@ function toQuery(params?: Record<string, string | number | boolean | null | unde
 }
 
 export const api = {
+  settings: {
+    me: () => request<UserProfile>('/api/settings/me'),
+    changePassword: (data: { current_password: string; new_password: string }) => request<{ success: boolean }>('/api/settings/me/password', { method: 'PATCH', body: JSON.stringify(data) }),
+  },
+  adminUsers: {
+    list: (params?: { role?: UserRole | ''; is_disabled?: string; status?: string; search?: string }) => {
+      const qs = toQuery(params)
+      return request<UserProfile[]>(`/api/admin/users${qs ? `?${qs}` : ''}`)
+    },
+    get: (id: string) => request<UserProfile>(`/api/admin/users/${id}`),
+    createSalesRep: (data: { email: string; password: string; full_name: string }) => request<UserProfile>('/api/admin/users', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: { email?: string; role?: UserRole; full_name?: string | null }) => request<UserProfile>(`/api/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    resetPassword: (id: string, new_password: string) => request<{ success: boolean }>(`/api/admin/users/${id}/reset-password`, { method: 'POST', body: JSON.stringify({ new_password }) }),
+    disable: (id: string, reason?: string) => request<{ success: boolean }>(`/api/admin/users/${id}/disable`, { method: 'POST', body: JSON.stringify({ reason }) }),
+    reactivate: (id: string) => request<{ success: boolean }>(`/api/admin/users/${id}/reactivate`, { method: 'POST' }),
+    close: (id: string, reason?: string) => request<{ success: boolean }>(`/api/admin/users/${id}/close`, { method: 'POST', body: JSON.stringify({ reason }) }),
+  },
   search: {
     global: (q: string) => request<SearchResults>(`/api/search?q=${encodeURIComponent(q)}`),
   },

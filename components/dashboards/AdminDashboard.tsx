@@ -13,6 +13,7 @@ import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 import { Chatbot } from '../Chatbot';
 import { TaskPanel } from './shared/TaskPanel';
 import { AdminFinanceView } from './AdminFinanceView';
+import { AdminSettingsPage } from './AdminSettingsPage';
 import { FilterBar } from './shared/FilterBar';
 import { SearchBar, type SearchResultSelection } from './shared/SearchBar';
 import { api } from '../../src/lib/api-client';
@@ -30,7 +31,7 @@ interface AdminDashboardProps {
     onPrint?: (submission: FormData) => void;
 }
 
-type AdminSection = 'leads' | 'merchants' | 'lenders' | 'pipeline' | 'tasks' | 'finance';
+type AdminSection = 'leads' | 'merchants' | 'lenders' | 'pipeline' | 'tasks' | 'finance' | 'settings';
 
 const themedSelectClass = 'w-full rounded-lg border-2 border-theme-yellow bg-slate-950 px-3 py-2 text-sm font-bold text-theme-teal shadow-[4px_4px_0_var(--ct-tertiary-container)] outline-none transition focus:border-theme-teal focus:shadow-[4px_4px_0_var(--ct-secondary-fixed-dim)]';
 const headerClass = 'text-left text-xs font-black uppercase tracking-wider text-theme-yellow';
@@ -39,8 +40,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
     const [activeSection, setActiveSection] = useState<AdminSection>('leads');
     const [selectedItem, setSelectedItem] = useState<FormData | LenderInfo | null>(null);
     const [isEditing, setIsEditing] = useState(false);
-    const [isCreatingRep, setIsCreatingRep] = useState(false);
-    const [repError, setRepError] = useState<string | null>(null);
     const [merchantRows, setMerchantRows] = useState<FormData[]>(merchants);
     const [lenderRows, setLenderRows] = useState<LenderInfo[]>(lenders);
     const [merchantFilters, setMerchantFilters] = useState<Record<string, string>>({});
@@ -107,39 +106,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
         }
     };
 
-    const handleCreateSalesRep = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        setRepError(null);
-        const form = new globalThis.FormData(event.currentTarget);
-        const full_name = String(form.get('full_name') ?? '').trim();
-        const email = String(form.get('email') ?? '').trim();
-        const password = String(form.get('password') ?? '');
-
-        if (password.length < 8) {
-            setRepError('Password must be at least 8 characters.');
-            return;
-        }
-
-        const res = await fetch('/api/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ full_name, email, password, role: 'sales_rep' }),
-        });
-
-        if (!res.ok) {
-            setRepError('Could not create sales rep. Email may already be in use.');
-            return;
-        }
-
-        const body = await res.json() as { user: AuthUser };
-        onSalesRepCreated({
-            id: body.user.id,
-            email: body.user.email,
-            name: body.user.full_name ?? body.user.name ?? body.user.email,
-        });
-        setIsCreatingRep(false);
-    };
-    
     const renderSelectedItem = () => {
         if (!selectedItem) return null;
         const isMerchant = 'businessInfo' in selectedItem;
@@ -229,38 +195,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
         </div>
     );
 
-    const renderCreateSalesRepModal = () => (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <Card className="w-full max-w-md">
-                <form onSubmit={handleCreateSalesRep}>
-                    <div className="p-6">
-                        <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Create Sales Rep</h3>
-                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Create a real login account for a sales representative.</p>
-                        <div className="mt-4 space-y-4">
-                            <label className="block">
-                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Full Name</span>
-                                <input name="full_name" type="text" required className="mt-1 block w-full rounded-md border-0 px-3 py-2 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-theme-yellow dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600" />
-                            </label>
-                            <label className="block">
-                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Email</span>
-                                <input name="email" type="email" required className="mt-1 block w-full rounded-md border-0 px-3 py-2 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-theme-yellow dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600" />
-                            </label>
-                            <label className="block">
-                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Password</span>
-                                <input name="password" type="password" required minLength={8} className="mt-1 block w-full rounded-md border-0 px-3 py-2 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-theme-yellow dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600" />
-                            </label>
-                            {repError && <p className="text-sm text-red-600 dark:text-red-300">{repError}</p>}
-                        </div>
-                    </div>
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t flex justify-end space-x-2">
-                        <PrimaryButton label="Cancel" size="small" variant="danger" onClick={() => setIsCreatingRep(false)} />
-                        <PrimaryButton type="submit" label="Create Sales Rep" size="small" />
-                    </div>
-                </form>
-            </Card>
-        </div>
-    );
-
     const renderLenders = () => (
         <div className="space-y-4">
             <FilterBar entityType="lenders" filters={lenderFilters} onFilterChange={(next) => { setLenderFilters(next); setLenderPage(1); }} onReset={() => { setLenderFilters({}); setLenderPage(1); }} currentUserRole={currentUser.role} />
@@ -298,12 +232,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                 { id: 'pipeline', label: 'Kamba Pipeline' },
                 { id: 'tasks', label: 'Tasks' },
                 { id: 'finance', label: 'Finance' },
+                { id: 'settings', label: '⚙ Settings' },
             ]}
             activeSection={activeSection}
             onSectionChange={(section) => { setActiveSection(section); setSelectedItem(null); setIsEditing(false); }}
             onExit={onExit}
             exitLabel="Logout"
             themeToggle={themeToggle}
+            settingsSectionId="settings"
         >
             {selectedItem ? renderSelectedItem() : (
                 <div className={activeSection === 'pipeline' ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}>
@@ -313,7 +249,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                             {listError && <p className="mt-1 text-xs font-bold text-red-600 dark:text-red-300">{listError}</p>}
                         </div>
                         <SearchBar onSelectResult={handleSearchSelect} />
-                        <PrimaryButton label="Create Sales Rep" size="small" onClick={() => setIsCreatingRep(true)} />
                     </div>
                     {activeSection === 'leads' && <LeadManager isAdmin={true} salesReps={salesReps} currentUser={currentUser} initialLeadId={leadSearchId} />}
                     {activeSection === 'merchants' && renderMerchants()}
@@ -323,10 +258,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                     )}
                     {activeSection === 'tasks' && <TaskPanel currentUser={currentUser} title="Tasks" />}
                     {activeSection === 'finance' && <AdminFinanceView />}
+                    {activeSection === 'settings' && <AdminSettingsPage currentUser={currentUser} onSalesRepCreated={onSalesRepCreated} />}
                 </div>
             )}
         </DashboardShell>
-        {isCreatingRep && renderCreateSalesRepModal()}
         <Chatbot
             currentUser={currentUser}
             currentPage="Admin Dashboard"

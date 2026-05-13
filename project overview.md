@@ -10,10 +10,10 @@ This is **not** a lender-originated deal marketplace. Lenders/funders are users 
 
 | Role | Business meaning |
 |---|---|
-| Admin | Broker shop owner or operator. Controls the shop, users, lenders, assignments, matching, pipeline, broker revenue, and internal rep commissions. |
-| Sales Rep | Internal broker-shop rep who works leads and assigned merchant files. |
-| Merchant | Funding customer/applicant who submits an application, uploads documents, reviews offers, and responds to stipulations. |
-| Lender/Funder | Funding partner who reviews broker-submitted merchant files, approves/declines, requests documents, and sends offers. |
+| Admin | Broker shop owner or operator. Controls the shop, users, lenders, assignments, matching, pipeline, broker revenue, internal rep commissions, and admin-only account settings such as user emails, password resets, disabled/closed accounts, and roles. |
+| Sales Rep | Internal broker-shop rep who works leads and assigned merchant files. Can manage only safe self-service settings such as own password, not email or role. |
+| Merchant | Funding customer/applicant who submits an application, uploads documents, reviews offers, and responds to stipulations. Can change only own password in user settings; email/account status changes are admin-controlled. |
+| Lender/Funder | Funding partner who reviews broker-submitted merchant files, approves/declines, requests documents, and sends offers. Can change only own password in user settings; email/account status changes are admin-controlled. |
 | Lender-side account/relationship manager | Contact at the lender/funder company who manages the broker relationship/files from the lender side. Not a commission recipient and not a deal submitter in MCA King. |
 
 ## Phase 1: Onboarding & Intake
@@ -79,7 +79,7 @@ Merchants can:
 Broker admins can:
 
 - View all leads, merchants, lenders/funders, documents, offers, matches, and pipeline stages
-- Create and manage sales rep accounts
+- Create and manage sales rep accounts from Admin Settings
 - Assign reps to merchant files
 - Match and submit files to lenders/funders
 - Move merchant files through the 12-step Kamba pipeline
@@ -95,6 +95,7 @@ Sales reps can:
 - Help collect documents
 - Match files to lenders when permitted
 - Track assigned files in the Kamba pipeline
+- Change only their own password in User Settings
 
 ### Lender/Funder Dashboard
 
@@ -106,6 +107,7 @@ Lenders/funders can:
 - Request stipulations/additional documents
 - Send offers to the broker/merchant workflow
 - See only their own offers/responses; competing lender/funder offers on the same merchant file are hidden server-side
+- Change only their own password in User Settings
 
 ## Key Technical Requirements
 
@@ -114,4 +116,4 @@ Lenders/funders can:
 - Secure document storage and signed URL access
 - Broker-to-lender package generation and notification workflow
 - State machine for the 12-step Kamba pipeline
-- Activity history and tasks are implemented. Funding records, broker revenue, internal sales rep commissions, merchant-file submission outcomes, and search/filter/saved-view work queues are implemented. Renewals, reporting, and compliance controls remain future expansion areas.
+- Activity history and tasks are implemented. Funding records, broker revenue, internal sales rep commissions, merchant-file submission outcomes, search/filter/saved-view work queues, and account settings/admin user management are implemented. Renewals, reporting, and compliance controls remain future expansion areas.

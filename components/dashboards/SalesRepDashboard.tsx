@@ -8,6 +8,7 @@ import { LeadManager } from './LeadManager';
 import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 import { Chatbot } from '../Chatbot';
 import { TaskPanel } from './shared/TaskPanel';
+import { UserSettingsPage } from './shared/UserSettingsPage';
 import { FilterBar } from './shared/FilterBar';
 import { SearchBar, type SearchResultSelection } from './shared/SearchBar';
 import { api } from '../../src/lib/api-client';
@@ -24,7 +25,7 @@ interface SalesRepDashboardProps {
     salesReps: SalesRepresentative[];
 }
 
-type SalesRepSection = 'leads' | 'deals' | 'pipeline' | 'tasks';
+type SalesRepSection = 'leads' | 'deals' | 'pipeline' | 'tasks' | 'settings';
 
 export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUser, deals, rep, onExit, themeToggle, onPrint, lenders, onUpdateMerchant, salesReps }) => {
     const [selectedDeal, setSelectedDeal] = useState<FormData | null>(null);
@@ -84,11 +85,13 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
                 { id: 'deals', label: 'My Deals' },
                 { id: 'pipeline', label: 'Kamba Pipeline' },
                 { id: 'tasks', label: 'Tasks' },
+                { id: 'settings', label: '⚙ Settings' },
             ]}
             activeSection={activeSection}
             onSectionChange={(section) => { setActiveSection(section); setSelectedDeal(null); }}
             onExit={onExit}
             themeToggle={themeToggle}
+            settingsSectionId="settings"
         >
             {selectedDealCurrent ? (
                 <div className="max-w-4xl mx-auto">
@@ -155,6 +158,7 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
                         <KanbanPipelineView merchants={deals} lenders={lenders} onUpdateMerchant={onUpdateMerchant} onSelectMerchant={setSelectedDeal} />
                     )}
                     {activeSection === 'tasks' && <TaskPanel currentUser={currentUser} title="My Tasks" />}
+                    {activeSection === 'settings' && <UserSettingsPage currentUser={currentUser} onLogout={onExit} />}
                 </div>
             )}
         </DashboardShell>

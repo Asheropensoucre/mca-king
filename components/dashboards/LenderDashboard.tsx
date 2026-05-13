@@ -7,6 +7,7 @@ import { MerchantDetailView } from './shared/MerchantDetailView';
 import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 import { api } from '../../src/lib/api-client';
 import { Chatbot } from '../Chatbot';
+import { UserSettingsPage } from './shared/UserSettingsPage';
 
 interface LenderDashboardProps { 
     currentUser: AuthUser;
@@ -30,6 +31,7 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
     const [offerTerm, setOfferTerm] = useState('');
     const [stipDescription, setStipDescription] = useState('');
     const [message, setMessage] = useState<string | null>(null);
+    const [showSettings, setShowSettings] = useState(false);
 
     const assignedMerchants = useMemo(() => merchants.map(merchant => sanitizeForCurrentLender(merchant, profile.id)), [merchants, profile.id]);
     const sanitizedSelectedDeal = selectedDeal ? sanitizeForCurrentLender(selectedDeal, profile.id) : null;
@@ -80,7 +82,7 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
         }
     };
 
-    if (sanitizedSelectedDeal) {
+    if (sanitizedSelectedDeal && !showSettings) {
         return (
              <>
              <div className="p-4 sm:p-6 lg:p-8">
@@ -152,15 +154,16 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
             <div className="max-w-7xl mx-auto">
                  <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-6">
                     <div>
-                        <h1 className="text-3xl font-black text-theme-maroon dark:text-theme-yellow">Lender Dashboard</h1>
+                        <h1 className="text-3xl font-black text-theme-maroon dark:text-theme-yellow">{showSettings ? 'Settings' : 'Lender Dashboard'}</h1>
                         <p className="text-slate-500 dark:text-slate-400">Welcome, {currentUser.full_name ?? currentUser.name ?? profile.lenderName}</p>
                     </div>
                     <div className="flex items-center gap-3 self-start sm:self-auto">
                         {themeToggle}
+                        <PrimaryButton label={showSettings ? 'Back to Dashboard' : '⚙ Settings'} size="small" onClick={() => setShowSettings(prev => !prev)} />
                         <PrimaryButton label="Logout" size="small" onClick={onExit} />
                     </div>
                 </div>
-                <Card>
+                {showSettings ? <UserSettingsPage currentUser={currentUser} onLogout={onExit} /> : <Card>
                     <div className="p-6">
                         <h2 className="text-xl font-black text-theme-maroon dark:text-theme-yellow mb-4">Assigned Merchants</h2>
                         <div className="overflow-x-auto">
@@ -183,7 +186,7 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
                             </table>
                         </div>
                     </div>
-                </Card>
+                </Card>}
             </div>
         </div>
         <Chatbot

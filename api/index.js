@@ -43656,7 +43656,7 @@ function toAuthUser(row) {
   };
 }
 async function findUserByEmail(email) {
-  const { data, error } = await supabaseAdmin.from("users").select("id,email,role,full_name,name").eq("email", email.toLowerCase()).maybeSingle();
+  const { data, error } = await supabaseAdmin.from("users").select("id,email,role,full_name,name,is_disabled,disabled_at,closed_at,last_login_at,created_at").eq("email", email.toLowerCase()).maybeSingle();
   if (error)
     throw new Error(error.message);
   return data ?? null;
@@ -43684,7 +43684,7 @@ async function createUserWithCredential(params) {
     image: null,
     createdAt: now,
     updatedAt: now
-  }).select("id,email,role,full_name,name").single();
+  }).select("id,email,role,full_name,name,is_disabled,disabled_at,closed_at,last_login_at,created_at").single();
   if (userError)
     throw new Error(userError.message);
   const { error: accountError } = await supabaseAdmin.from("account").insert({
@@ -43728,12 +43728,16 @@ async function deleteSession(token) {
 async function getUserFromSessionToken(token) {
   if (!token)
     return null;
-  const { data, error } = await supabaseAdmin.from("session").select("id,token,expiresAt, users:userId(id,email,role,full_name,name)").eq("token", token).maybeSingle();
+  const { data, error } = await supabaseAdmin.from("session").select("id,token,expiresAt, users:userId(id,email,role,full_name,name,is_disabled,disabled_at,closed_at,last_login_at,created_at)").eq("token", token).maybeSingle();
   if (error)
     throw new Error(error.message);
   if (!data?.users)
     return null;
   if (new Date(data.expiresAt).getTime() <= Date.now()) {
+    await deleteSession(token);
+    return null;
+  }
+  if (data.users.is_disabled || data.users.closed_at) {
     await deleteSession(token);
     return null;
   }
@@ -45122,8 +45126,8 @@ async function verifyPassword(hash, password) {
 }
 
 // src/routes/auth/register.ts
-function isUserRole(value) {
-  return value === "admin" || value === "sales_rep" || value === "merchant" || value === "lender";
+function isSelfRegisterRole(value) {
+  return value === "merchant" || value === "lender";
 }
 async function POST9(req) {
   try {
@@ -45141,7 +45145,7 @@ async function POST9(req) {
     const user = await createUserWithCredential({
       email: normalizedEmail,
       passwordHash: await hashPassword(password),
-      role: isUserRole(role) ? role : "merchant",
+      role: isSelfRegisterRole(role) ? role : "merchant",
       fullName: full_name?.trim() || normalizedEmail
     });
     return Response.json({ user });
@@ -45166,6 +45170,13 @@ async function POST10(req) {
     if (!valid) {
       return new Response("Invalid credentials", { status: 401 });
     }
+    if (account.users.is_disabled) {
+      return new Response("Account is disabled. Please contact your administrator.", { status: 403 });
+    }
+    if (account.users.closed_at) {
+      return new Response("This account has been closed.", { status: 403 });
+    }
+    await supabaseAdmin.from("users").update({ last_login_at: new Date().toISOString(), updatedAt: new Date().toISOString() }).eq("id", account.users.id);
     const token = await createSession(account.users.id);
     return Response.json({ user: toAuthUser(account.users) }, { headers: { "set-cookie": serializeSessionCookie(token) } });
   } catch (error) {
@@ -46530,6 +46541,342 @@ async function DELETE7(_req, context) {
   const { error } = await supabaseAdmin.from("saved_views").delete().eq("id", id);
   if (error)
     return badRequest(error.message);
+  return json({ success: true });
+}
+
+// src/lib/account-users.ts
+var USER_ROLES = ["admin", "sales_rep", "merchant", "lender"];
+function isUserRole(value) {
+  return typeof value === "string" && USER_ROLES.includes(value);
+}
+function normalizeEmail(email) {
+  return email.toLowerCase().trim();
+}
+function toUserProfile(row) {
+  return {
+    id: row.id,
+    email: row.email,
+    role: row.role,
+    full_name: row.full_name ?? row.name,
+    is_disabled: Boolean(row.is_disabled),
+    disabled_at: row.disabled_at,
+    closed_at: row.closed_at,
+    last_login_at: row.last_login_at,
+    created_at: row.created_at ?? row.createdAt ?? ""
+  };
+}
+async function getAccountUserById(id) {
+  const { data, error } = await supabaseAdmin.from("users").select("id,email,role,full_name,name,is_disabled,disabled_at,closed_at,last_login_at,created_at,createdAt,updatedAt").eq("id", id).maybeSingle();
+  if (error)
+    throw new Error(error.message);
+  return data ?? null;
+}
+async function emailBelongsToAnotherUser(email, userId) {
+  const { data, error } = await supabaseAdmin.from("users").select("id").eq("email", normalizeEmail(email)).neq("id", userId).maybeSingle();
+  if (error)
+    throw new Error(error.message);
+  return Boolean(data);
+}
+
+// src/lib/revoke-sessions.ts
+async function revokeUserSessions(userId) {
+  const { error } = await supabaseAdmin.from("session").delete().eq("userId", userId);
+  if (error) {
+    console.error("[revoke-sessions] Failed to revoke sessions for user:", userId, error);
+    throw new Error(error.message);
+  }
+}
+
+// src/routes/settings/me.ts
+async function GET22(req) {
+  const user = await requireAuth(req);
+  const row = await getAccountUserById(user.id);
+  if (!row)
+    return new Response("User not found", { status: 404 });
+  return json(toUserProfile(row));
+}
+async function PATCH11(req) {
+  const user = await requireAuth(req);
+  const body = await req.json();
+  if (!body.current_password || !body.new_password)
+    return badRequest("Current password and new password are required");
+  if (body.new_password.length < 8)
+    return badRequest("New password must be at least 8 characters");
+  const { data, error } = await supabaseAdmin.from("account").select("password").eq("userId", user.id).eq("providerId", "credential").maybeSingle();
+  if (error)
+    return badRequest(error.message);
+  if (!data?.password)
+    return new Response("Credential account not found", { status: 404 });
+  const valid = await verifyPassword(data.password, body.current_password);
+  if (!valid)
+    return new Response("Current password is incorrect", { status: 401 });
+  const now = new Date().toISOString();
+  const { error: updateError } = await supabaseAdmin.from("account").update({ password: await hashPassword(body.new_password), updatedAt: now }).eq("userId", user.id).eq("providerId", "credential");
+  if (updateError)
+    return badRequest(updateError.message);
+  await supabaseAdmin.from("users").update({ updatedAt: now }).eq("id", user.id);
+  await revokeUserSessions(user.id);
+  await writeActivity({
+    entity_type: "user",
+    entity_id: user.id,
+    user_id: user.id,
+    activity_type: "system",
+    body: "Password changed"
+  });
+  return json({ success: true });
+}
+
+// src/routes/admin/users/index.ts
+async function GET23(req) {
+  const user = await requireAuth(req);
+  if (user.role !== "admin")
+    return forbidden();
+  const url = new URL(req.url);
+  const role = url.searchParams.get("role");
+  const disabled = url.searchParams.get("is_disabled");
+  const search = (url.searchParams.get("search") ?? "").trim().replace(/[%,()]/g, " ");
+  const status = url.searchParams.get("status");
+  if (role && !isUserRole(role))
+    return badRequest("role is invalid");
+  let query = supabaseAdmin.from("users").select("id,email,role,full_name,name,is_disabled,disabled_at,closed_at,last_login_at,created_at,createdAt,updatedAt").order("createdAt", { ascending: false }).limit(100);
+  if (role)
+    query = query.eq("role", role);
+  if (disabled === "true")
+    query = query.eq("is_disabled", true).is("closed_at", null);
+  if (disabled === "false")
+    query = query.eq("is_disabled", false).is("closed_at", null);
+  if (status === "closed")
+    query = query.not("closed_at", "is", null);
+  if (search)
+    query = query.or(`email.ilike.%${search}%,full_name.ilike.%${search}%,name.ilike.%${search}%`);
+  const { data, error } = await query.returns();
+  if (error)
+    return badRequest(error.message);
+  return json((data ?? []).map(toUserProfile));
+}
+async function POST22(req) {
+  const user = await requireAuth(req);
+  if (user.role !== "admin")
+    return forbidden();
+  const body = await req.json();
+  if (!body.email || !body.password)
+    return badRequest("Email and password are required");
+  if (body.password.length < 8)
+    return badRequest("Password must be at least 8 characters");
+  const email = normalizeEmail(body.email);
+  const { data: existing, error: existingError } = await supabaseAdmin.from("users").select("id").eq("email", email).maybeSingle();
+  if (existingError)
+    return badRequest(existingError.message);
+  if (existing)
+    return badRequest("Email already exists");
+  try {
+    const created = await createUserWithCredential({
+      email,
+      passwordHash: await hashPassword(body.password),
+      role: "sales_rep",
+      fullName: body.full_name?.trim() || email
+    });
+    await writeActivity({
+      entity_type: "user",
+      entity_id: created.id,
+      user_id: user.id,
+      activity_type: "system",
+      body: `Sales rep account created: ${created.full_name ?? created.email}`
+    });
+    const row = await supabaseAdmin.from("users").select("id,email,role,full_name,name,is_disabled,disabled_at,closed_at,last_login_at,created_at,createdAt,updatedAt").eq("id", created.id).single();
+    if (row.error)
+      return badRequest(row.error.message);
+    return json(toUserProfile(row.data), { status: 201 });
+  } catch (error) {
+    console.error("Create sales rep failed", error);
+    return badRequest(error instanceof Error ? error.message : "Create sales rep failed");
+  }
+}
+
+// src/routes/admin/users/[id].ts
+async function GET24(req, context) {
+  const currentUser = await requireAuth(req);
+  if (currentUser.role !== "admin")
+    return forbidden();
+  const id = getId(context);
+  if (!id)
+    return badRequest("id is required");
+  const row = await getAccountUserById(id);
+  if (!row)
+    return notFound("User not found");
+  return json(toUserProfile(row));
+}
+async function PATCH12(req, context) {
+  const currentUser = await requireAuth(req);
+  if (currentUser.role !== "admin")
+    return forbidden();
+  const id = getId(context);
+  if (!id)
+    return badRequest("id is required");
+  const existing = await getAccountUserById(id);
+  if (!existing)
+    return notFound("User not found");
+  const body = await req.json();
+  const update = { updatedAt: new Date().toISOString() };
+  const activityBodies = [];
+  let shouldRevokeSessions = false;
+  if (body.full_name !== undefined) {
+    const fullName = body.full_name?.trim() || null;
+    update.full_name = fullName;
+    update.name = fullName;
+  }
+  if (body.email !== undefined) {
+    const nextEmail = normalizeEmail(body.email);
+    if (!nextEmail)
+      return badRequest("email cannot be blank");
+    if (await emailBelongsToAnotherUser(nextEmail, id))
+      return badRequest("Email already exists");
+    if (nextEmail !== existing.email) {
+      update.email = nextEmail;
+      activityBodies.push(`Email changed from ${existing.email} to ${nextEmail}`);
+      shouldRevokeSessions = true;
+    }
+  }
+  if (body.role !== undefined) {
+    if (!isUserRole(body.role))
+      return badRequest("role is invalid");
+    if (body.role !== existing.role) {
+      update.role = body.role;
+      activityBodies.push(`Role changed from ${existing.role} to ${body.role}`);
+      shouldRevokeSessions = true;
+    }
+  }
+  const { data, error } = await supabaseAdmin.from("users").update(update).eq("id", id).select("id,email,role,full_name,name,is_disabled,disabled_at,closed_at,last_login_at,created_at,createdAt,updatedAt").single();
+  if (error)
+    return badRequest(error.message);
+  if (shouldRevokeSessions)
+    await revokeUserSessions(id);
+  await Promise.all(activityBodies.map((bodyText) => writeActivity({
+    entity_type: "user",
+    entity_id: id,
+    user_id: currentUser.id,
+    activity_type: "system",
+    body: bodyText
+  })));
+  return json(toUserProfile(data));
+}
+
+// src/routes/admin/users/[id]/reset-password.ts
+async function POST23(req, context) {
+  const currentUser = await requireAuth(req);
+  if (currentUser.role !== "admin")
+    return forbidden();
+  const id = getId(context);
+  if (!id)
+    return badRequest("id is required");
+  const body = await req.json();
+  if (!body.new_password)
+    return badRequest("new_password is required");
+  if (body.new_password.length < 8)
+    return badRequest("Password must be at least 8 characters");
+  const existing = await getAccountUserById(id);
+  if (!existing)
+    return notFound("User not found");
+  const now = new Date().toISOString();
+  const { error } = await supabaseAdmin.from("account").update({ password: await hashPassword(body.new_password), updatedAt: now }).eq("userId", id).eq("providerId", "credential");
+  if (error)
+    return badRequest(error.message);
+  await supabaseAdmin.from("users").update({ updatedAt: now }).eq("id", id);
+  await revokeUserSessions(id);
+  await writeActivity({
+    entity_type: "user",
+    entity_id: id,
+    user_id: currentUser.id,
+    activity_type: "system",
+    body: "Password reset by admin"
+  });
+  return json({ success: true });
+}
+
+// src/routes/admin/users/[id]/disable.ts
+async function POST24(req, context) {
+  const currentUser = await requireAuth(req);
+  if (currentUser.role !== "admin")
+    return forbidden();
+  const id = getId(context);
+  if (!id)
+    return badRequest("id is required");
+  const target = await getAccountUserById(id);
+  if (!target)
+    return notFound("User not found");
+  if (target.role === "admin")
+    return forbidden("Admin accounts cannot be disabled");
+  const body = await req.json().catch(() => ({}));
+  const now = new Date().toISOString();
+  const { error } = await supabaseAdmin.from("users").update({ is_disabled: true, disabled_at: now, updatedAt: now }).eq("id", id);
+  if (error)
+    return badRequest(error.message);
+  await revokeUserSessions(id);
+  const reason = body.reason?.trim();
+  await writeActivity({
+    entity_type: "user",
+    entity_id: id,
+    user_id: currentUser.id,
+    activity_type: "system",
+    body: `Account disabled${reason ? `: ${reason}` : ""}`
+  });
+  return json({ success: true });
+}
+
+// src/routes/admin/users/[id]/reactivate.ts
+async function POST25(req, context) {
+  const currentUser = await requireAuth(req);
+  if (currentUser.role !== "admin")
+    return forbidden();
+  const id = getId(context);
+  if (!id)
+    return badRequest("id is required");
+  const target = await getAccountUserById(id);
+  if (!target)
+    return notFound("User not found");
+  if (target.closed_at)
+    return forbidden("Closed accounts cannot be reactivated");
+  const now = new Date().toISOString();
+  const { error } = await supabaseAdmin.from("users").update({ is_disabled: false, disabled_at: null, updatedAt: now }).eq("id", id);
+  if (error)
+    return badRequest(error.message);
+  await writeActivity({
+    entity_type: "user",
+    entity_id: id,
+    user_id: currentUser.id,
+    activity_type: "system",
+    body: "Account reactivated"
+  });
+  return json({ success: true });
+}
+
+// src/routes/admin/users/[id]/close.ts
+async function POST26(req, context) {
+  const currentUser = await requireAuth(req);
+  if (currentUser.role !== "admin")
+    return forbidden();
+  const id = getId(context);
+  if (!id)
+    return badRequest("id is required");
+  const target = await getAccountUserById(id);
+  if (!target)
+    return notFound("User not found");
+  if (target.role === "admin")
+    return forbidden("Admin accounts cannot be closed");
+  const body = await req.json().catch(() => ({}));
+  const now = new Date().toISOString();
+  const { error } = await supabaseAdmin.from("users").update({ is_disabled: true, disabled_at: now, closed_at: now, updatedAt: now }).eq("id", id);
+  if (error)
+    return badRequest(error.message);
+  await revokeUserSessions(id);
+  const reason = body.reason?.trim();
+  await writeActivity({
+    entity_type: "user",
+    entity_id: id,
+    user_id: currentUser.id,
+    activity_type: "system",
+    body: `Account closed${reason ? `: ${reason}` : ""}`
+  });
   return json({ success: true });
 }
 
@@ -63421,7 +63768,7 @@ Role-specific guidance:
 Tone: professional, helpful, and concise. Never make up information. If unsure, say so clearly and recommend checking the actual dashboard or asking an admin.
 `.trim();
 var displayName2 = (user) => user.full_name ?? user.email;
-async function POST22(req) {
+async function POST27(req) {
   const user = await requireAuth(req);
   const body = await readJson(req);
   const message = typeof body.message === "string" ? body.message.trim() : "";
@@ -63457,7 +63804,7 @@ ${message}`,
 function matchRoute(method, pathname) {
   if (pathname === "/api/ai/chat") {
     if (method === "POST")
-      return { handler: POST22 };
+      return { handler: POST27 };
   }
   if (pathname === "/api/auth/register") {
     if (method === "POST")
@@ -63488,6 +63835,40 @@ function matchRoute(method, pathname) {
   if (pathname === "/api/search") {
     if (method === "GET")
       return { handler: GET20 };
+  }
+  if (pathname === "/api/settings/me") {
+    if (method === "GET")
+      return { handler: GET22 };
+  }
+  if (pathname === "/api/settings/me/password") {
+    if (method === "PATCH")
+      return { handler: PATCH11 };
+  }
+  if (pathname === "/api/admin/users") {
+    if (method === "GET")
+      return { handler: GET23 };
+    if (method === "POST")
+      return { handler: POST22 };
+  }
+  const adminUserActionMatch = pathname.match(/^\/api\/admin\/users\/([^/]+)\/(reset-password|disable|reactivate|close)$/);
+  if (adminUserActionMatch) {
+    const params = { id: decodeURIComponent(adminUserActionMatch[1]) };
+    if (method === "POST" && adminUserActionMatch[2] === "reset-password")
+      return { handler: POST23, params };
+    if (method === "POST" && adminUserActionMatch[2] === "disable")
+      return { handler: POST24, params };
+    if (method === "POST" && adminUserActionMatch[2] === "reactivate")
+      return { handler: POST25, params };
+    if (method === "POST" && adminUserActionMatch[2] === "close")
+      return { handler: POST26, params };
+  }
+  const adminUserMatch = pathname.match(/^\/api\/admin\/users\/([^/]+)$/);
+  if (adminUserMatch) {
+    const params = { id: decodeURIComponent(adminUserMatch[1]) };
+    if (method === "GET")
+      return { handler: GET24, params };
+    if (method === "PATCH")
+      return { handler: PATCH12, params };
   }
   if (pathname === "/api/saved-views") {
     if (method === "GET")

@@ -35,6 +35,13 @@ import { PATCH as patchMerchantFileSubmission } from '../routes/merchant-file-su
 import { GET as getSearch } from '../routes/search/index'
 import { GET as getSavedViews, POST as postSavedView } from '../routes/saved-views/index'
 import { PATCH as patchSavedView, DELETE as deleteSavedView } from '../routes/saved-views/[id]'
+import { GET as getSettingsMe, PATCH as patchSettingsPassword } from '../routes/settings/me'
+import { GET as getAdminUsers, POST as postAdminUser } from '../routes/admin/users/index'
+import { GET as getAdminUser, PATCH as patchAdminUser } from '../routes/admin/users/[id]'
+import { POST as resetAdminUserPassword } from '../routes/admin/users/[id]/reset-password'
+import { POST as disableAdminUser } from '../routes/admin/users/[id]/disable'
+import { POST as reactivateAdminUser } from '../routes/admin/users/[id]/reactivate'
+import { POST as closeAdminUser } from '../routes/admin/users/[id]/close'
 import { POST as aiChat } from '../routes/ai/chat'
 import type { RouteContext } from '../lib/route-utils'
 
@@ -77,6 +84,35 @@ function matchRoute(method: string, pathname: string): RouteMatch | null {
 
   if (pathname === '/api/search') {
     if (method === 'GET') return { handler: getSearch }
+  }
+
+  if (pathname === '/api/settings/me') {
+    if (method === 'GET') return { handler: getSettingsMe }
+  }
+
+  if (pathname === '/api/settings/me/password') {
+    if (method === 'PATCH') return { handler: patchSettingsPassword }
+  }
+
+  if (pathname === '/api/admin/users') {
+    if (method === 'GET') return { handler: getAdminUsers }
+    if (method === 'POST') return { handler: postAdminUser }
+  }
+
+  const adminUserActionMatch = pathname.match(/^\/api\/admin\/users\/([^/]+)\/(reset-password|disable|reactivate|close)$/)
+  if (adminUserActionMatch) {
+    const params = { id: decodeURIComponent(adminUserActionMatch[1]) }
+    if (method === 'POST' && adminUserActionMatch[2] === 'reset-password') return { handler: resetAdminUserPassword, params }
+    if (method === 'POST' && adminUserActionMatch[2] === 'disable') return { handler: disableAdminUser, params }
+    if (method === 'POST' && adminUserActionMatch[2] === 'reactivate') return { handler: reactivateAdminUser, params }
+    if (method === 'POST' && adminUserActionMatch[2] === 'close') return { handler: closeAdminUser, params }
+  }
+
+  const adminUserMatch = pathname.match(/^\/api\/admin\/users\/([^/]+)$/)
+  if (adminUserMatch) {
+    const params = { id: decodeURIComponent(adminUserMatch[1]) }
+    if (method === 'GET') return { handler: getAdminUser, params }
+    if (method === 'PATCH') return { handler: patchAdminUser, params }
   }
 
   if (pathname === '/api/saved-views') {

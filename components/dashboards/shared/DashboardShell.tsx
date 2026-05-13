@@ -15,6 +15,7 @@ interface DashboardShellProps<T extends string> {
   onExit: () => void;
   exitLabel?: string;
   themeToggle?: React.ReactNode;
+  settingsSectionId?: T;
   children: React.ReactNode;
 }
 
@@ -27,8 +28,12 @@ export const DashboardShell = <T extends string>({
   onExit,
   exitLabel = 'Logout',
   themeToggle,
+  settingsSectionId,
   children,
 }: DashboardShellProps<T>) => {
+  const mainSections = settingsSectionId ? sections.filter(section => section.id !== settingsSectionId) : sections;
+  const settingsSection = settingsSectionId ? sections.find(section => section.id === settingsSectionId) : undefined;
+
   return (
     <div className="min-h-screen text-slate-900 dark:text-slate-100">
       <div className="flex min-h-screen">
@@ -44,7 +49,7 @@ export const DashboardShell = <T extends string>({
             {themeToggle}
           </div>
           <nav className="flex-1 space-y-3 p-4" aria-label="Dashboard sections">
-            {sections.map(section => (
+            {mainSections.map(section => (
               <button
                 key={section.id}
                 type="button"
@@ -59,7 +64,20 @@ export const DashboardShell = <T extends string>({
               </button>
             ))}
           </nav>
-          <div className="border-t-2 border-theme-maroon/70 p-4 dark:border-theme-yellow/70">
+          <div className="space-y-3 border-t-2 border-theme-maroon/70 p-4 dark:border-theme-yellow/70">
+            {settingsSection && (
+              <button
+                type="button"
+                onClick={() => onSectionChange(settingsSection.id)}
+                className={`w-full rounded-lg border-2 px-4 py-3 text-left text-sm font-black transition-all ${
+                  activeSection === settingsSection.id
+                    ? 'border-theme-maroon bg-theme-yellow text-theme-black shadow-[4px_4px_0_var(--ct-secondary-fixed-dim)]'
+                    : 'border-theme-teal/40 bg-slate-900/80 text-theme-teal hover:border-theme-yellow hover:bg-slate-800 hover:text-theme-yellow'
+                }`}
+              >
+                {settingsSection.label}
+              </button>
+            )}
             <PrimaryButton label={`${exitLabel} →`} size="small" fullWidth onClick={onExit} />
           </div>
         </aside>
