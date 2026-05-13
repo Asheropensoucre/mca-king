@@ -30,7 +30,7 @@ interface AdminDashboardProps {
     onPrint?: (submission: FormData) => void;
 }
 
-type AdminSection = 'leads' | 'merchants' | 'lenders' | 'pipeline' | 'finance';
+type AdminSection = 'leads' | 'merchants' | 'lenders' | 'pipeline' | 'tasks' | 'finance';
 
 const themedSelectClass = 'w-full rounded-lg border-2 border-theme-yellow bg-slate-950 px-3 py-2 text-sm font-bold text-theme-teal shadow-[4px_4px_0_var(--ct-tertiary-container)] outline-none transition focus:border-theme-teal focus:shadow-[4px_4px_0_var(--ct-secondary-fixed-dim)]';
 const headerClass = 'text-left text-xs font-black uppercase tracking-wider text-theme-yellow';
@@ -296,6 +296,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                 { id: 'merchants', label: 'Merchant Directory' },
                 { id: 'lenders', label: 'Lender Directory' },
                 { id: 'pipeline', label: 'Kamba Pipeline' },
+                { id: 'tasks', label: 'Tasks' },
                 { id: 'finance', label: 'Finance' },
             ]}
             activeSection={activeSection}
@@ -314,15 +315,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                         <SearchBar onSelectResult={handleSearchSelect} />
                         <PrimaryButton label="Create Sales Rep" size="small" onClick={() => setIsCreatingRep(true)} />
                     </div>
-                    <div className="mb-6">
-                        <TaskPanel currentUser={currentUser} title="Tasks Overview" overview />
-                    </div>
                     {activeSection === 'leads' && <LeadManager isAdmin={true} salesReps={salesReps} currentUser={currentUser} initialLeadId={leadSearchId} />}
                     {activeSection === 'merchants' && renderMerchants()}
                     {activeSection === 'lenders' && renderLenders()}
                     {activeSection === 'pipeline' && (
                         <KanbanPipelineView merchants={merchants} lenders={lenders} onUpdateMerchant={onUpdateMerchant} onSelectMerchant={handleSelectItem} />
                     )}
+                    {activeSection === 'tasks' && <TaskPanel currentUser={currentUser} title="Tasks" />}
                     {activeSection === 'finance' && <AdminFinanceView />}
                 </div>
             )}

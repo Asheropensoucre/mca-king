@@ -24,7 +24,7 @@ interface SalesRepDashboardProps {
     salesReps: SalesRepresentative[];
 }
 
-type SalesRepSection = 'leads' | 'deals' | 'pipeline';
+type SalesRepSection = 'leads' | 'deals' | 'pipeline' | 'tasks';
 
 export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUser, deals, rep, onExit, themeToggle, onPrint, lenders, onUpdateMerchant, salesReps }) => {
     const [selectedDeal, setSelectedDeal] = useState<FormData | null>(null);
@@ -83,6 +83,7 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
                 { id: 'leads', label: 'Leads' },
                 { id: 'deals', label: 'My Deals' },
                 { id: 'pipeline', label: 'Kamba Pipeline' },
+                { id: 'tasks', label: 'Tasks' },
             ]}
             activeSection={activeSection}
             onSectionChange={(section) => { setActiveSection(section); setSelectedDeal(null); }}
@@ -108,9 +109,6 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
                             {listError && <p className="mt-1 text-xs font-bold text-red-600 dark:text-red-300">{listError}</p>}
                         </div>
                         <SearchBar onSelectResult={handleSearchSelect} />
-                    </div>
-                    <div className="mb-6">
-                        <TaskPanel currentUser={currentUser} title="My Tasks" overview />
                     </div>
                     {activeSection === 'leads' && <LeadManager isAdmin={false} salesReps={salesReps} currentUser={currentUser} initialLeadId={leadSearchId} />}
                     {activeSection === 'deals' && (
@@ -156,6 +154,7 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
                     {activeSection === 'pipeline' && (
                         <KanbanPipelineView merchants={deals} lenders={lenders} onUpdateMerchant={onUpdateMerchant} onSelectMerchant={setSelectedDeal} />
                     )}
+                    {activeSection === 'tasks' && <TaskPanel currentUser={currentUser} title="My Tasks" />}
                 </div>
             )}
         </DashboardShell>
