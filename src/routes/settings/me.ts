@@ -1,5 +1,6 @@
 import { hashPassword, verifyPassword } from '@better-auth/utils/password'
 import { writeActivity } from '../../lib/activity'
+import { writeAuditLog } from '../../lib/audit'
 import { getAccountUserById, toUserProfile } from '../../lib/account-users'
 import { requireAuth } from '../../lib/requireAuth'
 import { revokeUserSessions } from '../../lib/revoke-sessions'
@@ -56,6 +57,7 @@ export async function PATCH(req: Request): Promise<Response> {
     activity_type: 'system',
     body: 'Password changed',
   })
+  await writeAuditLog({ req, user_id: user.id, action: 'settings.password_changed', entity_type: 'user', entity_id: user.id })
 
   return json({ success: true })
 }

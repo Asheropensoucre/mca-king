@@ -41,6 +41,8 @@ import { GET as getSearch } from '../routes/search/index'
 import { GET as getSavedViews, POST as postSavedView } from '../routes/saved-views/index'
 import { PATCH as patchSavedView, DELETE as deleteSavedView } from '../routes/saved-views/[id]'
 import { GET as getSettingsMe, PATCH as patchSettingsPassword } from '../routes/settings/me'
+import { GET as getAuditLogs } from '../routes/audit-logs/index'
+import { POST as postAuditReportExport } from '../routes/audit/report-export'
 import { GET as getAdminUsers, POST as postAdminUser } from '../routes/admin/users/index'
 import { GET as getAdminUser, PATCH as patchAdminUser } from '../routes/admin/users/[id]'
 import { POST as resetAdminUserPassword } from '../routes/admin/users/[id]/reset-password'
@@ -148,6 +150,14 @@ function matchRoute(method: string, pathname: string): RouteMatch | null {
 
   if (pathname === '/api/settings/me/password') {
     if (method === 'PATCH') return { handler: patchSettingsPassword }
+  }
+
+  if (pathname === '/api/audit-logs') {
+    if (method === 'GET') return { handler: getAuditLogs }
+  }
+
+  if (pathname === '/api/audit/report-export') {
+    if (method === 'POST') return { handler: postAuditReportExport }
   }
 
   if (pathname === '/api/admin/users') {

@@ -542,3 +542,17 @@ export interface LenderDashboardAnalytics {
   recent_fundings: ReportDrilldownRow[];
   pending_payoff_requests: ReportDrilldownRow[];
 }
+
+export interface AuditLog {
+  id: string;
+  user_id: string | null;
+  action: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  user_name?: string | null;
+  user_email?: string | null;
+}

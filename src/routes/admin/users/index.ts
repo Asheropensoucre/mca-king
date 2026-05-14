@@ -1,5 +1,6 @@
 import { hashPassword } from '@better-auth/utils/password'
 import { writeActivity } from '../../../lib/activity'
+import { writeAuditLog } from '../../../lib/audit'
 import { isUserRole, normalizeEmail, toUserProfile, type AccountUserRow } from '../../../lib/account-users'
 import { requireAuth } from '../../../lib/requireAuth'
 import { badRequest, forbidden, json } from '../../../lib/route-utils'
@@ -74,6 +75,7 @@ export async function POST(req: Request): Promise<Response> {
       activity_type: 'system',
       body: `Sales rep account created: ${created.full_name ?? created.email}`,
     })
+    await writeAuditLog({ req, user_id: user.id, action: 'admin.user.created', entity_type: 'user', entity_id: created.id, metadata: { role: 'sales_rep', email } })
 
     const row = await supabaseAdmin
       .from('users')

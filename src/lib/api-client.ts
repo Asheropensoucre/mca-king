@@ -1,4 +1,4 @@
-import type { Activity, ActivityType, EntityType, LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch, Task, Funding, BrokerRevenue, SalesRepCommission, MerchantFileSubmission, SavedView, SearchResults, PaginatedResponse, SavedViewEntityType, UserProfile, UserRole, Renewal, PayoffRequest, OverviewReport, PipelineReport, FundingReport, LeadReport, LenderReport, RevenueReport, CommissionReport, RenewalReport, TaskReport, LenderDashboardAnalytics } from '../../types'
+import type { Activity, ActivityType, EntityType, LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch, Task, Funding, BrokerRevenue, SalesRepCommission, MerchantFileSubmission, SavedView, SearchResults, PaginatedResponse, SavedViewEntityType, UserProfile, UserRole, Renewal, PayoffRequest, OverviewReport, PipelineReport, FundingReport, LeadReport, LenderReport, RevenueReport, CommissionReport, RenewalReport, TaskReport, LenderDashboardAnalytics, AuditLog } from '../../types'
 
 function headers(extra?: HeadersInit): HeadersInit {
   return {
@@ -47,6 +47,10 @@ export const api = {
   },
   lenderDashboard: {
     analytics: () => request<LenderDashboardAnalytics>('/api/lender-dashboard/analytics'),
+  },
+  auditLogs: {
+    list: (params?: Record<string, string | number | boolean | null | undefined>) => request<PaginatedResponse<AuditLog>>(`/api/audit-logs${toQuery(params) ? `?${toQuery(params)}` : ''}`),
+    reportExport: (data: { report_type: string; row_count: number }) => request<{ success: boolean }>('/api/audit/report-export', { method: 'POST', body: JSON.stringify(data) }),
   },
   adminUsers: {
     list: (params?: { role?: UserRole | ''; is_disabled?: string; status?: string; search?: string }) => {

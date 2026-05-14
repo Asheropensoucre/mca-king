@@ -44851,12 +44851,128 @@ async function POST6(req, context) {
   return json({ merchant_id: merchantId }, { status: 201 });
 }
 
+// src/lib/audit.ts
+var SENSITIVE_KEY_PATTERNS = [
+  /password/i,
+  /new_password/i,
+  /current_password/i,
+  /token/i,
+  /session/i,
+  /secret/i,
+  /api[_-]?key/i,
+  /service[_-]?role/i,
+  /authorization/i,
+  /cookie/i,
+  /^ssn$/i,
+  /dateofbirth/i,
+  /^dob$/i,
+  /taxid/i,
+  /signature/i
+];
+function getRequestIp(req) {
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded)
+    return forwarded.split(",")[0]?.trim() || null;
+  return req.headers.get("x-real-ip") ?? null;
+}
+function getUserAgent(req) {
+  return req.headers.get("user-agent");
+}
+function isSensitiveKey(key) {
+  return SENSITIVE_KEY_PATTERNS.some((pattern) => pattern.test(key));
+}
+function redactAuditMetadata(value) {
+  if (value === null || value === undefined)
+    return value;
+  if (Array.isArray(value))
+    return value.map((item) => redactAuditMetadata(item));
+  if (typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, entry]) => [
+      key,
+      isSensitiveKey(key) ? "[REDACTED]" : redactAuditMetadata(entry)
+    ]));
+  }
+  if (typeof value === "string" && value.length > 500)
+    return `${value.slice(0, 500)}…`;
+  return value;
+}
+async function writeAuditLog(params) {
+  try {
+    const { error } = await supabaseAdmin.from("audit_logs").insert({
+      user_id: params.user_id ?? null,
+      action: params.action,
+      entity_type: params.entity_type ?? null,
+      entity_id: params.entity_id ?? null,
+      ip_address: params.req ? getRequestIp(params.req) : null,
+      user_agent: params.req ? getUserAgent(params.req) : null,
+      metadata: redactAuditMetadata(params.metadata ?? {})
+    });
+    if (error)
+      console.error("[audit] write failed:", error.message);
+  } catch (error) {
+    console.error("[audit] write failed:", error instanceof Error ? error.message : "unknown error");
+  }
+}
+
+// src/lib/rate-limit.ts
+var buckets = new Map;
+async function checkRateLimit(options) {
+  const now = Date.now();
+  const existing = buckets.get(options.key) ?? [];
+  const recent = existing.filter((timestamp) => now - timestamp < options.windowMs);
+  if (recent.length >= options.limit) {
+    await writeAuditLog({
+      req: options.req,
+      user_id: options.userId ?? null,
+      action: "security.rate_limited",
+      entity_type: "security",
+      metadata: { key: options.key, limit: options.limit, window_ms: options.windowMs, action: options.action }
+    });
+    return new Response("Rate limit exceeded. Please try again later.", { status: 429 });
+  }
+  recent.push(now);
+  buckets.set(options.key, recent);
+  return null;
+}
+function rateLimitKey(req, scope, identifier) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown-ip";
+  return `${scope}:${identifier || "anonymous"}:${ip}`;
+}
+
 // src/routes/documents/upload.ts
 var DOC_TYPES = ["bank_statement", "contract", "stipulation", "id", "other"];
+var MAX_FILE_SIZE = 25 * 1024 * 1024;
+var ALLOWED_MIME_TYPES = new Map([
+  ["application/pdf", ["pdf"]],
+  ["image/png", ["png"]],
+  ["image/jpeg", ["jpg", "jpeg"]],
+  ["text/csv", ["csv"]],
+  ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ["xlsx"]],
+  ["application/vnd.ms-excel", ["xls"]]
+]);
 var isDocType = (value) => typeof value === "string" && DOC_TYPES.includes(value);
+function extensionOf(name) {
+  return name.includes(".") ? name.split(".").pop()?.toLowerCase() ?? "" : "";
+}
+function validateFile(file) {
+  if (file.size > MAX_FILE_SIZE)
+    return badRequest("File is too large. Maximum size is 25 MB.");
+  const allowedExtensions = ALLOWED_MIME_TYPES.get(file.type);
+  if (!allowedExtensions)
+    return badRequest("Unsupported file type. Upload PDF, PNG, JPG, CSV, XLS, or XLSX files only.");
+  if (!allowedExtensions.includes(extensionOf(file.name)))
+    return badRequest("File extension does not match the uploaded file type.");
+  return null;
+}
 async function canUploadRegularDocument(userId, role, merchantId) {
-  if (role === "admin" || role === "sales_rep")
+  if (role === "admin")
     return true;
+  if (role === "sales_rep") {
+    const { data, error } = await supabaseAdmin.from("merchants").select("id").eq("id", merchantId).eq("assigned_rep_id", userId).maybeSingle();
+    if (error)
+      return badRequest(error.message);
+    return Boolean(data);
+  }
   if (role === "merchant") {
     const { data, error } = await supabaseAdmin.from("merchants").select("id").eq("id", merchantId).eq("user_id", userId).maybeSingle();
     if (error)
@@ -44889,6 +45005,9 @@ async function canUploadPayoffLetter(userId, role, merchantId, payoffRequestId) 
 }
 async function POST7(req) {
   const user = await requireAuth(req);
+  const limited = await checkRateLimit({ key: rateLimitKey(req, "documents.upload", user.id), limit: 30, windowMs: 60 * 60 * 1000, req, userId: user.id, action: "documents.upload" });
+  if (limited)
+    return limited;
   const formData = await req.formData();
   const fileValue = formData.get("file");
   const merchantIdValue = formData.get("merchant_id");
@@ -44901,6 +45020,9 @@ async function POST7(req) {
     return badRequest("merchant_id is required");
   if (!isDocType(docTypeValue))
     return badRequest("invalid doc_type");
+  const validationError = validateFile(fileValue);
+  if (validationError)
+    return validationError;
   const isPayoffUpload = typeof payoffRequestIdValue === "string" && payoffRequestIdValue.length > 0;
   const allowed = isPayoffUpload ? await canUploadPayoffLetter(user.id, user.role, merchantIdValue, payoffRequestIdValue) : await canUploadRegularDocument(user.id, user.role, merchantIdValue);
   if (allowed instanceof Response)
@@ -44908,8 +45030,8 @@ async function POST7(req) {
   if (!allowed)
     return forbidden(isPayoffUpload ? "Only the funding lender/funder or admin can upload this payoff letter" : "Forbidden");
   const safeName = fileValue.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const storagePath = `${merchantIdValue}/${docTypeValue}/${Date.now()}-${safeName}`;
-  const { error: uploadError } = await supabaseAdmin.storage.from("documents").upload(storagePath, fileValue, { contentType: fileValue.type || "application/octet-stream" });
+  const storagePath = `${merchantIdValue}/${docTypeValue}/${crypto.randomUUID()}-${safeName}`;
+  const { error: uploadError } = await supabaseAdmin.storage.from("documents").upload(storagePath, fileValue, { contentType: fileValue.type });
   if (uploadError)
     return badRequest(uploadError.message);
   const { data, error } = await supabaseAdmin.from("documents").insert({
@@ -44934,76 +45056,77 @@ async function POST7(req) {
   }
   const activityBody = isPayoffUpload ? `Payoff letter uploaded: ${fileValue.name}` : `Document uploaded: ${fileValue.name} (${docTypeValue})`;
   const activityMetadata = { doc_type: docTypeValue, file_name: fileValue.name, document_id: data.id, payoff_request_id: isPayoffUpload ? payoffRequestIdValue : undefined };
-  recordActivity({
-    entity_type: "document",
-    entity_id: merchantIdValue,
-    user_id: user.id,
-    activity_type: "upload",
-    body: activityBody,
-    metadata: activityMetadata
-  });
-  recordActivity({
-    entity_type: "merchant",
-    entity_id: merchantIdValue,
-    user_id: user.id,
-    activity_type: "upload",
-    body: activityBody,
-    metadata: activityMetadata
-  });
+  recordActivity({ entity_type: "document", entity_id: merchantIdValue, user_id: user.id, activity_type: "upload", body: activityBody, metadata: activityMetadata });
+  recordActivity({ entity_type: "merchant", entity_id: merchantIdValue, user_id: user.id, activity_type: "upload", body: activityBody, metadata: activityMetadata });
+  await writeAuditLog({ req, user_id: user.id, action: isPayoffUpload ? "payoff_request.official_document_uploaded" : "document.uploaded", entity_type: "document", entity_id: data.id, metadata: { merchant_id: merchantIdValue, doc_type: docTypeValue, file_name: fileValue.name, file_size: fileValue.size, mime_type: fileValue.type, payoff_request_id: isPayoffUpload ? payoffRequestIdValue : null } });
   return json(data, { status: 201 });
 }
 
-// src/routes/documents/index.ts
-async function canAccessMerchant(userId, role, merchantId) {
-  if (role === "admin")
+// src/lib/permissions.ts
+async function canAccessMerchant(user, merchantId) {
+  if (user.role === "admin")
     return true;
-  const { data: merchant, error } = await supabaseAdmin.from("merchants").select("id,user_id,assigned_rep_id").eq("id", merchantId).maybeSingle();
-  if (error)
-    return badRequest(error.message);
-  if (!merchant)
+  const { data, error } = await supabaseAdmin.from("merchants").select("id,user_id,assigned_rep_id").eq("id", merchantId).maybeSingle();
+  if (error || !data)
     return false;
-  if (role === "sales_rep")
-    return merchant.assigned_rep_id === userId;
-  if (role === "merchant")
-    return merchant.user_id === userId;
-  if (role === "lender") {
-    const lenderId = await getLenderIdForUser(userId);
+  if (user.role === "sales_rep")
+    return data.assigned_rep_id === user.id;
+  if (user.role === "merchant")
+    return data.user_id === user.id;
+  if (user.role === "lender") {
+    const lenderId = await getLenderIdForUser(user.id);
     if (!lenderId)
       return false;
-    const { data, error: matchError } = await supabaseAdmin.from("lender_matches").select("id").eq("merchant_id", merchantId).eq("lender_id", lenderId).maybeSingle();
-    if (matchError)
-      return badRequest(matchError.message);
-    return Boolean(data);
+    const { data: match } = await supabaseAdmin.from("lender_matches").select("id").eq("merchant_id", merchantId).eq("lender_id", lenderId).maybeSingle();
+    if (match)
+      return true;
+    const { data: submission } = await supabaseAdmin.from("merchant_file_submissions").select("id").eq("merchant_id", merchantId).eq("lender_id", lenderId).maybeSingle();
+    return Boolean(submission);
   }
   return false;
 }
+
+// src/routes/documents/index.ts
 async function GET8(req) {
   const user = await requireAuth(req);
   const merchantId = new URL(req.url).searchParams.get("merchant_id");
   if (!merchantId)
     return badRequest("merchant_id is required");
-  const allowed = await canAccessMerchant(user.id, user.role, merchantId);
-  if (allowed instanceof Response)
-    return allowed;
-  if (!allowed)
+  if (!await canAccessMerchant(user, merchantId))
     return forbidden();
   const { data, error } = await supabaseAdmin.from("documents").select("*").eq("merchant_id", merchantId).order("uploaded_at", { ascending: false }).returns();
   if (error)
     return badRequest(error.message);
   const docs = await Promise.all((data ?? []).map(async (doc) => {
-    const { data: signedData } = await supabaseAdmin.storage.from("documents").createSignedUrl(doc.storage_path, 3600);
+    const { data: signedData } = await supabaseAdmin.storage.from("documents").createSignedUrl(doc.storage_path, 900);
+    await writeAuditLog({
+      req,
+      user_id: user.id,
+      action: "document.signed_url_generated",
+      entity_type: "document",
+      entity_id: doc.id,
+      metadata: { merchant_id: merchantId, doc_type: doc.doc_type, file_name: doc.file_name }
+    });
     return { ...doc, signed_url: signedData?.signedUrl };
   }));
+  await writeAuditLog({
+    req,
+    user_id: user.id,
+    action: "document.listed",
+    entity_type: "merchant",
+    entity_id: merchantId,
+    metadata: { count: docs.length }
+  });
   return json(docs);
 }
 
 // src/routes/documents/[id].ts
 async function DELETE4(req, context) {
-  await requireAuth(req, "admin");
+  const user = await requireAuth(req, "admin");
   const id = getId(context);
   if (!id)
     return badRequest();
-  const { data: doc, error: fetchError } = await supabaseAdmin.from("documents").select("id,storage_path").eq("id", id).maybeSingle();
+  const { data: doc, error: fetchError } = await supabaseAdmin.from("documents").select("id,storage_path,merchant_id,file_name,doc_type").eq("id", id).maybeSingle();
   if (fetchError)
     return badRequest(fetchError.message);
   if (!doc)
@@ -45014,6 +45137,7 @@ async function DELETE4(req, context) {
   const { error } = await supabaseAdmin.from("documents").delete().eq("id", id);
   if (error)
     return badRequest(error.message);
+  await writeAuditLog({ req, user_id: user.id, action: "document.deleted", entity_type: "document", entity_id: id, metadata: { merchant_id: doc.merchant_id, file_name: doc.file_name, doc_type: doc.doc_type } });
   return json({ success: true });
 }
 
@@ -45172,22 +45296,29 @@ function isSelfRegisterRole(value) {
 async function POST9(req) {
   try {
     const { email, password, role, full_name } = await req.json();
+    const normalizedEmail = email?.toLowerCase().trim() ?? "";
+    const limited = await checkRateLimit({ key: rateLimitKey(req, "auth.register", normalizedEmail), limit: 5, windowMs: 60 * 60 * 1000, req, action: "auth.register" });
+    if (limited)
+      return limited;
     if (!email || !password) {
+      await writeAuditLog({ req, action: "auth.register.failure", metadata: { email: normalizedEmail, reason: "missing_fields" } });
       return new Response("Email and password are required", { status: 400 });
     }
     if (password.length < 8) {
       return new Response("Password must be at least 8 characters", { status: 400 });
     }
-    const normalizedEmail = email.toLowerCase().trim();
     const existing = await findUserByEmail(normalizedEmail);
-    if (existing)
+    if (existing) {
+      await writeAuditLog({ req, action: "auth.register.failure", entity_type: "user", entity_id: existing.id, metadata: { email: normalizedEmail, reason: "duplicate_email" } });
       return new Response("Email already exists", { status: 400 });
+    }
     const user = await createUserWithCredential({
       email: normalizedEmail,
       passwordHash: await hashPassword(password),
       role: isSelfRegisterRole(role) ? role : "merchant",
       fullName: full_name?.trim() || normalizedEmail
     });
+    await writeAuditLog({ req, user_id: user.id, action: "auth.register", entity_type: "user", entity_id: user.id, metadata: { role: user.role } });
     return Response.json({ user });
   } catch (error) {
     console.error("Registration failed", error);
@@ -45199,25 +45330,35 @@ async function POST9(req) {
 async function POST10(req) {
   try {
     const { email, password } = await req.json();
+    const normalizedEmail = email?.toLowerCase().trim() ?? "";
+    const limited = await checkRateLimit({ key: rateLimitKey(req, "auth.login", normalizedEmail), limit: 10, windowMs: 10 * 60 * 1000, req, action: "auth.login" });
+    if (limited)
+      return limited;
     if (!email || !password) {
+      await writeAuditLog({ req, action: "auth.login.failure", metadata: { email: normalizedEmail, reason: "missing_fields" } });
       return new Response("Email and password are required", { status: 400 });
     }
-    const account = await findCredentialAccount(email.toLowerCase().trim());
+    const account = await findCredentialAccount(normalizedEmail);
     if (!account?.password || !account.users) {
+      await writeAuditLog({ req, action: "auth.login.failure", metadata: { email: normalizedEmail, reason: "invalid_credentials" } });
       return new Response("Invalid credentials", { status: 401 });
     }
     const valid = await verifyPassword(account.password, password);
     if (!valid) {
+      await writeAuditLog({ req, user_id: account.users.id, action: "auth.login.failure", entity_type: "user", entity_id: account.users.id, metadata: { email: normalizedEmail, reason: "invalid_credentials" } });
       return new Response("Invalid credentials", { status: 401 });
     }
     if (account.users.is_disabled) {
+      await writeAuditLog({ req, user_id: account.users.id, action: "auth.login.failure", entity_type: "user", entity_id: account.users.id, metadata: { email: normalizedEmail, reason: "disabled" } });
       return new Response("Account is disabled. Please contact your administrator.", { status: 403 });
     }
     if (account.users.closed_at) {
+      await writeAuditLog({ req, user_id: account.users.id, action: "auth.login.failure", entity_type: "user", entity_id: account.users.id, metadata: { email: normalizedEmail, reason: "closed" } });
       return new Response("This account has been closed.", { status: 403 });
     }
     await supabaseAdmin.from("users").update({ last_login_at: new Date().toISOString(), updatedAt: new Date().toISOString() }).eq("id", account.users.id);
     const token = await createSession(account.users.id);
+    await writeAuditLog({ req, user_id: account.users.id, action: "auth.login.success", entity_type: "user", entity_id: account.users.id, metadata: { role: account.users.role } });
     return Response.json({ user: toAuthUser(account.users) }, { headers: { "set-cookie": serializeSessionCookie(token) } });
   } catch (error) {
     console.error("Invalid credentials", error);
@@ -45228,9 +45369,11 @@ async function POST10(req) {
 // src/routes/auth/logout.ts
 async function POST11(req) {
   try {
+    const user = await requireAuth(req).catch(() => null);
     const token = getSessionToken(req);
     if (token)
       await deleteSession(token);
+    await writeAuditLog({ req, user_id: user?.id ?? null, action: "auth.logout", entity_type: user ? "user" : null, entity_id: user?.id ?? null });
     return new Response("Logged out", { status: 200, headers: { "set-cookie": serializeExpiredSessionCookie() } });
   } catch {
     return new Response("Logout failed", { status: 400 });
@@ -46036,6 +46179,7 @@ async function POST17(req) {
     body: `Deal funded for $${fundedAmount.toLocaleString()}`,
     metadata: { funding_id: fundingRow.id, lender_id: lenderId, funded_amount: fundedAmount }
   });
+  await writeAuditLog({ req, user_id: user.id, action: "funding.created", entity_type: "funding", entity_id: fundingRow.id, metadata: { merchant_id: body.merchant_id, lender_id: lenderId, funded_amount: fundedAmount, funding_type: fundingType, renewal_number: finalRenewalNumber, funding_position: finalFundingPosition } });
   triggerMerchantStatusEmail(body.merchant_id, FUNDED_STATUS);
   return json(toFunding(fundingRow), { status: 201 });
 }
@@ -47366,11 +47510,82 @@ async function PATCH13(req) {
     activity_type: "system",
     body: "Password changed"
   });
+  await writeAuditLog({ req, user_id: user.id, action: "settings.password_changed", entity_type: "user", entity_id: user.id });
+  return json({ success: true });
+}
+
+// src/routes/audit-logs/index.ts
+function toAuditLog(row) {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    action: row.action,
+    entity_type: row.entity_type,
+    entity_id: row.entity_id,
+    ip_address: row.ip_address,
+    user_agent: row.user_agent,
+    metadata: row.metadata ?? {},
+    created_at: row.created_at,
+    user_name: row.user?.full_name ?? row.user?.name ?? null,
+    user_email: row.user?.email ?? null
+  };
+}
+async function GET27(req) {
+  const user = await requireAuth(req);
+  if (user.role !== "admin")
+    return forbidden();
+  const url = new URL(req.url);
+  const pagination = getPagination(url);
+  const action = url.searchParams.get("action");
+  const entityType = url.searchParams.get("entity_type");
+  const entityId = url.searchParams.get("entity_id");
+  const userId = url.searchParams.get("user_id");
+  const from = url.searchParams.get("from");
+  const to = url.searchParams.get("to");
+  let query = supabaseAdmin.from("audit_logs").select("*, user:users(full_name,name,email)", { count: "exact" });
+  if (action)
+    query = query.ilike("action", `%${action.replace(/[%,()]/g, " ")}%`);
+  if (entityType)
+    query = query.eq("entity_type", entityType);
+  if (entityId)
+    query = query.eq("entity_id", entityId);
+  if (userId)
+    query = query.eq("user_id", userId);
+  if (from)
+    query = query.gte("created_at", `${from}T00:00:00.000Z`);
+  if (to)
+    query = query.lte("created_at", `${to}T23:59:59.999Z`);
+  const { data, error, count } = await query.order("created_at", { ascending: false }).range(pagination.from, pagination.to).returns();
+  if (error)
+    return badRequest(error.message);
+  return paginatedJson((data ?? []).map(toAuditLog), count, pagination.page, pagination.perPage);
+}
+
+// src/routes/audit/report-export.ts
+async function POST25(req) {
+  const user = await requireAuth(req);
+  if (user.role === "merchant" || user.role === "lender")
+    return forbidden();
+  const body = await req.json().catch(() => ({}));
+  const reportType = typeof body.report_type === "string" && body.report_type.trim() ? body.report_type.trim() : null;
+  if (!reportType)
+    return badRequest("report_type is required");
+  await writeAuditLog({
+    req,
+    user_id: user.id,
+    action: "report.csv_exported",
+    entity_type: "report",
+    metadata: {
+      report_type: reportType,
+      row_count: Number(body.row_count ?? 0),
+      role: user.role
+    }
+  });
   return json({ success: true });
 }
 
 // src/routes/admin/users/index.ts
-async function GET27(req) {
+async function GET28(req) {
   const user = await requireAuth(req);
   if (user.role !== "admin")
     return forbidden();
@@ -47397,7 +47612,7 @@ async function GET27(req) {
     return badRequest(error.message);
   return json((data ?? []).map(toUserProfile));
 }
-async function POST25(req) {
+async function POST26(req) {
   const user = await requireAuth(req);
   if (user.role !== "admin")
     return forbidden();
@@ -47426,6 +47641,7 @@ async function POST25(req) {
       activity_type: "system",
       body: `Sales rep account created: ${created.full_name ?? created.email}`
     });
+    await writeAuditLog({ req, user_id: user.id, action: "admin.user.created", entity_type: "user", entity_id: created.id, metadata: { role: "sales_rep", email } });
     const row = await supabaseAdmin.from("users").select("id,email,role,full_name,name,is_disabled,disabled_at,closed_at,last_login_at,created_at,createdAt,updatedAt").eq("id", created.id).single();
     if (row.error)
       return badRequest(row.error.message);
@@ -47437,7 +47653,7 @@ async function POST25(req) {
 }
 
 // src/routes/admin/users/[id].ts
-async function GET28(req, context) {
+async function GET29(req, context) {
   const currentUser = await requireAuth(req);
   if (currentUser.role !== "admin")
     return forbidden();
@@ -47501,11 +47717,14 @@ async function PATCH14(req, context) {
     activity_type: "system",
     body: bodyText
   })));
+  if (activityBodies.length > 0) {
+    await writeAuditLog({ req, user_id: currentUser.id, action: "admin.user.updated", entity_type: "user", entity_id: id, metadata: { changes: activityBodies } });
+  }
   return json(toUserProfile(data));
 }
 
 // src/routes/admin/users/[id]/reset-password.ts
-async function POST26(req, context) {
+async function POST27(req, context) {
   const currentUser = await requireAuth(req);
   if (currentUser.role !== "admin")
     return forbidden();
@@ -47533,11 +47752,12 @@ async function POST26(req, context) {
     activity_type: "system",
     body: "Password reset by admin"
   });
+  await writeAuditLog({ req, user_id: currentUser.id, action: "admin.user.password_reset", entity_type: "user", entity_id: id });
   return json({ success: true });
 }
 
 // src/routes/admin/users/[id]/disable.ts
-async function POST27(req, context) {
+async function POST28(req, context) {
   const currentUser = await requireAuth(req);
   if (currentUser.role !== "admin")
     return forbidden();
@@ -47563,11 +47783,12 @@ async function POST27(req, context) {
     activity_type: "system",
     body: `Account disabled${reason ? `: ${reason}` : ""}`
   });
+  await writeAuditLog({ req, user_id: currentUser.id, action: "admin.user.disabled", entity_type: "user", entity_id: id, metadata: { reason } });
   return json({ success: true });
 }
 
 // src/routes/admin/users/[id]/reactivate.ts
-async function POST28(req, context) {
+async function POST29(req, context) {
   const currentUser = await requireAuth(req);
   if (currentUser.role !== "admin")
     return forbidden();
@@ -47590,11 +47811,12 @@ async function POST28(req, context) {
     activity_type: "system",
     body: "Account reactivated"
   });
+  await writeAuditLog({ req, user_id: currentUser.id, action: "admin.user.reactivated", entity_type: "user", entity_id: id });
   return json({ success: true });
 }
 
 // src/routes/admin/users/[id]/close.ts
-async function POST29(req, context) {
+async function POST30(req, context) {
   const currentUser = await requireAuth(req);
   if (currentUser.role !== "admin")
     return forbidden();
@@ -47620,6 +47842,7 @@ async function POST29(req, context) {
     activity_type: "system",
     body: `Account closed${reason ? `: ${reason}` : ""}`
   });
+  await writeAuditLog({ req, user_id: currentUser.id, action: "admin.user.closed", entity_type: "user", entity_id: id, metadata: { reason } });
   return json({ success: true });
 }
 
@@ -47752,7 +47975,7 @@ function range(url) {
 }
 
 // src/routes/reports/overview.ts
-async function GET29(req) {
+async function GET30(req) {
   const user = await requireAuth(req);
   const roleError = blockReportRole(user);
   if (roleError)
@@ -47817,7 +48040,7 @@ async function GET29(req) {
 }
 
 // src/routes/reports/pipeline.ts
-async function GET30(req) {
+async function GET31(req) {
   const user = await requireAuth(req);
   const roleError = blockReportRole(user);
   if (roleError)
@@ -47863,7 +48086,7 @@ async function GET30(req) {
 }
 
 // src/routes/reports/funding.ts
-async function GET31(req) {
+async function GET32(req) {
   const user = await requireAuth(req);
   const roleError = blockReportRole(user);
   if (roleError)
@@ -47924,7 +48147,7 @@ async function GET31(req) {
 }
 
 // src/routes/reports/leads.ts
-async function GET32(req) {
+async function GET33(req) {
   const user = await requireAuth(req);
   const roleError = blockReportRole(user);
   if (roleError)
@@ -47965,7 +48188,7 @@ async function GET32(req) {
 }
 
 // src/routes/reports/lenders.ts
-async function GET33(req) {
+async function GET34(req) {
   const user = await requireAuth(req);
   const roleError = blockReportRole(user);
   if (roleError)
@@ -48037,7 +48260,7 @@ function agingKey(days) {
     return "31-60 days";
   return "60+ days";
 }
-async function GET34(req) {
+async function GET35(req) {
   const user = await requireAuth(req);
   const roleError = blockReportRole(user, true);
   if (roleError)
@@ -48094,7 +48317,7 @@ function agingKey2(days) {
     return "31-60 days";
   return "60+ days";
 }
-async function GET35(req) {
+async function GET36(req) {
   const user = await requireAuth(req);
   const roleError = blockReportRole(user);
   if (roleError)
@@ -48143,7 +48366,7 @@ async function GET35(req) {
 }
 
 // src/routes/reports/renewals.ts
-async function GET36(req) {
+async function GET37(req) {
   const user = await requireAuth(req);
   const roleError = blockReportRole(user);
   if (roleError)
@@ -48195,7 +48418,7 @@ async function GET36(req) {
 }
 
 // src/routes/reports/tasks.ts
-async function GET37(req) {
+async function GET38(req) {
   const user = await requireAuth(req);
   const roleError = blockReportRole(user);
   if (roleError)
@@ -48241,7 +48464,7 @@ async function GET37(req) {
 }
 
 // src/routes/lender-dashboard/analytics.ts
-async function GET38(req) {
+async function GET39(req) {
   const user = await requireAuth(req);
   if (user.role !== "lender")
     return forbidden();
@@ -65182,18 +65405,23 @@ Role-specific guidance:
 Tone: professional, helpful, and concise. Never make up information. If unsure, say so clearly and recommend checking the actual dashboard or asking an admin.
 `.trim();
 var displayName2 = (user) => user.full_name ?? user.email;
-async function POST30(req) {
+async function POST31(req) {
   const user = await requireAuth(req);
+  const limited = await checkRateLimit({ key: rateLimitKey(req, "ai.chat", user.id), limit: 50, windowMs: 24 * 60 * 60 * 1000, req, userId: user.id, action: "ai.chat" });
+  if (limited)
+    return limited;
   const body = await readJson(req);
   const message = typeof body.message === "string" ? body.message.trim() : "";
-  if (!message)
+  if (!message) {
+    await writeAuditLog({ req, user_id: user.id, action: "ai.chat.blocked", entity_type: "user", entity_id: user.id, metadata: { reason: "missing_message" } });
     return badRequest("message is required");
+  }
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return json({ error: "Gemini is not configured. Add GEMINI_API_KEY to the server environment and restart/redeploy." }, { status: 503 });
   }
   const currentPage = typeof body.currentPage === "string" && body.currentPage.trim() ? body.currentPage.trim() : "Unknown page";
-  const contextData = body.contextData && typeof body.contextData === "object" ? body.contextData : undefined;
+  const contextData = body.contextData && typeof body.contextData === "object" ? redactAuditMetadata(body.contextData) : undefined;
   const serializedContext = contextData ? JSON.stringify(contextData, null, 2) : "";
   const contextBlock = `[CONTEXT]
 User: ${displayName2(user)} | Role: ${user.role}
@@ -65201,64 +65429,70 @@ Current page: ${currentPage}
 ${serializedContext}
 [/CONTEXT]`;
   const ai = new GoogleGenAI({ apiKey });
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: `${contextBlock}
+  try {
+    await writeAuditLog({ req, user_id: user.id, action: "ai.chat.request", entity_type: "user", entity_id: user.id, metadata: { current_page: currentPage, message_length: message.length, role: user.role } });
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `${contextBlock}
 
 User message:
 ${message}`,
-    config: {
-      systemInstruction: SYSTEM_PROMPT
-    }
-  });
-  return json({ text: response.text ?? "I could not generate a response. Please try again." });
+      config: {
+        systemInstruction: SYSTEM_PROMPT
+      }
+    });
+    return json({ text: response.text ?? "I could not generate a response. Please try again." });
+  } catch (error) {
+    await writeAuditLog({ req, user_id: user.id, action: "ai.chat.error", entity_type: "user", entity_id: user.id, metadata: { current_page: currentPage, error: error instanceof Error ? error.message : "unknown" } });
+    throw error;
+  }
 }
 
 // src/server/api.ts
 function matchRoute(method, pathname) {
   if (pathname === "/api/lender-dashboard/analytics") {
     if (method === "GET")
-      return { handler: GET38 };
+      return { handler: GET39 };
   }
   if (pathname === "/api/reports/overview") {
     if (method === "GET")
-      return { handler: GET29 };
+      return { handler: GET30 };
   }
   if (pathname === "/api/reports/pipeline") {
     if (method === "GET")
-      return { handler: GET30 };
+      return { handler: GET31 };
   }
   if (pathname === "/api/reports/funding") {
     if (method === "GET")
-      return { handler: GET31 };
+      return { handler: GET32 };
   }
   if (pathname === "/api/reports/leads") {
     if (method === "GET")
-      return { handler: GET32 };
+      return { handler: GET33 };
   }
   if (pathname === "/api/reports/lenders") {
     if (method === "GET")
-      return { handler: GET33 };
+      return { handler: GET34 };
   }
   if (pathname === "/api/reports/revenue") {
     if (method === "GET")
-      return { handler: GET34 };
+      return { handler: GET35 };
   }
   if (pathname === "/api/reports/commissions") {
     if (method === "GET")
-      return { handler: GET35 };
+      return { handler: GET36 };
   }
   if (pathname === "/api/reports/renewals") {
     if (method === "GET")
-      return { handler: GET36 };
+      return { handler: GET37 };
   }
   if (pathname === "/api/reports/tasks") {
     if (method === "GET")
-      return { handler: GET37 };
+      return { handler: GET38 };
   }
   if (pathname === "/api/ai/chat") {
     if (method === "POST")
-      return { handler: POST30 };
+      return { handler: POST31 };
   }
   if (pathname === "/api/auth/register") {
     if (method === "POST")
@@ -65298,29 +65532,37 @@ function matchRoute(method, pathname) {
     if (method === "PATCH")
       return { handler: PATCH13 };
   }
-  if (pathname === "/api/admin/users") {
+  if (pathname === "/api/audit-logs") {
     if (method === "GET")
       return { handler: GET27 };
+  }
+  if (pathname === "/api/audit/report-export") {
     if (method === "POST")
       return { handler: POST25 };
+  }
+  if (pathname === "/api/admin/users") {
+    if (method === "GET")
+      return { handler: GET28 };
+    if (method === "POST")
+      return { handler: POST26 };
   }
   const adminUserActionMatch = pathname.match(/^\/api\/admin\/users\/([^/]+)\/(reset-password|disable|reactivate|close)$/);
   if (adminUserActionMatch) {
     const params = { id: decodeURIComponent(adminUserActionMatch[1]) };
     if (method === "POST" && adminUserActionMatch[2] === "reset-password")
-      return { handler: POST26, params };
-    if (method === "POST" && adminUserActionMatch[2] === "disable")
       return { handler: POST27, params };
-    if (method === "POST" && adminUserActionMatch[2] === "reactivate")
+    if (method === "POST" && adminUserActionMatch[2] === "disable")
       return { handler: POST28, params };
-    if (method === "POST" && adminUserActionMatch[2] === "close")
+    if (method === "POST" && adminUserActionMatch[2] === "reactivate")
       return { handler: POST29, params };
+    if (method === "POST" && adminUserActionMatch[2] === "close")
+      return { handler: POST30, params };
   }
   const adminUserMatch = pathname.match(/^\/api\/admin\/users\/([^/]+)$/);
   if (adminUserMatch) {
     const params = { id: decodeURIComponent(adminUserMatch[1]) };
     if (method === "GET")
-      return { handler: GET28, params };
+      return { handler: GET29, params };
     if (method === "PATCH")
       return { handler: PATCH14, params };
   }

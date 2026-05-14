@@ -1,4 +1,6 @@
 import { GoogleGenAI } from '@google/genai'
+import { redactAuditMetadata, writeAuditLog } from '../../lib/audit'
+import { checkRateLimit, rateLimitKey } from '../../lib/rate-limit'
 import { requireAuth } from '../../lib/requireAuth'
 import { badRequest, json, readJson } from '../../lib/route-utils'
 
@@ -49,9 +51,15 @@ const displayName = (user: { full_name?: string | null; email: string }): string
 
 export async function POST(req: Request): Promise<Response> {
   const user = await requireAuth(req)
+  const limited = await checkRateLimit({ key: rateLimitKey(req, 'ai.chat', user.id), limit: 50, windowMs: 24 * 60 * 60 * 1000, req, userId: user.id, action: 'ai.chat' })
+  if (limited) return limited
+
   const body = await readJson<ChatBody>(req)
   const message = typeof body.message === 'string' ? body.message.trim() : ''
-  if (!message) return badRequest('message is required')
+  if (!message) {
+    await writeAuditLog({ req, user_id: user.id, action: 'ai.chat.blocked', entity_type: 'user', entity_id: user.id, metadata: { reason: 'missing_message' } })
+    return badRequest('message is required')
+  }
 
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) {
@@ -59,18 +67,24 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const currentPage = typeof body.currentPage === 'string' && body.currentPage.trim() ? body.currentPage.trim() : 'Unknown page'
-  const contextData = body.contextData && typeof body.contextData === 'object' ? body.contextData : undefined
+  const contextData = body.contextData && typeof body.contextData === 'object' ? redactAuditMetadata(body.contextData) as Record<string, unknown> : undefined
   const serializedContext = contextData ? JSON.stringify(contextData, null, 2) : ''
   const contextBlock = `[CONTEXT]\nUser: ${displayName(user)} | Role: ${user.role}\nCurrent page: ${currentPage}\n${serializedContext}\n[/CONTEXT]`
 
   const ai = new GoogleGenAI({ apiKey })
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: `${contextBlock}\n\nUser message:\n${message}`,
-    config: {
-      systemInstruction: SYSTEM_PROMPT,
-    },
-  })
+  try {
+    await writeAuditLog({ req, user_id: user.id, action: 'ai.chat.request', entity_type: 'user', entity_id: user.id, metadata: { current_page: currentPage, message_length: message.length, role: user.role } })
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `${contextBlock}\n\nUser message:\n${message}`,
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+      },
+    })
 
-  return json({ text: response.text ?? 'I could not generate a response. Please try again.' })
+    return json({ text: response.text ?? 'I could not generate a response. Please try again.' })
+  } catch (error) {
+    await writeAuditLog({ req, user_id: user.id, action: 'ai.chat.error', entity_type: 'user', entity_id: user.id, metadata: { current_page: currentPage, error: error instanceof Error ? error.message : 'unknown' } })
+    throw error
+  }
 }

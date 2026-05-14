@@ -1,5 +1,6 @@
 import type { ApplicationStatus, BrokerRevenue, Funding, SalesRepCommission } from '../../../types'
 import { recordActivity } from '../../lib/activity'
+import { writeAuditLog } from '../../lib/audit'
 import { rowToMerchant, type MerchantRow, type OfferRow } from '../../lib/data-shapes'
 import { getPagination, paginatedJson, hasListParams } from '../../lib/list-query'
 import { ensureRenewalForFunding } from '../../lib/renewals'
@@ -321,6 +322,8 @@ export async function POST(req: Request): Promise<Response> {
     body: `Deal funded for $${fundedAmount.toLocaleString()}`,
     metadata: { funding_id: fundingRow.id, lender_id: lenderId, funded_amount: fundedAmount },
   })
+
+  await writeAuditLog({ req, user_id: user.id, action: 'funding.created', entity_type: 'funding', entity_id: fundingRow.id, metadata: { merchant_id: body.merchant_id, lender_id: lenderId, funded_amount: fundedAmount, funding_type: fundingType, renewal_number: finalRenewalNumber, funding_position: finalFundingPosition } })
 
   triggerMerchantStatusEmail(body.merchant_id, FUNDED_STATUS)
 

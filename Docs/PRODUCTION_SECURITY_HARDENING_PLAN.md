@@ -553,7 +553,7 @@ Strict-Transport-Security
 
 - [ ] Add Vercel headers in `vercel.json` or middleware-equivalent.
 - [ ] Create a CSP that allows only required scripts/styles/connect sources.
-- [ ] Account for Tailwind CDN if still used; better long-term fix is build-time Tailwind.
+- [x] Tailwind CDN removed; build-time Tailwind/PostCSS is now used.
 - [ ] Restrict framing to prevent clickjacking.
 - [ ] Confirm CORS does not allow arbitrary origins for authenticated APIs.
 - [ ] Ensure cookies are not set with a broad/shared domain.
@@ -713,12 +713,12 @@ MCA King can be considered ready for real customer data only when:
 - [ ] Merchants can only access their own data.
 - [ ] Sales reps can only access assigned data unless admin policy says otherwise.
 - [ ] All mutation routes are protected from obvious abuse.
-- [ ] Auth, AI, and uploads are rate-limited.
-- [ ] Documents are private and signed URLs are permission-checked.
-- [ ] Sensitive actions are audit logged.
+- [x] Auth, AI, and uploads have first-pass in-memory rate limiting; durable production store remains recommended.
+- [x] Documents are private and signed URLs are permission-checked/audited.
+- [x] Sensitive auth/admin/document/report actions are audit logged.
 - [ ] Supabase RLS/storage policies are verified.
 - [ ] Secrets are server-only and documented in deployment docs.
-- [ ] Security headers are in place.
+- [x] Security headers are configured in vercel.json.
 - [ ] A basic security test suite exists.
 - [ ] The team has a documented incident response process.
 

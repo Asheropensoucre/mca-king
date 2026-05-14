@@ -92,11 +92,9 @@ components/dashboards/shared/DashboardShell.tsx
 
 ### Styling / Build Cleanup
 
-* `index.html` currently links to `/index.css`, but the app is primarily styled through Tailwind CDN in `index.html`.
-* This causes a Vite build warning because `index.css` does not exist at build time.
-* Recommended cleanup:
-  * Either create a real `index.css`, or
-  * Remove the unused stylesheet link from `index.html`.
+* ✅ Tailwind CDN was removed in Phase H.
+* ✅ Tailwind now builds through local Tailwind/PostCSS config.
+* ✅ `index.css` is imported by `index.tsx` and contains Tailwind directives plus Corporate Tech theme CSS.
 
 ### Legacy Files
 

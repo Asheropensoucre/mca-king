@@ -1,4 +1,5 @@
 import { writeActivity } from '../../../lib/activity'
+import { writeAuditLog } from '../../../lib/audit'
 import { emailBelongsToAnotherUser, getAccountUserById, isUserRole, normalizeEmail, toUserProfile } from '../../../lib/account-users'
 import { requireAuth } from '../../../lib/requireAuth'
 import { revokeUserSessions } from '../../../lib/revoke-sessions'
@@ -81,6 +82,9 @@ export async function PATCH(req: Request, context?: RouteContext): Promise<Respo
     activity_type: 'system',
     body: bodyText,
   })))
+  if (activityBodies.length > 0) {
+    await writeAuditLog({ req, user_id: currentUser.id, action: 'admin.user.updated', entity_type: 'user', entity_id: id, metadata: { changes: activityBodies } })
+  }
 
   return json(toUserProfile(data))
 }

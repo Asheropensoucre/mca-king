@@ -1,4 +1,5 @@
 import { writeActivity } from '../../../../lib/activity'
+import { writeAuditLog } from '../../../../lib/audit'
 import { getAccountUserById } from '../../../../lib/account-users'
 import { requireAuth } from '../../../../lib/requireAuth'
 import { badRequest, forbidden, getId, json, notFound, type RouteContext } from '../../../../lib/route-utils'
@@ -30,6 +31,7 @@ export async function POST(req: Request, context?: RouteContext): Promise<Respon
     activity_type: 'system',
     body: 'Account reactivated',
   })
+  await writeAuditLog({ req, user_id: currentUser.id, action: 'admin.user.reactivated', entity_type: 'user', entity_id: id })
 
   return json({ success: true })
 }

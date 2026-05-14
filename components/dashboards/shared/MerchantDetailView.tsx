@@ -13,6 +13,7 @@ import { FundingModal } from './FundingModal';
 import { MerchantFileSubmissionsPanel } from './MerchantFileSubmissionsPanel';
 import { RenewalPanel } from './RenewalPanel';
 import { PayoffRequestsPanel } from './PayoffRequestsPanel';
+import { maskLast4 } from '../../../src/lib/sensitive-data';
 
 interface MerchantDetailViewProps { 
     item: FormData, 
@@ -184,6 +185,9 @@ export const MerchantDetailView: React.FC<MerchantDetailViewProps> = ({ item, le
     const [showFundingModal, setShowFundingModal] = useState(false);
     const [fundingRefreshKey, setFundingRefreshKey] = useState(0);
     const canMarkFunded = currentUser.role === 'admin' || currentUser.role === 'sales_rep';
+    const maskedTaxId = maskLast4(item.businessInfo.taxId);
+    const maskDob = (value: string) => value ? '••/••/••••' : '';
+    const sensitiveNotice = 'Sensitive owner/tax details are masked by default for dashboard viewing.';
 
     const handleFunded = (updatedMerchant: FormData) => {
         setFundingRefreshKey(key => key + 1);
@@ -192,8 +196,8 @@ export const MerchantDetailView: React.FC<MerchantDetailViewProps> = ({ item, le
 
     return (
     <div className="space-y-6">
-        <Card><div className="p-6"><h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Business Information</h3><dl className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"><SummaryItem label="Legal Name" value={item.businessInfo.legalName} /><SummaryItem label="DBA Name" value={item.businessInfo.dbaName} /><SummaryItem label="Phone" value={item.businessInfo.phone} /><SummaryItem label="Tax ID" value={item.businessInfo.taxId} /><SummaryItem label="Address" value={item.businessInfo.address} /><SummaryItem label="Start Date" value={item.businessInfo.startDate} /><SummaryItem label="Requested Amount" value={`$${Number(item.requestedAmount).toLocaleString()}`} /><SummaryItem label="Avg. Monthly Revenue" value={`$${Number(item.businessInfo.monthlyRevenue).toLocaleString()}`} /><SummaryItem label="Recent NSFs" value={item.businessInfo.recentNSFs} /><SummaryItem label="Industry" value={item.businessInfo.industryType} /></dl></div></Card>
-        {item.owners.map((owner, index) => (<Card key={owner.id}><div className="p-6"><h4 className="text-md font-semibold text-slate-700 dark:text-slate-300">Owner #{index + 1}</h4><dl className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"><SummaryItem label="Name" value={owner.name} /><SummaryItem label="Title" value={owner.title} /><SummaryItem label="Email" value={owner.email} /><SummaryItem label="Cell Phone" value={owner.cellPhone} /><SummaryItem label="Home Address" value={owner.homeAddress} /><SummaryItem label="DOB" value={owner.dateOfBirth} /><SummaryItem label="SSN" value={owner.ssn} /><SummaryItem label="Credit Score" value={owner.creditScore} /><SummaryItem label="Ownership" value={`${owner.ownership}%`} /></dl></div></Card>))}
+        <Card><div className="p-6"><h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Business Information</h3><p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">{sensitiveNotice}</p><dl className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"><SummaryItem label="Legal Name" value={item.businessInfo.legalName} /><SummaryItem label="DBA Name" value={item.businessInfo.dbaName} /><SummaryItem label="Phone" value={item.businessInfo.phone} /><SummaryItem label="Tax ID" value={maskedTaxId} /><SummaryItem label="Address" value={item.businessInfo.address} /><SummaryItem label="Start Date" value={item.businessInfo.startDate} /><SummaryItem label="Requested Amount" value={`$${Number(item.requestedAmount).toLocaleString()}`} /><SummaryItem label="Avg. Monthly Revenue" value={`$${Number(item.businessInfo.monthlyRevenue).toLocaleString()}`} /><SummaryItem label="Recent NSFs" value={item.businessInfo.recentNSFs} /><SummaryItem label="Industry" value={item.businessInfo.industryType} /></dl></div></Card>
+        {item.owners.map((owner, index) => (<Card key={owner.id}><div className="p-6"><h4 className="text-md font-semibold text-slate-700 dark:text-slate-300">Owner #{index + 1}</h4><dl className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"><SummaryItem label="Name" value={owner.name} /><SummaryItem label="Title" value={owner.title} /><SummaryItem label="Email" value={owner.email} /><SummaryItem label="Cell Phone" value={owner.cellPhone} /><SummaryItem label="Home Address" value={owner.homeAddress} /><SummaryItem label="DOB" value={maskDob(owner.dateOfBirth)} /><SummaryItem label="SSN" value={maskLast4(owner.ssn)} /><SummaryItem label="Credit Score" value={owner.creditScore} /><SummaryItem label="Ownership" value={`${owner.ownership}%`} /></dl></div></Card>))}
         
         <DocumentsPanel merchantId={item.id} canDelete={canDeleteDocuments} />
 

@@ -122,4 +122,4 @@ The broker shop can track renewal opportunities after a merchant is funded. Rene
 - Secure document storage and signed URL access
 - Broker-to-lender package generation and notification workflow
 - State machine for the 12-step Kamba pipeline
-- Activity history and tasks are implemented. Funding records, broker revenue, internal sales rep commissions, merchant-file submission outcomes, search/filter/saved-view work queues, account settings/admin user management, renewals tracking with payoff request tracking, and reporting/analytics are implemented. Compliance controls remain a future expansion area.
+- Activity history and tasks are implemented. Funding records, broker revenue, internal sales rep commissions, merchant-file submission outcomes, search/filter/saved-view work queues, account settings/admin user management, renewals tracking with payoff request tracking, reporting/analytics, and compliance/audit hardening are implemented. Future security enhancements include CSRF tokens, durable production rate limiting, MFA/session management, malware scanning, and automated security regression tests.

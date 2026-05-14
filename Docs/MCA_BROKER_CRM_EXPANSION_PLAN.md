@@ -99,7 +99,7 @@ Phase D — Search, Filters, Saved Views ✅ complete
 Phase E — Account Settings + Admin User Management ✅ complete
 Phase F — Renewals ✅ complete
 Phase G — Reporting and Analytics ✅ complete
-Phase H — Compliance + Audit Hardening
+Phase H — Compliance + Audit Hardening ✅ complete
 Phase I — Advanced Communications
 ```
 
@@ -1139,72 +1139,305 @@ Report tables support client-side CSV export for currently loaded rows.
 
 ---
 
-# Phase H — Compliance, Audit, and Sensitive Data Hardening
+# Phase H — Compliance, Audit, and Sensitive Data Hardening ✅ COMPLETE
 > Detailed customer-data readiness checklist: see [`PRODUCTION_SECURITY_HARDENING_PLAN.md`](PRODUCTION_SECURITY_HARDENING_PLAN.md).
-
 
 ## Goal
 
-Protect sensitive merchant data and provide auditability.
+Protect sensitive merchant data, add auditability, harden document/file handling, improve production browser security, and remove the Tailwind CDN production warning.
 
-## Why this matters
+## Database work implemented
 
-MCA applications contain sensitive data:
-
-- SSNs
-- DOBs
-- Tax IDs
-- Signatures
-- Bank statements
-- Business financials
-- Owner personal data
-
-## New/expanded tables
-
-### `audit_logs`
+Created `public.audit_logs`:
 
 ```sql
-id              uuid primary key default gen_random_uuid()
-user_id         uuid references users(id)
-action          text not null
-entity_type     text
-entity_id       uuid
-ip_address      text
-user_agent      text
-metadata        jsonb default '{}'::jsonb
-created_at      timestamptz default now()
+id uuid primary key default gen_random_uuid()
+user_id uuid references public.users(id) on delete set null
+action text not null
+entity_type text
+entity_id uuid
+ip_address text
+user_agent text
+metadata jsonb not null default '{}'::jsonb
+created_at timestamptz not null default now()
 ```
 
-## Events to audit
+Indexes added:
 
-- Login
-- Failed login
-- Logout
-- Role change
-- User created/disabled
-- Merchant viewed
-- Document downloaded
-- Document deleted
-- SSN/PII viewed
-- Offer edited
-- Funding edited
-- Commission edited
+```txt
+audit_logs_user_created_idx
+audit_logs_entity_idx
+audit_logs_action_created_idx
+audit_logs_created_idx
+status_history_merchant_changed_idx
+status_history_changed_by_idx
+```
 
-## Security improvements
+Security:
 
-- Mask SSN by default.
-- Store only last4 where possible.
-- Restrict full PII to admin or explicitly permitted users.
-- Log document signed URL generation.
-- Log document delete/download actions.
-- Add disabled users/session revocation.
-- Add rate limits on auth routes.
+```txt
+RLS enabled on audit_logs.
+Deny-all public policy added.
+Audit logs are accessed only through server-side service-role routes.
+```
+
+## Backend work implemented
+
+Created:
+
+```txt
+src/lib/audit.ts
+src/lib/permissions.ts
+src/lib/sensitive-data.ts
+src/lib/rate-limit.ts
+src/routes/audit-logs/index.ts
+src/routes/audit/report-export.ts
+```
+
+Registered routes:
+
+```txt
+GET  /api/audit-logs
+POST /api/audit/report-export
+```
+
+Access rules:
+
+```txt
+GET /api/audit-logs = admin only
+POST /api/audit/report-export = admin or sales_rep only
+```
+
+## Audit logging implemented
+
+Audit logs are now written for key sensitive actions including:
+
+```txt
+auth.login.success
+auth.login.failure
+auth.logout
+auth.register
+settings.password_changed
+admin.user.created
+admin.user.updated
+admin.user.password_reset
+admin.user.disabled
+admin.user.reactivated
+admin.user.closed
+document.listed
+document.signed_url_generated
+document.uploaded
+document.deleted
+payoff_request.official_document_uploaded
+funding.created
+report.csv_exported
+ai.chat.request
+ai.chat.blocked
+ai.chat.error
+security.rate_limited
+```
+
+Audit metadata is redacted before insert. Passwords, tokens, cookies, API keys, service-role keys, SSNs, DOBs, tax IDs, and signatures are not stored in audit metadata.
+
+## Admin UI implemented
+
+Added:
+
+```txt
+components/dashboards/AdminAuditLogPage.tsx
+```
+
+Admin Settings now includes:
+
+```txt
+Audit Logs
+```
+
+The audit log viewer supports:
+
+```txt
+Action filter
+Entity type filter
+User ID filter
+Date range filters
+Pagination
+Metadata preview
+Read-only viewing
+```
+
+## Document/file security implemented
+
+Document uploads now enforce:
+
+```txt
+Allowed MIME types
+File extension checks
+25 MB max file size
+Server-generated storage paths
+Private bucket usage through server-side Supabase service role
+Short signed URL expiration: 15 minutes
+Audit logs for listing/signed URL generation/upload/delete
+```
+
+Allowed files:
+
+```txt
+PDF
+PNG
+JPG/JPEG
+CSV
+XLS
+XLSX
+```
+
+Payoff letter uploads remain restricted to:
+
+```txt
+Admin
+Funding lender/funder for that specific funded deal
+```
+
+## Authorization hardening helpers
+
+Created reusable helpers for:
+
+```txt
+canAccessMerchant
+canUpdateMerchant
+canAccessLead
+canAccessDocument
+canAccessOffer
+canAccessLenderProfile
+assertCanAccessMerchant
+```
+
+Important lender/funder safety rule preserved:
+
+```txt
+Lender-related rows use lender profile IDs.
+The app resolves lenders.user_id → lenders.id before checking lender access.
+```
+
+## Sensitive-data masking/minimization
+
+Added helper:
+
+```txt
+src/lib/sensitive-data.ts
+```
+
+Normal merchant detail dashboard display now masks:
+
+```txt
+Tax ID
+Owner SSN
+Owner DOB
+Signatures are not displayed in normal dashboard detail views
+```
+
+AI chat context/audit metadata is redacted to avoid sending or storing obvious sensitive fields.
+
+## Rate limiting first pass
+
+Added in-memory first-pass rate limiting for:
+
+```txt
+POST /api/auth/login
+POST /api/auth/register
+POST /api/ai/chat
+POST /api/documents/upload
+```
+
+Important production note:
+
+```txt
+The current rate limiter is an in-memory safety fallback. For multi-instance Vercel production, replace/augment it with durable storage such as Upstash Redis, Vercel KV, or a Supabase-backed rate-limit table.
+```
+
+## Security headers/browser hardening
+
+Added production headers in `vercel.json`:
+
+```txt
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy
+X-Frame-Options: DENY
+Strict-Transport-Security
+Content-Security-Policy
+```
+
+## Tailwind production hardening
+
+Removed Tailwind CDN usage from `index.html`.
+
+Added build-time Tailwind pipeline:
+
+```txt
+tailwind.config.cjs
+postcss.config.cjs
+index.css with @tailwind directives
+```
+
+Added dev dependencies:
+
+```txt
+tailwindcss
+postcss
+autoprefixer
+```
+
+The production warning is resolved:
+
+```txt
+cdn.tailwindcss.com should not be used in production
+```
+
+## Deferred / future security work
+
+Phase H completed the first production hardening pass. The following should still be tracked for later hardening:
+
+```txt
+CSRF token protection for cookie-authenticated mutation routes
+Durable production rate-limit store
+Broader input schema validation across every API route
+Formal automated security regression suite
+MFA/session management enhancements
+Malware scanning pipeline for uploads
+```
+
+## Verification
+
+Passed:
+
+```bash
+bun run --bun tsc -p ./tsconfig.json --noEmit
+bun run build
+```
+
+Supabase advisors:
+
+```txt
+Security advisor: no lints.
+Performance advisor: INFO-only notices for existing unindexed FKs and unused/new indexes; no blocking issues.
+```
 
 ## Acceptance criteria
 
-- Sensitive actions produce audit logs.
-- PII is masked in normal views.
-- Admin can review user/document access history.
+- `audit_logs` table exists with RLS enabled and public access blocked. ✅
+- Sensitive auth/admin/document/deal/report events write audit logs. ✅
+- Admin can review audit logs in the app. ✅
+- Audit metadata is redacted and does not contain secrets/passwords/full PII. ✅
+- Reusable permission helpers exist. ✅
+- Lender/funder isolation is preserved across merchant details, offers, reports, documents, AI context, and dashboard analytics. ✅
+- Document upload has MIME/type/size validation. ✅
+- Signed document URLs are generated only after authorization checks and are audit logged. ✅
+- Sensitive fields are masked or removed from normal display/AI/log contexts where practical. ✅
+- Production security headers are added. ✅
+- Tailwind CDN production warning is removed. ✅
+- TypeScript passes. ✅
+- Production build passes. ✅
+- Supabase security advisor has no unresolved security findings after schema changes. ✅
 
 ---
 

@@ -44,12 +44,13 @@ The app is designed for MCA broker owners, broker shops, internal sales reps, me
 - **Account settings and admin user management** where users can change only their own password, while admins manage emails, roles, resets, account disable/close actions, and sales rep creation from a dedicated Settings area.
 - **Renewals tracking** for funded merchants, including broker-side eligibility queues, renewal funding history, and early-payoff request tracking. Merchants/admins/assigned reps can request payoff letters after funding; only the funding lender/funder for that deal or an admin can upload/link the official lender-provided payoff letter.
 - **Reporting and analytics** for admins and scoped sales reps, including overview, pipeline, funding, leads, lender/funder performance, broker revenue, commissions, renewals, tasks, and CSV exports. Lender/funder dashboards include only their own relationship analytics such as files sent, funded deals together, total funded together, and pending payoff requests.
+- **Compliance and audit hardening** with server-side audit logs, admin audit log viewer, document upload MIME/size validation, signed URL audit events, production security headers, sensitive-field masking, and first-pass rate limiting.
 
 ## Tech Stack
 
 | Area | Technology |
 |---|---|
-| Frontend | React 19, TypeScript, Vite, Tailwind CDN configuration |
+| Frontend | React 19, TypeScript, Vite, build-time Tailwind CSS/PostCSS configuration |
 | Backend | Vite development middleware API bridge, server route handlers in `src/routes` |
 | Database | Supabase Postgres |
 | Storage | Supabase Storage private `documents` bucket with signed URLs |
@@ -185,7 +186,7 @@ bun run preview
 ```txt
 Brokerage CRM/
 ├── App.tsx                         # Root React app, auth/session routing, forms, dashboards, chat mounting
-├── index.html                      # Vite HTML entry and Tailwind Corporate Tech theme config
+├── index.html                      # Vite HTML entry
 ├── index.css                       # Global Corporate Tech wallpaper, CSS variables, shadow overrides
 ├── index.tsx                       # React root mount
 ├── package.json                    # Bun/Vite scripts and dependencies
@@ -384,6 +385,6 @@ MCA King is built with and inspired by excellent open-source and developer-platf
 - [Resend](https://resend.com/) for transactional email automation
 - [Vite](https://vite.dev/) for frontend tooling and development server middleware
 - [React](https://react.dev/) for the UI framework
-- [Tailwind CSS](https://tailwindcss.com/) for utility-first styling via CDN configuration
+- [Tailwind CSS](https://tailwindcss.com/) for build-time utility-first styling
 - [dnd-kit](https://dndkit.com/) for drag-and-drop pipeline interactions
 - [Google Gemini](https://ai.google.dev/) for MCA King Assistant

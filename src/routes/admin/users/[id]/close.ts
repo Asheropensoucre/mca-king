@@ -1,4 +1,5 @@
 import { writeActivity } from '../../../../lib/activity'
+import { writeAuditLog } from '../../../../lib/audit'
 import { getAccountUserById } from '../../../../lib/account-users'
 import { requireAuth } from '../../../../lib/requireAuth'
 import { revokeUserSessions } from '../../../../lib/revoke-sessions'
@@ -38,6 +39,7 @@ export async function POST(req: Request, context?: RouteContext): Promise<Respon
     activity_type: 'system',
     body: `Account closed${reason ? `: ${reason}` : ''}`,
   })
+  await writeAuditLog({ req, user_id: currentUser.id, action: 'admin.user.closed', entity_type: 'user', entity_id: id, metadata: { reason } })
 
   return json({ success: true })
 }

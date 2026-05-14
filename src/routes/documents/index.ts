@@ -1,38 +1,18 @@
 import type { Document } from '../../../types'
-import { getLenderIdForUser } from '../../lib/merchant-file-submissions'
+import { writeAuditLog } from '../../lib/audit'
+import { canAccessMerchant } from '../../lib/permissions'
 import { requireAuth } from '../../lib/requireAuth'
 import { badRequest, forbidden, json } from '../../lib/route-utils'
 import { supabaseAdmin } from '../../lib/supabase-server'
 
-type MerchantAccessRow = { id: string; user_id: string | null; assigned_rep_id: string | null }
-
 type DocumentRow = Document
-
-async function canAccessMerchant(userId: string, role: string, merchantId: string): Promise<boolean | Response> {
-  if (role === 'admin') return true
-  const { data: merchant, error } = await supabaseAdmin.from('merchants').select('id,user_id,assigned_rep_id').eq('id', merchantId).maybeSingle<MerchantAccessRow>()
-  if (error) return badRequest(error.message)
-  if (!merchant) return false
-  if (role === 'sales_rep') return merchant.assigned_rep_id === userId
-  if (role === 'merchant') return merchant.user_id === userId
-  if (role === 'lender') {
-    const lenderId = await getLenderIdForUser(userId)
-    if (!lenderId) return false
-    const { data, error: matchError } = await supabaseAdmin.from('lender_matches').select('id').eq('merchant_id', merchantId).eq('lender_id', lenderId).maybeSingle<{ id: string }>()
-    if (matchError) return badRequest(matchError.message)
-    return Boolean(data)
-  }
-  return false
-}
 
 export async function GET(req: Request): Promise<Response> {
   const user = await requireAuth(req)
   const merchantId = new URL(req.url).searchParams.get('merchant_id')
   if (!merchantId) return badRequest('merchant_id is required')
 
-  const allowed = await canAccessMerchant(user.id, user.role, merchantId)
-  if (allowed instanceof Response) return allowed
-  if (!allowed) return forbidden()
+  if (!(await canAccessMerchant(user, merchantId))) return forbidden()
 
   const { data, error } = await supabaseAdmin
     .from('documents')
@@ -43,9 +23,26 @@ export async function GET(req: Request): Promise<Response> {
   if (error) return badRequest(error.message)
 
   const docs = await Promise.all((data ?? []).map(async doc => {
-    const { data: signedData } = await supabaseAdmin.storage.from('documents').createSignedUrl(doc.storage_path, 3600)
+    const { data: signedData } = await supabaseAdmin.storage.from('documents').createSignedUrl(doc.storage_path, 900)
+    await writeAuditLog({
+      req,
+      user_id: user.id,
+      action: 'document.signed_url_generated',
+      entity_type: 'document',
+      entity_id: doc.id,
+      metadata: { merchant_id: merchantId, doc_type: doc.doc_type, file_name: doc.file_name },
+    })
     return { ...doc, signed_url: signedData?.signedUrl }
   }))
+
+  await writeAuditLog({
+    req,
+    user_id: user.id,
+    action: 'document.listed',
+    entity_type: 'merchant',
+    entity_id: merchantId,
+    metadata: { count: docs.length },
+  })
 
   return json(docs)
 }

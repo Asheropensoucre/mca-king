@@ -6,13 +6,14 @@ import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 import { MCAKingLoader } from '../../src/components/ui/MCAKingLoader';
+import { AdminAuditLogPage } from './AdminAuditLogPage';
 
 interface AdminSettingsPageProps {
   currentUser: AuthUser;
   onSalesRepCreated: (rep: { id: string; email: string; name: string }) => void;
 }
 
-type AdminSettingsTab = 'users' | 'create_rep';
+type AdminSettingsTab = 'users' | 'create_rep' | 'audit_logs';
 type UserAction = 'email' | 'reset' | 'disable' | 'close' | null;
 
 function formatDate(value: string | null): string {
@@ -182,6 +183,7 @@ export const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ currentUse
       <div className="flex flex-wrap gap-2">
         <PrimaryButton label="User Management" size="small" variant={tab === 'users' ? 'funded' : 'default'} onClick={() => setTab('users')} />
         <PrimaryButton label="Create Sales Rep" size="small" variant={tab === 'create_rep' ? 'funded' : 'default'} onClick={() => setTab('create_rep')} />
+        <PrimaryButton label="Audit Logs" size="small" variant={tab === 'audit_logs' ? 'funded' : 'default'} onClick={() => setTab('audit_logs')} />
       </div>
 
       {tab === 'users' && (
@@ -253,6 +255,8 @@ export const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ currentUse
           </div>
         </Card>
       )}
+
+      {tab === 'audit_logs' && <AdminAuditLogPage />}
 
       {tab === 'create_rep' && (
         <Card>

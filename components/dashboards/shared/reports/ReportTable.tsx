@@ -27,7 +27,14 @@ export const ReportTable: React.FC<ReportTableProps> = ({ title, rows, exportNam
     <div>
       <div className="mb-3 flex items-center justify-between gap-3">
         {title && <h4 className="text-sm font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">{title}</h4>}
-        <PrimaryButton label="Export CSV" size="small" disabled={safeRows.length === 0} onClick={() => downloadCsv(exportName, safeRows.map(flatten))} />
+        <PrimaryButton label="Export CSV" size="small" disabled={safeRows.length === 0} onClick={() => {
+          void fetch('/api/audit/report-export', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ report_type: exportName.replace(/\.csv$/i, ''), row_count: safeRows.length }),
+          }).catch(() => undefined);
+          downloadCsv(exportName, safeRows.map(flatten));
+        }} />
       </div>
       <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
