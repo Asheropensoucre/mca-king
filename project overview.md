@@ -122,4 +122,11 @@ The broker shop can track renewal opportunities after a merchant is funded. Rene
 - Secure document storage and signed URL access
 - Broker-to-lender package generation and notification workflow
 - State machine for the 12-step Kamba pipeline
-- Activity history and tasks are implemented. Funding records, broker revenue, internal sales rep commissions, merchant-file submission outcomes, search/filter/saved-view work queues, account settings/admin user management, renewals tracking with payoff request tracking, reporting/analytics, and compliance/audit hardening are implemented. Future security enhancements include CSRF tokens, durable production rate limiting, MFA/session management, malware scanning, and automated security regression tests.
+- Activity history and tasks are implemented. Funding records, broker revenue, internal sales rep commissions, merchant-file submission outcomes, search/filter/saved-view work queues, account settings/admin user management, renewals tracking with payoff request tracking, reporting/analytics, and compliance/audit hardening are implemented. Future security enhancements include CSRF tokens, durable production rate limiting, MFA/session management, malware scanning, and automated security regression tests. Phase I communications are implemented. Future communications enhancements include SMS activation only after provider selection, A2P 10DLC compliance, STOP/HELP webhooks, quiet hours, documented opt-in proof, and budget approval.
+
+
+## Phase I: Email-First Communications Center ✅ Complete
+
+The communications phase is email-first and SMS-future-ready. Resend remains the outbound app/campaign email provider. Zoho Mail remains the mailbox provider for normal human business email and is not used for bulk/campaign sending.
+
+Phase I adds communication preferences, consent fields, global suppressions, email templates, unsubscribe handling, campaign recipient tracking, communication history, and Resend webhook handling. SMS remains disabled until a provider is selected and the business is ready for A2P 10DLC registration, STOP/HELP handling, quiet hours, documented SMS consent, and recurring SMS/provider costs.

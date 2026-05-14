@@ -16,6 +16,7 @@ import { AdminFinanceView } from './AdminFinanceView';
 import { AdminSettingsPage } from './AdminSettingsPage';
 import { RenewalsView } from './RenewalsView';
 import { ReportsView } from './ReportsView';
+import { CommunicationsCenter } from './CommunicationsCenter';
 import { FilterBar } from './shared/FilterBar';
 import { SearchBar, type SearchResultSelection } from './shared/SearchBar';
 import { api } from '../../src/lib/api-client';
@@ -33,7 +34,7 @@ interface AdminDashboardProps {
     onPrint?: (submission: FormData) => void;
 }
 
-type AdminSection = 'leads' | 'merchants' | 'lenders' | 'pipeline' | 'tasks' | 'finance' | 'renewals' | 'reports' | 'settings';
+type AdminSection = 'leads' | 'merchants' | 'lenders' | 'pipeline' | 'tasks' | 'finance' | 'renewals' | 'reports' | 'communications' | 'settings';
 
 const themedSelectClass = 'w-full rounded-lg border-2 border-theme-yellow bg-slate-950 px-3 py-2 text-sm font-bold text-theme-teal shadow-[4px_4px_0_var(--ct-tertiary-container)] outline-none transition focus:border-theme-teal focus:shadow-[4px_4px_0_var(--ct-secondary-fixed-dim)]';
 const headerClass = 'text-left text-xs font-black uppercase tracking-wider text-theme-yellow';
@@ -236,6 +237,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                 { id: 'finance', label: 'Finance' },
                 { id: 'renewals', label: 'Renewals' },
                 { id: 'reports', label: 'Reports' },
+                { id: 'communications', label: 'Communications' },
                 { id: 'settings', label: '⚙ Settings' },
             ]}
             activeSection={activeSection}
@@ -264,6 +266,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                     {activeSection === 'finance' && <AdminFinanceView />}
                     {activeSection === 'renewals' && <RenewalsView currentUser={currentUser} salesReps={salesReps} />}
                     {activeSection === 'reports' && <ReportsView currentUser={currentUser} salesReps={salesReps} lenders={lenders} />}
+                    {activeSection === 'communications' && <CommunicationsCenter currentUser={currentUser} />}
                     {activeSection === 'settings' && <AdminSettingsPage currentUser={currentUser} onSalesRepCreated={onSalesRepCreated} />}
                 </div>
             )}

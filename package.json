@@ -8,7 +8,8 @@
     "build": "bun run build:api && bun run build:web",
     "preview": "vite preview --config \"$PWD/vite.config.ts\"",
     "build:api": "bun run scripts/build-api.ts",
-    "build:web": "vite build --config \"$PWD/vite.config.ts\""
+    "build:web": "vite build --config \"$PWD/vite.config.ts\"",
+    "tsc": "tsc -p \"$PWD/tsconfig.json\""
   },
   "dependencies": {
     "@better-auth/utils": "^0.4.0",

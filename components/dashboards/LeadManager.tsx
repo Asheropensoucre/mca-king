@@ -7,6 +7,9 @@ import { Textarea } from '../ui/Textarea';
 import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 import { ActivityTimeline } from './shared/ActivityTimeline';
 import { TaskPanel } from './shared/TaskPanel';
+import { CommunicationHistoryPanel } from './shared/communications/CommunicationHistoryPanel';
+import { CommunicationPreferencesPanel } from './shared/communications/CommunicationPreferencesPanel';
+import { ManualEmailModal } from './shared/communications/ManualEmailModal';
 import { FilterBar } from './shared/FilterBar';
 
 const STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
@@ -46,6 +49,8 @@ interface LeadManagerProps {
 export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, onConverted, currentUser, initialLeadId }) => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [communicationRefreshKey, setCommunicationRefreshKey] = useState(0);
   const [showNewForm, setShowNewForm] = useState(false);
   const [noteBody, setNoteBody] = useState('');
   const [form, setForm] = useState({ business_name: '', owner_name: '', phone: '', email: '', state: '', assigned_rep_id: '', initial_note: '' });
@@ -163,6 +168,9 @@ export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, on
               </form>
             ) : selectedLead && (
               <div>
+                {showEmailModal && (
+                  <ManualEmailModal entityType="lead" entityId={selectedLead.id} defaultTo={selectedLead.email} onClose={() => setShowEmailModal(false)} onSent={() => setCommunicationRefreshKey(key => key + 1)} />
+                )}
                 <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between"><h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">{selectedLead.business_name}</h3><button onClick={() => setSelectedLead(null)} className="text-sm text-theme-teal">Close</button></div>
                 <div className="p-6 space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -173,7 +181,12 @@ export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, on
                     <label className="block"><span className="text-sm font-medium text-slate-700 dark:text-slate-300">Status</span><select value={selectedLead.status} disabled={selectedLead.status === 'converted'} onChange={e => void updateLead({ status: e.target.value as LeadStatus })} className="mt-1 block w-full rounded-md border-0 py-2 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600">{selectedLead.status === 'converted' && <option value="converted">Converted</option>}{STATUS_OPTIONS.map(status => <option key={status.value} value={status.value}>{status.label}</option>)}</select></label>
                     {isAdmin && <label className="block"><span className="text-sm font-medium text-slate-700 dark:text-slate-300">Assign Rep</span><select value={selectedLead.assigned_rep_id || ''} onChange={e => void updateLead({ assigned_rep_id: e.target.value || null })} className="mt-1 block w-full rounded-md border-0 py-2 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600"><option value="">Unassigned</option>{salesReps.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}</select></label>}
                   </div>
-                  <PrimaryButton disabled={selectedLead.status === 'converted'} label={selectedLead.status === 'converted' ? 'Already Converted' : 'Convert to Merchant'} onClick={() => void convertLead()} />
+                  <div className="flex flex-wrap gap-2">
+                    <PrimaryButton disabled={selectedLead.status === 'converted'} label={selectedLead.status === 'converted' ? 'Already Converted' : 'Convert to Merchant'} onClick={() => void convertLead()} />
+                    <PrimaryButton label="Send Email" onClick={() => setShowEmailModal(true)} />
+                  </div>
+                  <CommunicationPreferencesPanel entityType="lead" entityId={selectedLead.id} defaultEmail={selectedLead.email} defaultPhone={selectedLead.phone} />
+                  <CommunicationHistoryPanel key={communicationRefreshKey} entityType="lead" entityId={selectedLead.id} />
                   <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                     <ActivityTimeline entityType="lead" entityId={selectedLead.id} currentUserRole={currentUser.role} />
                     <TaskPanel entityType="lead" entityId={selectedLead.id} currentUser={currentUser} />

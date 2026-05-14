@@ -60,6 +60,17 @@ import { GET as getReportRenewals } from '../routes/reports/renewals'
 import { GET as getReportTasks } from '../routes/reports/tasks'
 import { GET as getLenderDashboardAnalytics } from '../routes/lender-dashboard/analytics'
 import { POST as aiChat } from '../routes/ai/chat'
+import { GET as getCommunicationPreferences, PATCH as patchCommunicationPreferences } from '../routes/communications/preferences'
+import { GET as getCommunicationHistory } from '../routes/communications/history'
+import { POST as postCommunicationSendEmail } from '../routes/communications/send-email'
+import { GET as getCommunicationTemplates, POST as postCommunicationTemplate } from '../routes/communications/templates/index'
+import { PATCH as patchCommunicationTemplate, DELETE as deleteCommunicationTemplate } from '../routes/communications/templates/[id]'
+import { GET as getCommunicationCampaigns, POST as postCommunicationCampaign } from '../routes/communications/campaigns/index'
+import { GET as getCommunicationCampaign, PATCH as patchCommunicationCampaign } from '../routes/communications/campaigns/[id]'
+import { POST as previewCommunicationCampaignRecipients } from '../routes/communications/campaigns/preview-recipients'
+import { POST as sendCommunicationCampaign } from '../routes/communications/campaigns/send'
+import { GET as getCommunicationUnsubscribe, POST as postCommunicationUnsubscribe } from '../routes/communications/unsubscribe'
+import { POST as postResendWebhook } from '../routes/webhooks/resend'
 import type { RouteContext } from '../lib/route-utils'
 
 type Handler = (req: Request, context?: RouteContext) => Promise<Response> | Response
@@ -70,6 +81,65 @@ type RouteMatch = {
 }
 
 function matchRoute(method: string, pathname: string): RouteMatch | null {
+
+
+  if (pathname === '/api/communications/preferences') {
+    if (method === 'GET') return { handler: getCommunicationPreferences }
+    if (method === 'PATCH') return { handler: patchCommunicationPreferences }
+  }
+
+  if (pathname === '/api/communications/history') {
+    if (method === 'GET') return { handler: getCommunicationHistory }
+  }
+
+  if (pathname === '/api/communications/send-email') {
+    if (method === 'POST') return { handler: postCommunicationSendEmail }
+  }
+
+  if (pathname === '/api/communications/templates') {
+    if (method === 'GET') return { handler: getCommunicationTemplates }
+    if (method === 'POST') return { handler: postCommunicationTemplate }
+  }
+
+  const communicationTemplateMatch = pathname.match(/^\/api\/communications\/templates\/([^/]+)$/)
+  if (communicationTemplateMatch) {
+    const params = { id: decodeURIComponent(communicationTemplateMatch[1]) }
+    if (method === 'PATCH') return { handler: patchCommunicationTemplate, params }
+    if (method === 'DELETE') return { handler: deleteCommunicationTemplate, params }
+  }
+
+  if (pathname === '/api/communications/campaigns') {
+    if (method === 'GET') return { handler: getCommunicationCampaigns }
+    if (method === 'POST') return { handler: postCommunicationCampaign }
+  }
+
+  const communicationCampaignPreviewMatch = pathname.match(/^\/api\/communications\/campaigns\/([^/]+)\/preview-recipients$/)
+  if (communicationCampaignPreviewMatch) {
+    const params = { id: decodeURIComponent(communicationCampaignPreviewMatch[1]) }
+    if (method === 'POST') return { handler: previewCommunicationCampaignRecipients, params }
+  }
+
+  const communicationCampaignSendMatch = pathname.match(/^\/api\/communications\/campaigns\/([^/]+)\/send$/)
+  if (communicationCampaignSendMatch) {
+    const params = { id: decodeURIComponent(communicationCampaignSendMatch[1]) }
+    if (method === 'POST') return { handler: sendCommunicationCampaign, params }
+  }
+
+  const communicationCampaignMatch = pathname.match(/^\/api\/communications\/campaigns\/([^/]+)$/)
+  if (communicationCampaignMatch) {
+    const params = { id: decodeURIComponent(communicationCampaignMatch[1]) }
+    if (method === 'GET') return { handler: getCommunicationCampaign, params }
+    if (method === 'PATCH') return { handler: patchCommunicationCampaign, params }
+  }
+
+  if (pathname === '/api/communications/unsubscribe') {
+    if (method === 'GET') return { handler: getCommunicationUnsubscribe }
+    if (method === 'POST') return { handler: postCommunicationUnsubscribe }
+  }
+
+  if (pathname === '/api/webhooks/resend') {
+    if (method === 'POST') return { handler: postResendWebhook }
+  }
 
   if (pathname === '/api/lender-dashboard/analytics') {
     if (method === 'GET') return { handler: getLenderDashboardAnalytics }

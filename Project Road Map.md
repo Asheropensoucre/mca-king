@@ -6,6 +6,9 @@
 >
 > **Business model correction:** MCA King is a broker-shop CRM. Admin users represent the broker owner/operator, sales reps are internal broker-shop users, merchants submit funding applications, and lenders/funders only review broker-submitted or broker-matched merchant files. Lenders do not originate or submit merchant deals into this CRM. Lender-side account/relationship managers are lender contacts only; MCA King should not track payouts to them.
 >
+
+> **Communications strategy:** Phase I is implemented as email-first and SMS-later. Resend should handle controlled app/campaign email, Zoho Mail should remain for human mailboxes only, and live SMS should wait until provider selection, A2P 10DLC registration, STOP/HELP handling, quiet hours, consent proof, and budget are ready. See [`Docs/COMMUNICATIONS_COMPLIANCE_STRATEGY.md`](Docs/COMMUNICATIONS_COMPLIANCE_STRATEGY.md).
+>
 > **Settings/account-management roadmap correction:** User Settings and Admin Settings must be separate. Normal users may change only their own password and safe preferences. Only admins may change user emails, roles, password reset flows, disabled/closed account status, and sales rep account creation.
 
 ## Executive Summary
@@ -189,21 +192,27 @@ Backend matching should consider:
 * Time in business
 * Lender-specific rules
 
-### Email and Notification Automation
+### Email and Notification Automation / Communications
 
-Needed features:
+Current direction:
 
-* Send merchant packages to lenders
-* Email matched lenders
-* Notify merchants when offers arrive
-* Notify sales reps on status movement
-* Send contract/stipulation notifications
+* Resend is the preferred provider for app email and Phase I controlled campaign email.
+* Zoho Mail should remain for human mailbox hosting only.
+* Phase I adds communication preferences, suppressions, templates, unsubscribe handling, campaign recipient tracking, communication history, recipient preview, and Resend webhook ingestion.
+* Live SMS should not be enabled yet; SMS waits for provider selection, A2P 10DLC, STOP/HELP webhooks, quiet hours, documented consent, and budget.
 
-Potential providers:
+Potential email providers if Resend is later replaced:
 
-* SendGrid
 * Resend
+* SendGrid
 * AWS SES
+
+Potential later SMS providers to compare:
+
+* Telnyx
+* Plivo
+* Twilio
+* Zoho Voice for human phone/UCaaS workflows, not as the default automated campaign engine unless API/webhook support is verified
 
 ### PDF Package Generation
 

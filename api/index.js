@@ -45085,6 +45085,14 @@ async function canAccessMerchant(user, merchantId) {
   }
   return false;
 }
+async function canAccessLead(user, leadId) {
+  if (user.role === "admin")
+    return true;
+  if (user.role !== "sales_rep")
+    return false;
+  const { data } = await supabaseAdmin.from("leads").select("id").eq("id", leadId).or(`assigned_rep_id.eq.${user.id},created_by.eq.${user.id}`).maybeSingle();
+  return Boolean(data);
+}
 
 // src/routes/documents/index.ts
 async function GET8(req) {
@@ -65448,8 +65456,994 @@ ${message}`,
   }
 }
 
+// src/lib/communications/suppression.ts
+function normalizeEmail2(email) {
+  const value = email?.trim().toLowerCase();
+  return value || null;
+}
+function normalizePhone(phone) {
+  const value = phone?.replace(/[^0-9+]/g, "").trim();
+  return value || null;
+}
+async function getOrCreatePreference(params) {
+  const { data, error } = await supabaseAdmin.from("communication_preferences").select("*").eq("entity_type", params.entity_type).eq("entity_id", params.entity_id).maybeSingle();
+  if (error)
+    throw new Error(error.message);
+  if (data) {
+    const update = {};
+    if (params.email && params.email !== data.email)
+      update.email = params.email;
+    if (params.phone && params.phone !== data.phone)
+      update.phone = params.phone;
+    if (Object.keys(update).length > 0) {
+      update.updated_at = new Date().toISOString();
+      const { data: updated, error: updateError } = await supabaseAdmin.from("communication_preferences").update(update).eq("id", data.id).select("*").single();
+      if (updateError)
+        throw new Error(updateError.message);
+      return updated;
+    }
+    return data;
+  }
+  const { data: created, error: createError } = await supabaseAdmin.from("communication_preferences").insert({
+    entity_type: params.entity_type,
+    entity_id: params.entity_id,
+    email: params.email ?? null,
+    phone: params.phone ?? null,
+    email_opt_in: true,
+    email_opt_out: false,
+    sms_opt_in: false,
+    sms_opt_out: false,
+    do_not_contact: false
+  }).select("*").single();
+  if (createError)
+    throw new Error(createError.message);
+  return created;
+}
+async function isSuppressed(channel, identifier) {
+  const normalized = channel === "email" ? normalizeEmail2(identifier) : normalizePhone(identifier);
+  if (!normalized)
+    return { suppressed: false, reason: null };
+  const { data, error } = await supabaseAdmin.from("global_suppressions").select("reason").eq("channel", channel).ilike("identifier", normalized).maybeSingle();
+  if (error)
+    throw new Error(error.message);
+  return { suppressed: Boolean(data), reason: data?.reason ?? null };
+}
+async function addSuppression(params) {
+  const identifier = params.channel === "email" ? normalizeEmail2(params.identifier) : normalizePhone(params.identifier);
+  if (!identifier)
+    return;
+  const { error } = await supabaseAdmin.from("global_suppressions").upsert({
+    channel: params.channel,
+    identifier,
+    reason: params.reason,
+    source: params.source,
+    entity_type: params.entity_type ?? null,
+    entity_id: params.entity_id ?? null,
+    created_by: params.created_by ?? null,
+    metadata: params.metadata ?? {}
+  }, { onConflict: "channel,identifier" });
+  if (error)
+    throw new Error(error.message);
+}
+async function evaluateEmailEligibility(params) {
+  if (!params.email)
+    return { sendable: false, skip_reason: "missing_email", preference: null };
+  const preference = await getOrCreatePreference(params);
+  if (preference?.do_not_contact)
+    return { sendable: false, skip_reason: "do_not_contact", preference };
+  if (preference?.email_opt_out || preference?.email_opt_in === false)
+    return { sendable: false, skip_reason: "email_opt_out", preference };
+  const suppressed = await isSuppressed("email", params.email);
+  if (suppressed.suppressed)
+    return { sendable: false, skip_reason: suppressed.reason ?? "suppressed", preference };
+  return { sendable: true, skip_reason: null, preference };
+}
+async function markEmailUnsubscribed(params) {
+  const email = normalizeEmail2(params.email);
+  if (!email)
+    return;
+  if (params.entity_type && params.entity_id) {
+    await getOrCreatePreference({ entity_type: params.entity_type, entity_id: params.entity_id, email });
+    const { error } = await supabaseAdmin.from("communication_preferences").update({ email_opt_in: false, email_opt_out: true, email_opt_out_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("entity_type", params.entity_type).eq("entity_id", params.entity_id);
+    if (error)
+      throw new Error(error.message);
+  }
+  await addSuppression({
+    channel: "email",
+    identifier: email,
+    reason: "unsubscribe",
+    source: params.source,
+    entity_type: params.entity_type ?? null,
+    entity_id: params.entity_id ?? null,
+    metadata: params.metadata
+  });
+}
+
+// src/lib/communications/entities.ts
+function merchantPrimaryContact(merchant) {
+  const owner = merchant.owners?.[0];
+  return {
+    email: owner?.email || null,
+    phone: owner?.cellPhone || merchant.businessInfo.phone || null,
+    name: owner?.name || merchant.businessInfo.legalName
+  };
+}
+async function canAccessCommunicationEntity(user, entityType, entityId) {
+  if (entityType === "lead")
+    return canAccessLead(user, entityId);
+  if (entityType === "merchant")
+    return canAccessMerchant(user, entityId);
+  if (entityType === "user")
+    return user.role === "admin" || user.id === entityId;
+  return user.role === "admin";
+}
+async function resolveRecipient(entityType, entityId) {
+  if (entityType === "lead") {
+    const { data, error } = await supabaseAdmin.from("leads").select("*").eq("id", entityId).maybeSingle();
+    if (error)
+      throw new Error(error.message);
+    if (!data)
+      return null;
+    return { entity_type: "lead", entity_id: data.id, name: data.owner_name || data.business_name, email: data.email, phone: data.phone };
+  }
+  if (entityType === "merchant") {
+    const { data, error } = await supabaseAdmin.from("merchants").select("*").eq("id", entityId).maybeSingle();
+    if (error)
+      throw new Error(error.message);
+    if (!data)
+      return null;
+    const merchant = rowToMerchant(data);
+    const contact = merchantPrimaryContact(merchant);
+    return { entity_type: "merchant", entity_id: merchant.id, name: contact.name, email: contact.email, phone: contact.phone };
+  }
+  if (entityType === "user") {
+    const { data, error } = await supabaseAdmin.from("users").select("id,email,full_name,name").eq("id", entityId).maybeSingle();
+    if (error)
+      throw new Error(error.message);
+    if (!data)
+      return null;
+    return { entity_type: "user", entity_id: data.id, name: data.full_name || data.name || data.email, email: data.email, phone: null };
+  }
+  return null;
+}
+async function listRecipientCandidates(user, entityType, ids) {
+  if (entityType === "lead") {
+    let query2 = supabaseAdmin.from("leads").select("*").limit(250);
+    if (ids?.length)
+      query2 = query2.in("id", ids);
+    if (user.role === "sales_rep")
+      query2 = query2.or(`assigned_rep_id.eq.${user.id},created_by.eq.${user.id}`);
+    const { data: data2, error: error2 } = await query2.returns();
+    if (error2)
+      throw new Error(error2.message);
+    return (data2 ?? []).map((lead) => ({ entity_type: "lead", entity_id: lead.id, name: lead.owner_name || lead.business_name, email: lead.email, phone: lead.phone }));
+  }
+  let query = supabaseAdmin.from("merchants").select("*").limit(250);
+  if (ids?.length)
+    query = query.in("id", ids);
+  if (user.role === "sales_rep")
+    query = query.eq("assigned_rep_id", user.id);
+  const { data, error } = await query.returns();
+  if (error)
+    throw new Error(error.message);
+  return (data ?? []).map((row) => {
+    const merchant = rowToMerchant(row);
+    const contact = merchantPrimaryContact(merchant);
+    return { entity_type: "merchant", entity_id: merchant.id, name: contact.name, email: contact.email, phone: contact.phone };
+  });
+}
+function renderTemplate(body, recipient) {
+  return body.replaceAll("{{name}}", recipient.name).replaceAll("{{email}}", recipient.email ?? "").replaceAll("{{phone}}", recipient.phone ?? "");
+}
+
+// src/routes/communications/preferences.ts
+function isEntityType2(value) {
+  return value === "lead" || value === "merchant" || value === "contact" || value === "user";
+}
+async function GET40(req) {
+  const user = await requireAuth(req);
+  if (user.role === "merchant" || user.role === "lender")
+    return forbidden();
+  const url = new URL(req.url);
+  const entityType = url.searchParams.get("entity_type");
+  const entityId = url.searchParams.get("entity_id");
+  if (!isEntityType2(entityType) || !entityId)
+    return badRequest("entity_type and entity_id are required");
+  if (!await canAccessCommunicationEntity(user, entityType, entityId))
+    return forbidden();
+  const { data, error } = await supabaseAdmin.from("communication_preferences").select("*").eq("entity_type", entityType).eq("entity_id", entityId).maybeSingle();
+  if (error)
+    return badRequest(error.message);
+  return json(data ?? await getOrCreatePreference({ entity_type: entityType, entity_id: entityId }));
+}
+async function PATCH15(req) {
+  const user = await requireAuth(req);
+  if (user.role === "merchant" || user.role === "lender")
+    return forbidden();
+  const body = await req.json();
+  const entityType = typeof body.entity_type === "string" ? body.entity_type : null;
+  const entityId = typeof body.entity_id === "string" ? body.entity_id : null;
+  if (!isEntityType2(entityType) || !entityId)
+    return badRequest("entity_type and entity_id are required");
+  if (!await canAccessCommunicationEntity(user, entityType, entityId))
+    return forbidden();
+  await getOrCreatePreference({ entity_type: entityType, entity_id: entityId, email: body.email, phone: body.phone });
+  const allowed = ["email", "phone", "email_opt_in", "email_opt_out", "sms_opt_in", "sms_opt_out", "sms_consent_source", "sms_consent_text", "sms_consent_ip", "sms_consent_at", "do_not_contact", "preferred_contact_method"];
+  const patch = { updated_at: new Date().toISOString() };
+  for (const key of allowed)
+    if (Object.prototype.hasOwnProperty.call(body, key))
+      patch[key] = body[key];
+  if (patch.email_opt_out === true) {
+    patch.email_opt_in = false;
+    patch.email_opt_out_at = new Date().toISOString();
+  }
+  if (patch.sms_opt_out === true) {
+    patch.sms_opt_in = false;
+    patch.sms_opt_out_at = new Date().toISOString();
+  }
+  const { data, error } = await supabaseAdmin.from("communication_preferences").update(patch).eq("entity_type", entityType).eq("entity_id", entityId).select("*").single();
+  if (error)
+    return badRequest(error.message);
+  await writeAuditLog({ req, user_id: user.id, action: "communications.preferences.updated", entity_type: entityType, entity_id: entityId, metadata: patch });
+  return json(data);
+}
+
+// src/routes/communications/history.ts
+function isEntityType3(value) {
+  return value === "lead" || value === "merchant" || value === "contact" || value === "user";
+}
+async function GET41(req) {
+  const user = await requireAuth(req);
+  if (user.role === "merchant" || user.role === "lender")
+    return forbidden();
+  const url = new URL(req.url);
+  const entityType = url.searchParams.get("entity_type");
+  const entityId = url.searchParams.get("entity_id");
+  if (!isEntityType3(entityType) || !entityId)
+    return badRequest("entity_type and entity_id are required");
+  if (!await canAccessCommunicationEntity(user, entityType, entityId))
+    return forbidden();
+  const { data, error } = await supabaseAdmin.from("communications").select("*").eq("entity_type", entityType).eq("entity_id", entityId).order("created_at", { ascending: false }).limit(100);
+  if (error)
+    return badRequest(error.message);
+  return json(data ?? []);
+}
+
+// src/lib/communications/providers/resend-provider.ts
+async function sendResendEmail(payload) {
+  const config2 = getEmailConfig();
+  if (!config2)
+    return { ok: false, provider: "resend", error: "Resend email is not configured" };
+  const result = await config2.resend.emails.send({
+    from: config2.from,
+    to: payload.to,
+    subject: payload.subject,
+    html: payload.html,
+    text: payload.text
+  });
+  if (result.error) {
+    return { ok: false, provider: "resend", error: result.error.message };
+  }
+  return { ok: true, provider: "resend", provider_message_id: result.data?.id ?? null };
+}
+
+// src/lib/communications/providers/sms-disabled-provider.ts
+async function sendDisabledSms() {
+  return {
+    ok: false,
+    provider: "sms-disabled",
+    error: "SMS is not enabled. Provider selection, A2P/10DLC registration, STOP/HELP handling, quiet hours, consent proof, and budget approval are required before activation."
+  };
+}
+
+// src/lib/communications/unsubscribe.ts
+import { createHmac, timingSafeEqual } from "crypto";
+var TOKEN_VERSION = "v1";
+function secret() {
+  return process.env.BETTER_AUTH_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "dev-communications-secret";
+}
+function base64url(value) {
+  return Buffer.from(value, "utf8").toString("base64url");
+}
+function unbase64url(value) {
+  return Buffer.from(value, "base64url").toString("utf8");
+}
+function sign(payload) {
+  return createHmac("sha256", secret()).update(payload).digest("base64url");
+}
+function createUnsubscribeToken(payload, ttlDays = 365) {
+  const withExpiry = {
+    ...payload,
+    exp: Date.now() + ttlDays * 24 * 60 * 60 * 1000
+  };
+  const encoded = base64url(JSON.stringify(withExpiry));
+  return `${TOKEN_VERSION}.${encoded}.${sign(`${TOKEN_VERSION}.${encoded}`)}`;
+}
+function verifyUnsubscribeToken(token) {
+  if (!token)
+    return null;
+  const parts = token.split(".");
+  if (parts.length !== 3 || parts[0] !== TOKEN_VERSION)
+    return null;
+  const signedPart = `${parts[0]}.${parts[1]}`;
+  const expected = sign(signedPart);
+  const expectedBuffer = Buffer.from(expected);
+  const actualBuffer = Buffer.from(parts[2]);
+  if (expectedBuffer.length !== actualBuffer.length || !timingSafeEqual(expectedBuffer, actualBuffer))
+    return null;
+  try {
+    const parsed = JSON.parse(unbase64url(parts[1]));
+    if (!parsed.email || !parsed.entity_type || !parsed.entity_id || Date.now() > parsed.exp)
+      return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+function unsubscribeUrl(payload) {
+  const token = createUnsubscribeToken(payload);
+  const base = getAppUrl().replace(/\/$/, "");
+  return `${base}/api/communications/unsubscribe?token=${encodeURIComponent(token)}`;
+}
+function injectUnsubscribeFooter(html, url, physicalAddress) {
+  const address = physicalAddress?.trim() || process.env.BROKER_PHYSICAL_ADDRESS || "Broker physical mailing address must be configured before production campaigns.";
+  const footer = `
+    <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0" />
+    <p style="font-size:12px;color:#64748b;line-height:1.5">
+      You are receiving this email because you are connected with this broker shop or requested funding information.
+      <br />
+      <a href="${url}" style="color:#0f766e">Unsubscribe from campaign emails</a>
+      <br />
+      ${address}
+    </p>
+  `;
+  return `${html}
+${footer}`;
+}
+
+// src/lib/communications/communication-service.ts
+function bodyPreview(html) {
+  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 500);
+}
+async function appendCommunicationEvent(params) {
+  const { error } = await supabaseAdmin.from("communications").insert({
+    entity_type: params.entity_type,
+    entity_id: params.entity_id,
+    channel: params.channel,
+    communication_type: params.communication_type,
+    from_user_id: params.from_user_id ?? null,
+    to_contact: params.to_contact ?? null,
+    subject: params.subject ?? null,
+    body_preview: params.body_preview ?? null,
+    status: params.status ?? "logged",
+    provider: params.provider ?? null,
+    provider_message_id: params.provider_message_id ?? null,
+    campaign_id: params.campaign_id ?? null,
+    campaign_recipient_id: params.campaign_recipient_id ?? null,
+    metadata: params.metadata ?? {}
+  });
+  if (error)
+    throw new Error(error.message);
+}
+async function sendEmailWithCompliance(payload) {
+  const eligible = await evaluateEmailEligibility({
+    entity_type: payload.entity_type,
+    entity_id: payload.entity_id,
+    email: payload.to
+  });
+  if (!eligible.sendable) {
+    const result2 = { ok: false, provider: "resend", error: eligible.skip_reason ?? "suppressed" };
+    await appendCommunicationEvent({
+      entity_type: payload.entity_type,
+      entity_id: payload.entity_id,
+      channel: "email",
+      communication_type: payload.category === "campaign" ? "campaign" : "manual",
+      from_user_id: payload.user.id,
+      to_contact: payload.to,
+      subject: payload.subject,
+      body_preview: bodyPreview(payload.html),
+      status: "skipped",
+      provider: "resend",
+      campaign_id: payload.campaign_id ?? null,
+      campaign_recipient_id: payload.campaign_recipient_id ?? null,
+      metadata: { reason: result2.error }
+    });
+    return result2;
+  }
+  if (payload.category === "campaign" && !process.env.BROKER_PHYSICAL_ADDRESS?.trim()) {
+    return { ok: false, provider: "resend", error: "BROKER_PHYSICAL_ADDRESS is required before campaign email can be sent" };
+  }
+  const html = payload.category === "campaign" ? injectUnsubscribeFooter(payload.html, unsubscribeUrl({
+    email: payload.to,
+    entity_type: payload.entity_type,
+    entity_id: payload.entity_id,
+    campaign_id: payload.campaign_id ?? null,
+    campaign_recipient_id: payload.campaign_recipient_id ?? null
+  })) : payload.html;
+  const result = await sendResendEmail({ ...payload, html });
+  await appendCommunicationEvent({
+    entity_type: payload.entity_type,
+    entity_id: payload.entity_id,
+    channel: "email",
+    communication_type: payload.category === "campaign" ? "campaign" : "manual",
+    from_user_id: payload.user.id,
+    to_contact: payload.to,
+    subject: payload.subject,
+    body_preview: bodyPreview(html),
+    status: result.ok ? "sent" : "failed",
+    provider: result.provider,
+    provider_message_id: result.provider_message_id ?? null,
+    campaign_id: payload.campaign_id ?? null,
+    campaign_recipient_id: payload.campaign_recipient_id ?? null,
+    metadata: result.error ? { error: result.error } : {}
+  });
+  recordActivity({
+    entity_type: payload.entity_type === "contact" ? "lead" : payload.entity_type,
+    entity_id: payload.entity_id,
+    user_id: payload.user.id,
+    activity_type: "email",
+    body: `${payload.category === "campaign" ? "Campaign email" : "Email"} ${result.ok ? "sent" : "failed"}: ${payload.subject}`,
+    metadata: { provider: result.provider, provider_message_id: result.provider_message_id, campaign_id: payload.campaign_id, error: result.error }
+  });
+  await writeAuditLog({
+    req: payload.req,
+    user_id: payload.user.id,
+    action: payload.category === "campaign" ? "communications.campaign_email.sent" : "communications.manual_email.sent",
+    entity_type: payload.entity_type,
+    entity_id: payload.entity_id,
+    metadata: { to: payload.to, subject: payload.subject, ok: result.ok, provider_message_id: result.provider_message_id, error: result.error }
+  });
+  return result;
+}
+async function sendSmsDisabled() {
+  return sendDisabledSms();
+}
+
+// src/routes/communications/send-email.ts
+function isEntityType4(value) {
+  return value === "lead" || value === "merchant" || value === "contact" || value === "user";
+}
+function htmlFromText(value) {
+  return value.split(`
+`).map((line) => `<p>${line.replace(/[&<>]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[char] ?? char)}</p>`).join("");
+}
+async function POST32(req) {
+  const user = await requireAuth(req);
+  if (user.role === "merchant" || user.role === "lender")
+    return forbidden();
+  const body = await req.json();
+  if (body.channel === "sms" || body.channel === "sms_future")
+    return json(await sendSmsDisabled(), { status: 400 });
+  if (!isEntityType4(body.entity_type) || typeof body.entity_id !== "string")
+    return badRequest("entity_type and entity_id are required");
+  if (typeof body.subject !== "string" || typeof body.body !== "string")
+    return badRequest("subject and body are required");
+  if (!await canAccessCommunicationEntity(user, body.entity_type, body.entity_id))
+    return forbidden();
+  const recipient = await resolveRecipient(body.entity_type, body.entity_id);
+  const to = typeof body.to === "string" && body.to.trim() ? body.to.trim() : recipient?.email;
+  if (!recipient || !to)
+    return badRequest("Recipient email not found");
+  const result = await sendEmailWithCompliance({
+    req,
+    to,
+    subject: body.subject,
+    html: htmlFromText(body.body),
+    category: body.category === "campaign" ? "campaign" : "transactional",
+    entity_type: body.entity_type,
+    entity_id: body.entity_id,
+    user
+  });
+  return json(result, { status: result.ok ? 200 : 400 });
+}
+
+// src/routes/communications/templates/index.ts
+async function GET42(req) {
+  const user = await requireAuth(req);
+  if (user.role === "merchant" || user.role === "lender")
+    return forbidden();
+  const { data, error } = await supabaseAdmin.from("message_templates").select("*").order("created_at", { ascending: false });
+  if (error)
+    return badRequest(error.message);
+  return json(data ?? []);
+}
+async function POST33(req) {
+  const user = await requireAuth(req);
+  const roleError = assertRole(user, ["admin"]);
+  if (roleError)
+    return roleError;
+  const body = await req.json();
+  const channel = body.channel === "sms_future" ? "sms_future" : "email";
+  if (channel === "sms_future")
+    return badRequest("SMS templates are future-ready only and cannot be created for sending in Phase I");
+  const category = body.category === "transactional" ? "transactional" : "campaign";
+  if (!body.name || !body.body)
+    return badRequest("name and body are required");
+  const { data, error } = await supabaseAdmin.from("message_templates").insert({
+    name: String(body.name),
+    channel,
+    category,
+    subject: body.subject ? String(body.subject) : null,
+    body: String(body.body),
+    variables: Array.isArray(body.variables) ? body.variables : [],
+    is_active: body.is_active !== false,
+    created_by: user.id,
+    updated_by: user.id
+  }).select("*").single();
+  if (error)
+    return badRequest(error.message);
+  await writeAuditLog({ req, user_id: user.id, action: "communications.template.created", entity_type: "message_template", entity_id: data.id, metadata: { name: data.name, category: data.category } });
+  return json(data, { status: 201 });
+}
+
+// src/routes/communications/templates/[id].ts
+async function PATCH16(req, context) {
+  const user = await requireAuth(req);
+  const roleError = assertRole(user, ["admin"]);
+  if (roleError)
+    return roleError;
+  const id = getId(context);
+  if (!id)
+    return badRequest();
+  const body = await req.json();
+  const patch = { updated_by: user.id, updated_at: new Date().toISOString() };
+  for (const key of ["name", "subject", "body", "is_active"]) {
+    if (Object.prototype.hasOwnProperty.call(body, key))
+      patch[key] = body[key];
+  }
+  if (body.category === "transactional" || body.category === "campaign")
+    patch.category = body.category;
+  if (body.channel === "email")
+    patch.channel = "email";
+  if (Array.isArray(body.variables))
+    patch.variables = body.variables;
+  const { data, error } = await supabaseAdmin.from("message_templates").update(patch).eq("id", id).select("*").single();
+  if (error)
+    return error.code === "PGRST116" ? notFound() : badRequest(error.message);
+  await writeAuditLog({ req, user_id: user.id, action: "communications.template.updated", entity_type: "message_template", entity_id: id, metadata: patch });
+  return json(data);
+}
+async function DELETE8(req, context) {
+  const user = await requireAuth(req);
+  const roleError = assertRole(user, ["admin"]);
+  if (roleError)
+    return roleError;
+  const id = getId(context);
+  if (!id)
+    return badRequest();
+  const { error } = await supabaseAdmin.from("message_templates").update({ is_active: false, updated_by: user.id, updated_at: new Date().toISOString() }).eq("id", id);
+  if (error)
+    return badRequest(error.message);
+  await writeAuditLog({ req, user_id: user.id, action: "communications.template.disabled", entity_type: "message_template", entity_id: id });
+  return json({ success: true });
+}
+
+// src/routes/communications/campaigns/index.ts
+async function GET43(req) {
+  const user = await requireAuth(req);
+  if (user.role === "merchant" || user.role === "lender")
+    return forbidden();
+  let query = supabaseAdmin.from("campaigns").select("*").order("created_at", { ascending: false }).limit(100);
+  if (user.role === "sales_rep")
+    query = query.eq("created_by", user.id);
+  const { data, error } = await query;
+  if (error)
+    return badRequest(error.message);
+  return json(data ?? []);
+}
+async function POST34(req) {
+  const user = await requireAuth(req);
+  if (user.role === "merchant" || user.role === "lender")
+    return forbidden();
+  const body = await req.json();
+  const channel = body.channel === "sms_future" ? "sms_future" : "email";
+  if (channel !== "email")
+    return badRequest("SMS campaigns are disabled in Phase I");
+  if (!body.name)
+    return badRequest("name is required");
+  const metadata = typeof body.metadata === "object" && body.metadata ? body.metadata : {};
+  const { data, error } = await supabaseAdmin.from("campaigns").insert({
+    name: String(body.name),
+    channel,
+    category: "campaign",
+    template_id: typeof body.template_id === "string" && body.template_id ? body.template_id : null,
+    subject: typeof body.subject === "string" ? body.subject : null,
+    body: typeof body.body === "string" ? body.body : null,
+    status: "draft",
+    created_by: user.id,
+    metadata
+  }).select("*").single();
+  if (error)
+    return badRequest(error.message);
+  await writeAuditLog({ req, user_id: user.id, action: "communications.campaign.created", entity_type: "campaign", entity_id: data.id, metadata: { name: data.name } });
+  return json(data, { status: 201 });
+}
+
+// src/routes/communications/campaigns/[id].ts
+async function loadCampaign(id, userId, role) {
+  let query = supabaseAdmin.from("campaigns").select("*").eq("id", id);
+  if (role === "sales_rep")
+    query = query.eq("created_by", userId);
+  const { data, error } = await query.maybeSingle();
+  if (error)
+    throw new Error(error.message);
+  return data;
+}
+async function GET44(req, context) {
+  const user = await requireAuth(req);
+  if (user.role === "merchant" || user.role === "lender")
+    return forbidden();
+  const id = getId(context);
+  if (!id)
+    return badRequest();
+  const campaign = await loadCampaign(id, user.id, user.role);
+  if (!campaign)
+    return notFound();
+  const { data: recipients, error } = await supabaseAdmin.from("campaign_recipients").select("*").eq("campaign_id", id).order("created_at", { ascending: false });
+  if (error)
+    return badRequest(error.message);
+  return json({ ...campaign, recipients: recipients ?? [] });
+}
+async function PATCH17(req, context) {
+  const user = await requireAuth(req);
+  if (user.role === "merchant" || user.role === "lender")
+    return forbidden();
+  const id = getId(context);
+  if (!id)
+    return badRequest();
+  const campaign = await loadCampaign(id, user.id, user.role);
+  if (!campaign)
+    return notFound();
+  if (!["draft", "scheduled"].includes(campaign.status))
+    return badRequest("Only draft/scheduled campaigns can be edited");
+  const body = await req.json();
+  const patch = { updated_at: new Date().toISOString() };
+  for (const key of ["name", "subject", "body", "scheduled_at"])
+    if (Object.prototype.hasOwnProperty.call(body, key))
+      patch[key] = body[key];
+  if (typeof body.template_id === "string")
+    patch.template_id = body.template_id || null;
+  if (typeof body.status === "string" && ["draft", "scheduled", "cancelled"].includes(body.status))
+    patch.status = body.status;
+  if (body.channel === "sms_future")
+    return badRequest("SMS campaigns are disabled in Phase I");
+  const { data, error } = await supabaseAdmin.from("campaigns").update(patch).eq("id", id).select("*").single();
+  if (error)
+    return badRequest(error.message);
+  await writeAuditLog({ req, user_id: user.id, action: "communications.campaign.updated", entity_type: "campaign", entity_id: id, metadata: patch });
+  return json(data);
+}
+
+// src/routes/communications/campaigns/preview-recipients.ts
+async function loadCampaign2(id, userId, role) {
+  let query = supabaseAdmin.from("campaigns").select("*").eq("id", id);
+  if (role === "sales_rep")
+    query = query.eq("created_by", userId);
+  const { data, error } = await query.maybeSingle();
+  if (error)
+    throw new Error(error.message);
+  return data;
+}
+async function POST35(req, context) {
+  const user = await requireAuth(req);
+  if (user.role === "merchant" || user.role === "lender")
+    return forbidden();
+  const id = getId(context);
+  if (!id)
+    return badRequest();
+  const campaign = await loadCampaign2(id, user.id, user.role);
+  if (!campaign)
+    return notFound();
+  if (campaign.channel !== "email")
+    return badRequest("SMS campaigns are disabled in Phase I");
+  const body = await req.json().catch(() => ({}));
+  const entityType = body.entity_type === "merchant" ? "merchant" : "lead";
+  const candidates = await listRecipientCandidates(user, entityType, Array.isArray(body.entity_ids) ? body.entity_ids : undefined);
+  const rows = [];
+  for (const candidate of candidates) {
+    const eligibility = await evaluateEmailEligibility({ entity_type: candidate.entity_type, entity_id: candidate.entity_id, email: candidate.email, phone: candidate.phone });
+    rows.push({ ...candidate, sendable: eligibility.sendable, skip_reason: eligibility.skip_reason });
+  }
+  const preview = {
+    total: rows.length,
+    sendable: rows.filter((row) => row.sendable).length,
+    skipped: rows.filter((row) => !row.sendable).length,
+    suppressed: rows.filter((row) => row.skip_reason && !["missing_email", "do_not_contact"].includes(row.skip_reason)).length,
+    missing_email: rows.filter((row) => row.skip_reason === "missing_email").length,
+    do_not_contact: rows.filter((row) => row.skip_reason === "do_not_contact").length,
+    rows
+  };
+  return json(preview);
+}
+
+// src/routes/communications/campaigns/send.ts
+var MAX_BATCH_SEND = 50;
+async function loadCampaign3(id, userId, role) {
+  let query = supabaseAdmin.from("campaigns").select("*").eq("id", id);
+  if (role === "sales_rep")
+    query = query.eq("created_by", userId);
+  const { data, error } = await query.maybeSingle();
+  if (error)
+    throw new Error(error.message);
+  return data;
+}
+async function POST36(req, context) {
+  const user = await requireAuth(req);
+  if (user.role === "merchant" || user.role === "lender")
+    return forbidden();
+  const id = getId(context);
+  if (!id)
+    return badRequest();
+  const campaign = await loadCampaign3(id, user.id, user.role);
+  if (!campaign)
+    return notFound();
+  if (campaign.channel !== "email")
+    return badRequest("SMS campaigns are disabled in Phase I");
+  if (!["draft", "scheduled", "failed"].includes(campaign.status))
+    return badRequest("Campaign cannot be sent in its current status");
+  if (!process.env.BROKER_PHYSICAL_ADDRESS?.trim())
+    return badRequest("BROKER_PHYSICAL_ADDRESS is required before campaign email can be sent");
+  if (!campaign.subject || !campaign.body)
+    return badRequest("Campaign subject and body are required");
+  const body = await req.json().catch(() => ({}));
+  const entityType = body.entity_type === "merchant" ? "merchant" : "lead";
+  const candidates = (await listRecipientCandidates(user, entityType, Array.isArray(body.entity_ids) ? body.entity_ids : undefined)).slice(0, MAX_BATCH_SEND);
+  await supabaseAdmin.from("campaigns").update({ status: "sending", started_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", id);
+  let sent = 0;
+  let failed = 0;
+  let skipped = 0;
+  const details = [];
+  for (const candidate of candidates) {
+    const eligibility = await evaluateEmailEligibility({ entity_type: candidate.entity_type, entity_id: candidate.entity_id, email: candidate.email, phone: candidate.phone });
+    const { data: recipient, error: recipientError } = await supabaseAdmin.from("campaign_recipients").insert({
+      campaign_id: id,
+      entity_type: candidate.entity_type,
+      entity_id: candidate.entity_id,
+      email: candidate.email,
+      phone: candidate.phone,
+      status: eligibility.sendable ? "queued" : "skipped",
+      skip_reason: eligibility.skip_reason,
+      provider: "resend"
+    }).select("*").single();
+    if (recipientError || !recipient) {
+      failed++;
+      details.push({ entity_id: candidate.entity_id, status: "failed", reason: recipientError?.message ?? "recipient insert failed" });
+      continue;
+    }
+    if (!eligibility.sendable || !candidate.email) {
+      skipped++;
+      details.push({ entity_id: candidate.entity_id, status: "skipped", reason: eligibility.skip_reason ?? "not_sendable" });
+      continue;
+    }
+    const result = await sendEmailWithCompliance({
+      req,
+      to: candidate.email,
+      subject: renderTemplate(campaign.subject, candidate),
+      html: renderTemplate(campaign.body, candidate).split(`
+`).map((line) => `<p>${line}</p>`).join(""),
+      category: "campaign",
+      entity_type: candidate.entity_type,
+      entity_id: candidate.entity_id,
+      user,
+      campaign_id: id,
+      campaign_recipient_id: recipient.id
+    });
+    await supabaseAdmin.from("campaign_recipients").update({
+      status: result.ok ? "sent" : "failed",
+      provider: result.provider,
+      provider_message_id: result.provider_message_id ?? null,
+      sent_at: result.ok ? new Date().toISOString() : null,
+      failed_at: result.ok ? null : new Date().toISOString(),
+      metadata: result.error ? { error: result.error } : {},
+      updated_at: new Date().toISOString()
+    }).eq("id", recipient.id);
+    if (result.ok)
+      sent++;
+    else
+      failed++;
+    details.push({ entity_id: candidate.entity_id, status: result.ok ? "sent" : "failed", reason: result.error });
+  }
+  await supabaseAdmin.from("campaigns").update({
+    status: failed > 0 && sent === 0 ? "failed" : "completed",
+    completed_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    metadata: { sent, failed, skipped, capped_at: MAX_BATCH_SEND }
+  }).eq("id", id);
+  await writeAuditLog({ req, user_id: user.id, action: "communications.campaign.sent", entity_type: "campaign", entity_id: id, metadata: { sent, failed, skipped, total: candidates.length } });
+  return json({ sent, failed, skipped, total: candidates.length, details });
+}
+
+// src/routes/communications/unsubscribe.ts
+function html(message) {
+  return new Response(`<!doctype html><html><head><title>Email Preferences</title><meta name="viewport" content="width=device-width,initial-scale=1" /></head><body style="font-family:system-ui,sans-serif;max-width:680px;margin:60px auto;padding:24px"><h1>${message}</h1><p>Your email preferences have been updated. You may close this page.</p></body></html>`, {
+    headers: { "Content-Type": "text/html; charset=utf-8" }
+  });
+}
+async function processToken(token) {
+  const payload = verifyUnsubscribeToken(token);
+  if (!payload)
+    return badRequest("Invalid or expired unsubscribe token");
+  await markEmailUnsubscribed({
+    email: payload.email,
+    entity_type: payload.entity_type,
+    entity_id: payload.entity_id,
+    source: "unsubscribe_link",
+    metadata: { campaign_id: payload.campaign_id, campaign_recipient_id: payload.campaign_recipient_id }
+  });
+  if (payload.campaign_recipient_id) {
+    await supabaseAdmin.from("campaign_recipients").update({ status: "unsubscribed", updated_at: new Date().toISOString() }).eq("id", payload.campaign_recipient_id);
+  }
+  await appendCommunicationEvent({
+    entity_type: payload.entity_type,
+    entity_id: payload.entity_id,
+    channel: "email",
+    communication_type: "delivery_event",
+    to_contact: payload.email,
+    status: "unsubscribed",
+    campaign_id: payload.campaign_id ?? null,
+    campaign_recipient_id: payload.campaign_recipient_id ?? null,
+    metadata: { source: "unsubscribe_link" }
+  });
+  return html("You have been unsubscribed");
+}
+async function GET45(req) {
+  const token = new URL(req.url).searchParams.get("token");
+  return processToken(token);
+}
+async function POST37(req) {
+  const body = await req.json().catch(() => ({}));
+  const response = await processToken(body.token ?? null);
+  if (response.headers.get("content-type")?.includes("text/html"))
+    return json({ success: true });
+  return response;
+}
+
+// src/routes/webhooks/resend.ts
+function eventType(body) {
+  return String(body.type || body.event || body.event_type || "");
+}
+function eventData(body) {
+  const data = body.data;
+  return typeof data === "object" && data !== null ? data : body;
+}
+function emailFrom(data) {
+  const candidates = [data.to, data.email, data.recipient, data.rcpt_to];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string")
+      return normalizeEmail2(candidate);
+    if (Array.isArray(candidate) && typeof candidate[0] === "string")
+      return normalizeEmail2(candidate[0]);
+  }
+  return null;
+}
+function messageIdFrom(data) {
+  for (const key of ["email_id", "message_id", "id"]) {
+    if (typeof data[key] === "string")
+      return data[key];
+  }
+  return null;
+}
+async function POST38(req) {
+  const body = await req.json().catch(() => null);
+  if (!body)
+    return badRequest("Invalid webhook payload");
+  const type = eventType(body);
+  const data = eventData(body);
+  const providerMessageId = messageIdFrom(data);
+  const email = emailFrom(data);
+  let recipient = null;
+  if (providerMessageId) {
+    const { data: found } = await supabaseAdmin.from("campaign_recipients").select("id,entity_type,entity_id,campaign_id,email").eq("provider_message_id", providerMessageId).maybeSingle();
+    recipient = found ?? null;
+  }
+  const normalizedType = type.toLowerCase();
+  let status = null;
+  if (normalizedType.includes("delivered"))
+    status = "delivered";
+  if (normalizedType.includes("bounce"))
+    status = "bounced";
+  if (normalizedType.includes("complain") || normalizedType.includes("spam"))
+    status = "complained";
+  if (normalizedType.includes("unsubscribe"))
+    status = "unsubscribed";
+  if (recipient && status) {
+    const patch = { status, updated_at: new Date().toISOString() };
+    if (status === "delivered")
+      patch.delivered_at = new Date().toISOString();
+    if (status === "bounced" || status === "complained")
+      patch.failed_at = new Date().toISOString();
+    await supabaseAdmin.from("campaign_recipients").update(patch).eq("id", recipient.id);
+  }
+  if (email && (status === "bounced" || status === "complained")) {
+    await addSuppression({ channel: "email", identifier: email, reason: status === "bounced" ? "bounce" : "complaint", source: "resend_webhook", metadata: { event_type: type, provider_message_id: providerMessageId } });
+  }
+  if (email && status === "unsubscribed") {
+    await markEmailUnsubscribed({ email, entity_type: recipient?.entity_type, entity_id: recipient?.entity_id, source: "resend_webhook", metadata: { event_type: type, provider_message_id: providerMessageId } });
+  }
+  if (recipient) {
+    await appendCommunicationEvent({
+      entity_type: recipient.entity_type,
+      entity_id: recipient.entity_id,
+      channel: "email",
+      communication_type: "delivery_event",
+      to_contact: email ?? recipient.email,
+      status: status ?? type,
+      provider: "resend",
+      provider_message_id: providerMessageId,
+      campaign_id: recipient.campaign_id,
+      campaign_recipient_id: recipient.id,
+      metadata: { event_type: type }
+    });
+  }
+  return json({ received: true });
+}
+
 // src/server/api.ts
 function matchRoute(method, pathname) {
+  if (pathname === "/api/communications/preferences") {
+    if (method === "GET")
+      return { handler: GET40 };
+    if (method === "PATCH")
+      return { handler: PATCH15 };
+  }
+  if (pathname === "/api/communications/history") {
+    if (method === "GET")
+      return { handler: GET41 };
+  }
+  if (pathname === "/api/communications/send-email") {
+    if (method === "POST")
+      return { handler: POST32 };
+  }
+  if (pathname === "/api/communications/templates") {
+    if (method === "GET")
+      return { handler: GET42 };
+    if (method === "POST")
+      return { handler: POST33 };
+  }
+  const communicationTemplateMatch = pathname.match(/^\/api\/communications\/templates\/([^/]+)$/);
+  if (communicationTemplateMatch) {
+    const params = { id: decodeURIComponent(communicationTemplateMatch[1]) };
+    if (method === "PATCH")
+      return { handler: PATCH16, params };
+    if (method === "DELETE")
+      return { handler: DELETE8, params };
+  }
+  if (pathname === "/api/communications/campaigns") {
+    if (method === "GET")
+      return { handler: GET43 };
+    if (method === "POST")
+      return { handler: POST34 };
+  }
+  const communicationCampaignPreviewMatch = pathname.match(/^\/api\/communications\/campaigns\/([^/]+)\/preview-recipients$/);
+  if (communicationCampaignPreviewMatch) {
+    const params = { id: decodeURIComponent(communicationCampaignPreviewMatch[1]) };
+    if (method === "POST")
+      return { handler: POST35, params };
+  }
+  const communicationCampaignSendMatch = pathname.match(/^\/api\/communications\/campaigns\/([^/]+)\/send$/);
+  if (communicationCampaignSendMatch) {
+    const params = { id: decodeURIComponent(communicationCampaignSendMatch[1]) };
+    if (method === "POST")
+      return { handler: POST36, params };
+  }
+  const communicationCampaignMatch = pathname.match(/^\/api\/communications\/campaigns\/([^/]+)$/);
+  if (communicationCampaignMatch) {
+    const params = { id: decodeURIComponent(communicationCampaignMatch[1]) };
+    if (method === "GET")
+      return { handler: GET44, params };
+    if (method === "PATCH")
+      return { handler: PATCH17, params };
+  }
+  if (pathname === "/api/communications/unsubscribe") {
+    if (method === "GET")
+      return { handler: GET45 };
+    if (method === "POST")
+      return { handler: POST37 };
+  }
+  if (pathname === "/api/webhooks/resend") {
+    if (method === "POST")
+      return { handler: POST38 };
+  }
   if (pathname === "/api/lender-dashboard/analytics") {
     if (method === "GET")
       return { handler: GET39 };

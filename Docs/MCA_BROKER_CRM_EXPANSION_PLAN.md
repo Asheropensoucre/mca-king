@@ -100,7 +100,7 @@ Phase E — Account Settings + Admin User Management ✅ complete
 Phase F — Renewals ✅ complete
 Phase G — Reporting and Analytics ✅ complete
 Phase H — Compliance + Audit Hardening ✅ complete
-Phase I — Advanced Communications
+Phase I — Email-First Communications Center + Compliant Campaign Foundation ✅ complete
 ```
 
 ---
@@ -1441,60 +1441,281 @@ Performance advisor: INFO-only notices for existing unindexed FKs and unused/new
 
 ---
 
-# Phase I — Advanced Communications
+# Phase I — Email-First Communications Center + Compliant Campaign Foundation ✅ COMPLETE
+
+## Implementation status
+
+Phase I is implemented as an email-first communications center. It adds communication preferences, global suppressions, email templates, campaign drafts, recipient preview, controlled Resend email sending, unsubscribe handling, communication history, Resend webhook ingestion, and SMS-disabled future readiness. Live SMS sending remains intentionally disabled.
+
+## Strategic decision
+
+Phase I should be **email-first** and **SMS-future-ready**, not a full live SMS rollout.
+
+Current communications stack:
+
+```txt
+Zoho Mail = mailbox/domain email hosting for normal human inboxes.
+Resend = outbound app email and future controlled campaign email.
+SMS provider = not selected yet.
+```
+
+Recommended decision:
+
+```txt
+Use Resend for Phase I email communications.
+Do not use Zoho Mail SMTP for bulk/campaign email.
+Do not build live SMS sending until budget/client demand and compliance setup justify it.
+Build the consent/suppression/provider foundation now so SMS can be added safely later.
+```
+
+Why SMS waits:
+
+- US business SMS commonly requires A2P 10DLC brand/campaign registration.
+- SMS has setup, monthly campaign, phone number, per-segment, and carrier surcharge costs.
+- Marketing SMS requires documented opt-in proof.
+- Cold/imported lead SMS is high-risk and should not be allowed.
+- STOP/HELP, delivery receipts, quiet hours, and provider webhooks must exist before activation.
+
+Supporting strategy doc:
+
+```txt
+Docs/COMMUNICATIONS_COMPLIANCE_STRATEGY.md
+```
 
 ## Goal
 
-Move beyond automated emails into a true communication center.
+Build a safe communication center for broker admins and internal sales reps while protecting deliverability, consent records, and future SMS readiness.
 
-## Features
+Phase I should deliver:
 
-- Manual email from CRM
-- SMS integration
-- Call logging
-- Email templates editable by admins
-- Inbound reply capture
-- Conversation history per merchant/lead
-- Bulk email/SMS for selected records
+- Communication preferences and consent tracking.
+- Global suppression list.
+- Email template management.
+- Manual email from CRM through Resend.
+- Email campaign drafts and selected-recipient sends.
+- Recipient preview with skipped/suppressed counts.
+- Required unsubscribe links for campaign email.
+- Communication history per merchant/lead.
+- Campaign recipient status tracking.
+- Resend webhook route for delivery/bounce/complaint/unsubscribe events where supported.
+- Provider abstraction for email now and SMS later.
+- SMS consent fields and disabled/future-ready UI, but no live SMS sending.
 
-## New tables
+## Explicit non-goals
+
+Do not build in Phase I:
+
+```txt
+Live Twilio/Telnyx/Plivo/Zoho Voice SMS sending
+Bulk SMS campaigns
+SMS blast UI
+Automatic texting to leads
+A2P 10DLC registration workflow inside the app
+Zoho Mail SMTP campaign sending
+Unsubscribe-less campaign email
+Campaign sending to suppressed recipients
+```
+
+## Recommended tables
+
+### `communication_preferences`
+
+```sql
+id                      uuid primary key default gen_random_uuid()
+entity_type             text not null -- lead | merchant | contact | user
+entity_id               uuid not null
+email                   text
+phone                   text
+email_opt_in            boolean not null default true
+email_opt_out           boolean not null default false
+email_opt_out_at        timestamptz
+sms_opt_in              boolean not null default false
+sms_opt_out             boolean not null default false
+sms_opt_out_at          timestamptz
+sms_consent_source      text
+sms_consent_text        text
+sms_consent_ip          text
+sms_consent_at          timestamptz
+do_not_contact          boolean not null default false
+preferred_contact_method text
+created_at              timestamptz default now()
+updated_at              timestamptz default now()
+```
+
+Important defaults:
+
+```txt
+sms_opt_in must default false.
+Imported/cold leads must not be treated as SMS-consented.
+do_not_contact overrides non-critical outreach.
+```
+
+### `global_suppressions`
+
+```sql
+id              uuid primary key default gen_random_uuid()
+channel         text not null -- email | sms
+identifier      text not null -- normalized email or phone
+reason          text not null -- unsubscribe | bounce | complaint | STOP | admin | do_not_contact
+source          text not null default 'system' -- webhook | user | admin | import | system
+entity_type     text
+entity_id       uuid
+metadata        jsonb default '{}'::jsonb
+created_at      timestamptz default now()
+created_by      uuid references users(id)
+```
 
 ### `message_templates`
 
 ```sql
 id              uuid primary key default gen_random_uuid()
 name            text not null
-channel         text not null -- email | sms
+channel         text not null -- email | sms_future
+category        text not null -- transactional | campaign
 subject         text
 body            text not null
 variables       text[] default '{}'
+is_active       boolean default true
 created_by      uuid references users(id)
+updated_by      uuid references users(id)
 created_at      timestamptz default now()
 updated_at      timestamptz default now()
 ```
 
-### `communications`
+### `campaigns`
 
 ```sql
 id              uuid primary key default gen_random_uuid()
-entity_type     text not null
-entity_id       uuid not null
-channel         text not null -- email | sms | call
-from_user_id    uuid references users(id)
-to_contact      text
+name            text not null
+channel         text not null -- email now; sms_future disabled
+category        text not null default 'campaign'
+template_id     uuid references message_templates(id)
 subject         text
 body            text
-status          text default 'sent'
-provider_id     text
+status          text default 'draft' -- draft | scheduled | sending | completed | cancelled | failed
+created_by      uuid references users(id)
+scheduled_at    timestamptz
+started_at      timestamptz
+completed_at    timestamptz
 metadata        jsonb default '{}'::jsonb
 created_at      timestamptz default now()
+updated_at      timestamptz default now()
 ```
+
+### `campaign_recipients`
+
+```sql
+id                    uuid primary key default gen_random_uuid()
+campaign_id           uuid references campaigns(id) on delete cascade
+entity_type           text not null -- lead | merchant | contact later
+entity_id             uuid not null
+email                 text
+phone                 text
+status                text default 'pending' -- pending | skipped | queued | sent | delivered | bounced | complained | unsubscribed | failed
+skip_reason           text
+provider              text
+provider_message_id   text
+sent_at               timestamptz
+delivered_at          timestamptz
+failed_at             timestamptz
+metadata              jsonb default '{}'::jsonb
+created_at            timestamptz default now()
+updated_at            timestamptz default now()
+```
+
+### `communications` or `communication_events`
+
+```sql
+id                    uuid primary key default gen_random_uuid()
+entity_type           text not null
+entity_id             uuid not null
+channel               text not null -- email | sms_future | call | system
+communication_type    text not null -- manual | campaign | transactional | delivery_event | call
+from_user_id          uuid references users(id)
+to_contact            text
+subject               text
+body_preview          text
+status                text default 'logged'
+provider              text
+provider_message_id   text
+campaign_id           uuid references campaigns(id)
+campaign_recipient_id uuid references campaign_recipients(id)
+metadata              jsonb default '{}'::jsonb
+created_at            timestamptz default now()
+```
+
+New public tables should have RLS enabled with public access blocked because MCA King uses server-side service-role routes.
+
+## Provider and pricing guidance
+
+Treat SMS pricing as planning estimates only. Verify directly before purchase.
+
+| Provider | Best fit | Approximate research cost profile | Notes |
+|---|---|---:|---|
+| Resend | Email transactional/campaign API | Free tier has limits; paid plans needed for production volume | Recommended for Phase I email. Keep campaign sending controlled. |
+| Telnyx | Lower-cost programmable SMS | About `$0.0040`/SMS segment base plus carrier fees; numbers around `$1/mo` | Strong later SMS candidate if cost/scale matter. |
+| Plivo | Balanced SMS developer experience/cost | About `$0.0050-$0.0077`/SMS segment; numbers around `$0.80/mo` | Good middle-ground later SMS candidate. |
+| Twilio | Most established SMS ecosystem | About `$0.0083`/SMS segment base plus carrier fees; numbers around `$1.15/mo` | Best docs/ecosystem, usually more expensive. |
+| Zoho Voice | Human business phone/UCaaS | Research showed about `$0.009` outbound SMS style pricing; verify | Better for sales phone system than automated campaign engine unless webhooks/API prove sufficient. |
+
+A2P 10DLC planning costs may include brand registration, standard vetting, campaign vetting, monthly campaign fees, number rental, per-message provider fees, and carrier surcharges. Research suggests initial registration/vetting can be around `$60+` and monthly campaign fees may range around `$1.50-$10+` per use case before per-message costs.
+
+## Backend/API acceptance direction
+
+Suggested routes:
+
+```txt
+GET/PATCH /api/communications/preferences
+GET       /api/communications/history
+GET/POST/PATCH /api/communications/templates
+POST      /api/communications/send-email
+GET/POST/PATCH /api/communications/campaigns
+POST      /api/communications/campaigns/:id/preview-recipients
+POST      /api/communications/campaigns/:id/send
+GET/POST  /api/communications/unsubscribe
+POST      /api/webhooks/resend
+```
+
+Rules:
+
+- Admins can manage global templates and campaigns.
+- Sales reps can communicate only with assigned/permitted leads/merchants.
+- Merchants/lenders cannot access broker campaign tools.
+- Lenders/funders cannot see broker communication lists or unrelated merchant data.
+- Campaign email must check suppressions server-side.
+- SMS send attempts must be rejected server-side until a future SMS activation phase.
+- Send/template/campaign/suppression actions should write audit logs and communication history.
+
+## UI requirements
+
+- Add Communications navigation for admins.
+- Add communication history/preferences panels to lead/merchant views where practical.
+- Avoid the word "blast" in UI.
+- Show recipient preview before sending:
+  - selected
+  - sendable
+  - skipped
+  - suppressed
+  - missing email
+  - do-not-contact
+- Disable campaign send until unsubscribe compliance is satisfied.
+- Show SMS as disabled/future-ready with clear compliance explanation.
 
 ## Acceptance criteria
 
-- Users can send manual emails from merchant/lead views.
-- Admins can edit templates without code changes.
-- Communications show in the activity timeline.
+- Communication preferences and suppression tables exist with RLS enabled and public access blocked.
+- Email templates support transactional vs campaign classification.
+- Campaign emails require unsubscribe/suppression compliance.
+- Resend is used for Phase I email through a provider abstraction.
+- Communication history is visible for leads/merchants.
+- Campaign recipient preview shows sendable/skipped/suppressed counts.
+- Unsubscribe flow is idempotent and updates suppression/preference records.
+- Resend webhook route exists and updates delivery/suppression records where supported.
+- SMS consent fields exist, but live SMS sending is disabled.
+- Server rejects SMS send attempts with a clear disabled/provider-not-configured response.
+- Zoho Mail is documented as mailbox/human email only, not campaign sending infrastructure.
+- TypeScript and production build pass.
+- Supabase security advisor has no unresolved Phase I security findings.
 
 ---
 
@@ -1762,9 +1983,9 @@ Merchant-File Submissions ✅ complete
 Search + Saved Views ✅ complete
 Account Settings + Admin User Management ✅ complete
 Renewals ✅ complete
-Reports
-Compliance/Audit
-Communications
+Reporting and Analytics ✅ complete
+Compliance + Audit Hardening ✅ complete
+Email-First Communications Center + Compliant Campaign Foundation ✅ complete
 ```
 
 That is the path from a strong workflow platform to a serious MCA brokerage CRM.

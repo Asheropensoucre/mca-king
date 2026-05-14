@@ -13,6 +13,9 @@ import { FundingModal } from './FundingModal';
 import { MerchantFileSubmissionsPanel } from './MerchantFileSubmissionsPanel';
 import { RenewalPanel } from './RenewalPanel';
 import { PayoffRequestsPanel } from './PayoffRequestsPanel';
+import { CommunicationHistoryPanel } from './communications/CommunicationHistoryPanel';
+import { CommunicationPreferencesPanel } from './communications/CommunicationPreferencesPanel';
+import { ManualEmailModal } from './communications/ManualEmailModal';
 import { maskLast4 } from '../../../src/lib/sensitive-data';
 
 interface MerchantDetailViewProps { 
@@ -183,6 +186,8 @@ const MatchedLendersPanel: React.FC<MatchedLendersPanelProps> = ({ merchantId, l
 
 export const MerchantDetailView: React.FC<MerchantDetailViewProps> = ({ item, lenders = [], canDeleteDocuments = false, canManageMatches = false, canRemoveMatches = false, currentUser, onMerchantFunded }) => {
     const [showFundingModal, setShowFundingModal] = useState(false);
+    const [showEmailModal, setShowEmailModal] = useState(false);
+    const [communicationRefreshKey, setCommunicationRefreshKey] = useState(0);
     const [fundingRefreshKey, setFundingRefreshKey] = useState(0);
     const canMarkFunded = currentUser.role === 'admin' || currentUser.role === 'sales_rep';
     const maskedTaxId = maskLast4(item.businessInfo.taxId);
@@ -211,6 +216,11 @@ export const MerchantDetailView: React.FC<MerchantDetailViewProps> = ({ item, le
 
         {(currentUser.role === 'admin' || currentUser.role === 'sales_rep') && (
             <>
+                <div className="flex justify-end">
+                    <PrimaryButton label="Send Email" size="small" onClick={() => setShowEmailModal(true)} />
+                </div>
+                <CommunicationPreferencesPanel entityType="merchant" entityId={item.id} defaultEmail={item.owners[0]?.email || null} defaultPhone={item.owners[0]?.cellPhone || item.businessInfo.phone || null} />
+                <CommunicationHistoryPanel key={communicationRefreshKey} entityType="merchant" entityId={item.id} />
                 <FundingSummary merchantId={item.id} currentUser={currentUser} refreshKey={fundingRefreshKey} />
                 <RenewalPanel merchantId={item.id} currentUser={currentUser} />
                 <PayoffRequestsPanel merchantId={item.id} lenders={lenders} currentUser={currentUser} />
@@ -232,6 +242,9 @@ export const MerchantDetailView: React.FC<MerchantDetailViewProps> = ({ item, le
             ) : <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{currentUser.role === 'lender' ? 'You have not sent an offer for this file yet.' : 'No offers yet.'}</p>}
         </div></Card>
 
+        {showEmailModal && (
+            <ManualEmailModal entityType="merchant" entityId={item.id} defaultTo={item.owners[0]?.email || null} onClose={() => setShowEmailModal(false)} onSent={() => setCommunicationRefreshKey(key => key + 1)} />
+        )}
         {showFundingModal && (
             <FundingModal merchant={item} lenders={lenders} currentUser={currentUser} onClose={() => setShowFundingModal(false)} onFunded={handleFunded} />
         )}

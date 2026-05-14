@@ -1,4 +1,4 @@
-import type { Activity, ActivityType, EntityType, LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch, Task, Funding, BrokerRevenue, SalesRepCommission, MerchantFileSubmission, SavedView, SearchResults, PaginatedResponse, SavedViewEntityType, UserProfile, UserRole, Renewal, PayoffRequest, OverviewReport, PipelineReport, FundingReport, LeadReport, LenderReport, RevenueReport, CommissionReport, RenewalReport, TaskReport, LenderDashboardAnalytics, AuditLog } from '../../types'
+import type { Activity, ActivityType, EntityType, LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch, Task, Funding, BrokerRevenue, SalesRepCommission, MerchantFileSubmission, SavedView, SearchResults, PaginatedResponse, SavedViewEntityType, UserProfile, UserRole, Renewal, PayoffRequest, OverviewReport, PipelineReport, FundingReport, LeadReport, LenderReport, RevenueReport, CommissionReport, RenewalReport, TaskReport, LenderDashboardAnalytics, AuditLog, CommunicationPreference, MessageTemplate, Campaign, CommunicationEvent, RecipientPreview, CommunicationEntityType } from '../../types'
 
 function headers(extra?: HeadersInit): HeadersInit {
   return {
@@ -30,6 +30,27 @@ function toQuery(params?: Record<string, string | number | boolean | null | unde
 }
 
 export const api = {
+
+  communications: {
+    preferences: (entityType: CommunicationEntityType, entityId: string) => request<CommunicationPreference>(`/api/communications/preferences?entity_type=${encodeURIComponent(entityType)}&entity_id=${encodeURIComponent(entityId)}`),
+    updatePreferences: (data: Partial<CommunicationPreference> & { entity_type: CommunicationEntityType; entity_id: string }) => request<CommunicationPreference>('/api/communications/preferences', { method: 'PATCH', body: JSON.stringify(data) }),
+    history: (entityType: CommunicationEntityType, entityId: string) => request<CommunicationEvent[]>(`/api/communications/history?entity_type=${encodeURIComponent(entityType)}&entity_id=${encodeURIComponent(entityId)}`),
+    sendEmail: (data: { entity_type: CommunicationEntityType; entity_id: string; subject: string; body: string; category?: 'transactional' | 'campaign'; to?: string }) => request<{ ok: boolean; provider: string; provider_message_id?: string | null; error?: string }>('/api/communications/send-email', { method: 'POST', body: JSON.stringify(data) }),
+    templates: {
+      list: () => request<MessageTemplate[]>('/api/communications/templates'),
+      create: (data: Pick<MessageTemplate, 'name' | 'channel' | 'category' | 'body'> & Partial<Pick<MessageTemplate, 'subject' | 'variables' | 'is_active'>>) => request<MessageTemplate>('/api/communications/templates', { method: 'POST', body: JSON.stringify(data) }),
+      update: (id: string, data: Partial<Pick<MessageTemplate, 'name' | 'channel' | 'category' | 'subject' | 'body' | 'variables' | 'is_active'>>) => request<MessageTemplate>(`/api/communications/templates/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+      disable: (id: string) => request<{ success: boolean }>(`/api/communications/templates/${id}`, { method: 'DELETE' }),
+    },
+    campaigns: {
+      list: () => request<Campaign[]>('/api/communications/campaigns'),
+      create: (data: { name: string; subject?: string | null; body?: string | null; template_id?: string | null; metadata?: Record<string, unknown> }) => request<Campaign>('/api/communications/campaigns', { method: 'POST', body: JSON.stringify({ ...data, channel: 'email' }) }),
+      get: (id: string) => request<Campaign>(`/api/communications/campaigns/${id}`),
+      update: (id: string, data: Partial<Campaign>) => request<Campaign>(`/api/communications/campaigns/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+      previewRecipients: (id: string, data: { entity_type: 'lead' | 'merchant'; entity_ids?: string[] }) => request<RecipientPreview>(`/api/communications/campaigns/${id}/preview-recipients`, { method: 'POST', body: JSON.stringify(data) }),
+      send: (id: string, data: { entity_type: 'lead' | 'merchant'; entity_ids?: string[] }) => request<{ sent: number; failed: number; skipped: number; total: number; details: Array<{ entity_id: string; status: string; reason?: string }> }>(`/api/communications/campaigns/${id}/send`, { method: 'POST', body: JSON.stringify(data) }),
+    },
+  },
   settings: {
     me: () => request<UserProfile>('/api/settings/me'),
     changePassword: (data: { current_password: string; new_password: string }) => request<{ success: boolean }>('/api/settings/me/password', { method: 'PATCH', body: JSON.stringify(data) }),

@@ -45,6 +45,7 @@ The app is designed for MCA broker owners, broker shops, internal sales reps, me
 - **Renewals tracking** for funded merchants, including broker-side eligibility queues, renewal funding history, and early-payoff request tracking. Merchants/admins/assigned reps can request payoff letters after funding; only the funding lender/funder for that deal or an admin can upload/link the official lender-provided payoff letter.
 - **Reporting and analytics** for admins and scoped sales reps, including overview, pipeline, funding, leads, lender/funder performance, broker revenue, commissions, renewals, tasks, and CSV exports. Lender/funder dashboards include only their own relationship analytics such as files sent, funded deals together, total funded together, and pending payoff requests.
 - **Compliance and audit hardening** with server-side audit logs, admin audit log viewer, document upload MIME/size validation, signed URL audit events, production security headers, sensitive-field masking, and first-pass rate limiting.
+- **Email-first Communications Center** with communication preferences, global suppressions, email templates, selected-recipient campaign drafts, recipient preview, unsubscribe handling, communication history, Resend webhook ingestion, and SMS-disabled future readiness. Resend is used for app/campaign email, Zoho Mail remains for human inboxes only, and live SMS is intentionally deferred until provider budget, A2P 10DLC registration, STOP/HELP handling, quiet hours, and documented SMS consent workflows are ready.
 
 ## Tech Stack
 
@@ -55,7 +56,7 @@ The app is designed for MCA broker owners, broker shops, internal sales reps, me
 | Database | Supabase Postgres |
 | Storage | Supabase Storage private `documents` bucket with signed URLs |
 | Auth | Better Auth configuration, Better Auth-compatible tables, custom HTTP-only session-cookie route helpers |
-| Email | Resend |
+| Email | Resend for app/campaign email; Zoho Mail for human mailbox hosting |
 | AI | Google Gemini via `@google/genai` |
 | Build | Bun, Vite, TypeScript |
 
@@ -80,6 +81,18 @@ Role examples:
 - Merchants can access their own applications, offers, stipulations, and documents.
 - Lenders/funders can access their own profile and merchant files submitted or matched to them; they do not originate merchant deals in this CRM.
 - Lender-side account/relationship managers are treated as lender contact people only; they are not broker commission recipients and do not submit deals to the brokerage.
+
+
+### Communications strategy
+
+MCA King's communications implementation is intentionally **email-first and SMS-later**:
+
+- Use **Resend** for controlled app email and future campaign email.
+- Use **Zoho Mail** only for regular human inboxes/business email, not bulk campaign sending.
+- Communication preferences, suppressions, unsubscribe handling, templates, campaign recipient tracking, communication history, and Resend webhook ingestion are implemented for Phase I.
+- Keep SMS disabled until there is provider/budget approval and compliance readiness, including A2P 10DLC registration, documented opt-in proof, STOP/HELP webhooks, quiet hours, and rate limits.
+
+See [`Docs/COMMUNICATIONS_COMPLIANCE_STRATEGY.md`](Docs/COMMUNICATIONS_COMPLIANCE_STRATEGY.md) and [`Docs/PHASE_I_GOOSE_PROMPT.md`](Docs/PHASE_I_GOOSE_PROMPT.md).
 
 ### 12-step status machine
 
@@ -177,8 +190,9 @@ bun run preview
 | `DATABASE_URL` | Postgres connection string for Better Auth/Kysely configuration and auth table compatibility. | Yes |
 | `BETTER_AUTH_URL` | Public application URL used by auth/email flows and email links. | Yes |
 | `BETTER_AUTH_SECRET` | Secret for Better Auth deployments that use Better Auth runtime/session features. | Recommended |
-| `RESEND_API_KEY` | Resend API key used for outbound email automation. | Yes for email |
+| `RESEND_API_KEY` | Resend API key used for outbound email automation and Phase I email communications. | Yes for email |
 | `EMAIL_FROM` | Verified sender address used for Resend emails. | Yes for email |
+| `BROKER_PHYSICAL_ADDRESS` | Physical mailing address/footer value for campaign email compliance. Required before sending marketing/campaign emails. | Recommended for Phase I campaigns |
 | `GEMINI_API_KEY` | Server-only Google Gemini API key used by MCA King Assistant through `/api/ai/chat`. Do not prenewalx with `VITE_`. | Yes for AI |
 
 ## Project Structure
