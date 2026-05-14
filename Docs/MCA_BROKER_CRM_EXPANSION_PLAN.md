@@ -98,7 +98,7 @@ Phase C — Merchant-File Submissions ✅ complete
 Phase D — Search, Filters, Saved Views ✅ complete
 Phase E — Account Settings + Admin User Management ✅ complete
 Phase F — Renewals ✅ complete
-Phase G — Reporting
+Phase G — Reporting and Analytics ✅ complete
 Phase H — Compliance + Audit Hardening
 Phase I — Advanced Communications
 ```
@@ -903,95 +903,239 @@ Add merchant view:
 
 ---
 
-# Phase G — Reporting and Analytics
+# Phase G — Reporting and Analytics ✅ COMPLETE
 
 ## Goal
 
-Give brokerage owners visibility into volume, performance, bottlenecks, and revenue.
+Give brokerage owners visibility into volume, performance, bottlenecks, lender/funder outcomes, revenue, commissions, renewals, and follow-up execution.
 
-## Reports to build
+## Implemented backend/API work
 
-### Pipeline reports
-
-- Deals by current status
-- Deals by rep
-- Average time in each status
-- Stale deals
-- Conversion rate by status
-
-### Sales reports
-
-- Funded volume by date
-- Funded volume by rep
-- Funded volume by lender
-- Average funded amount
-- Close rate by rep
-- Offer-to-funded rate
-
-### Lead reports
-
-- Lead count by source
-- Lead conversion rate
-- Time from lead to application
-- Rep lead performance
-
-### Lender reports
-
-- Merchant-file submission count by lender/funder
-- Approval/offer rate
-- Decline rate
-- Average response time
-- Funded volume by lender
-
-### Broker revenue and sales rep commission reports
-
-- Broker revenue expected from lenders/funders
-- Broker revenue received
-- Short-paid/disputed receivables
-- Internal sales rep commissions payable
-- Internal sales rep commissions paid
-- Unpaid sales rep commission aging
-- Sales rep clawbacks/adjustments
-
-## Backend/API work implemented
-
-Created routes:
+Created server-backed reporting routes:
 
 ```txt
+GET /api/reports/overview
 GET /api/reports/pipeline
 GET /api/reports/funding
 GET /api/reports/leads
 GET /api/reports/lenders
-GET /api/reports/broker-revenue
-GET /api/reports/sales-rep-commissions
+GET /api/reports/revenue
+GET /api/reports/commissions
+GET /api/reports/renewals
+GET /api/reports/tasks
 ```
 
-## Frontend work
+Created lender/funder dashboard analytics route:
 
-Add admin section:
+```txt
+GET /api/lender-dashboard/analytics
+```
+
+Added shared reporting helpers:
+
+```txt
+src/lib/reporting.ts
+src/routes/reports/common.ts
+src/lib/csv.ts
+```
+
+## Implemented frontend work
+
+Added admin/sales rep reports UI:
+
+```txt
+components/dashboards/ReportsView.tsx
+components/dashboards/shared/reports/ReportFilters.tsx
+components/dashboards/shared/reports/ReportMetricCard.tsx
+components/dashboards/shared/reports/ReportSection.tsx
+components/dashboards/shared/reports/SimpleBarChart.tsx
+components/dashboards/shared/reports/SimpleLineChart.tsx
+components/dashboards/shared/reports/ReportTable.tsx
+```
+
+Added lender/funder relationship analytics dashboard cards:
+
+```txt
+components/dashboards/shared/LenderAnalyticsPanel.tsx
+components/dashboards/LenderDashboard.tsx
+```
+
+Admin dashboard now includes:
 
 ```txt
 Reports
 ```
 
-Add chart/table components:
+Sales rep dashboard now includes:
 
 ```txt
-ReportCard.tsx
-PipelineAgingReport.tsx
-FundingVolumeReport.tsx
-RepPerformanceReport.tsx
-LenderPerformanceReport.tsx
-BrokerRevenueReport.tsx
-SalesRepCommissionReport.tsx
+My Reports
 ```
+
+Lender/funder dashboard now includes relationship analytics cards and safe recent lists.
+
+## Reports implemented
+
+### Overview
+
+- Funded volume
+- Funded deal count
+- Average funded amount
+- Lead conversion rate
+- Offer-to-funded rate
+- Broker revenue expected/received
+- Unpaid commission liability
+- Overdue tasks
+- Eligible renewals
+- Funding trend
+- Pipeline breakdown
+- Top reps
+- Top lenders/funders
+
+### Pipeline
+
+- Deals by status
+- Deals by rep
+- Stale deals
+- Average age
+- Average days since update
+- Funded/declined counts
+
+### Funding
+
+- Funded volume by period
+- Funded volume by rep
+- Funded volume by lender/funder
+- First funding / renewal funding / additional funding breakdown
+- Funding position breakdown
+- Average funded amount
+- Average factor rate
+- Average term days
+- Funding drilldown rows
+
+Funding reports count actual funding records dynamically. They do **not** collapse a merchant to only the latest funding.
+
+### Leads
+
+- Lead count
+- Converted lead count
+- Conversion rate
+- Dead lead count
+- Unassigned lead count
+- Average days to conversion
+- Leads by status/rep
+
+### Lenders/Funders
+
+Internal broker-shop lender/funder performance reports:
+
+- Submission count
+- Offer count
+- Decline count
+- Offer rate
+- Decline rate
+- Funded count
+- Funded volume
+- Average funded amount
+- Average response time
+- Payoff request count
+
+These reports are internal broker-shop reports and are not visible to lender/funder users.
+
+### Broker Revenue
+
+Admin-only:
+
+- Expected
+- Invoiced
+- Received
+- Short-paid
+- Disputed
+- Waived
+- Revenue by status
+- Revenue by lender/funder
+- Receivable aging
+
+### Sales Rep Commissions
+
+- Admin can see all commission reporting.
+- Sales reps can see only their own commission reporting.
+- Reports include unpaid, approved, paid, adjusted, clawed back, void, aging, and rows.
+
+### Renewals
+
+- Eligible renewals
+- Renewal status counts
+- Renewal conversion rate
+- Renewal funded volume
+- Overdue follow-ups
+- Renewals by rep
+
+### Tasks
+
+- Open/completed/cancelled tasks
+- Overdue tasks
+- Due today/week
+- Completion rate
+- Average completion days
+- Tasks by status/rep/priority
+
+## Lender/Funder Dashboard Analytics
+
+Lender/funder users do not get broker reports. They get scoped relationship analytics on their own dashboard only.
+
+Lender/funder dashboard cards include:
+
+```txt
+Files Sent To Us
+Pending Review
+Offers/Approvals Sent
+Funded Deals Together
+Total Funded Together
+Average Funded Amount
+This Month Funded
+Payoff Requests Pending
+```
+
+Lender/funder recent lists include:
+
+```txt
+Recent Submissions
+Recent Funded Deals
+Pending Payoff Requests
+```
+
+Important lender/funder visibility rules:
+
+```txt
+Lender/funder analytics are scoped only to that lender/funder profile.
+Lenders/funders never see competing lender/funder performance.
+Lenders/funders never see broker revenue.
+Lenders/funders never see sales rep commissions.
+Lenders/funders never see broker strategy.
+```
+
+## CSV Export
+
+Report tables support client-side CSV export for currently loaded rows.
 
 ## Acceptance criteria
 
-- Admin can see funded volume.
-- Admin can see close rates.
-- Admin can see stale pipeline deals.
-- Admin can see broker revenue receivables and internal sales rep commission liability.
+- Admin has a Reports section in the left nav. ✅
+- Sales reps have a scoped My Reports section. ✅
+- Reports include Overview, Pipeline, Funding, Leads, Lenders/Funders, Revenue, Commissions, Renewals, and Tasks. ✅
+- Reports support date range filters. ✅
+- Reports support admin rep/lender filters where relevant. ✅
+- Funding reports correctly support first funding, renewal funding, and additional/split funding positions. ✅
+- Lender/funder performance reports are internal broker-shop reports only. ✅
+- Lender/funder dashboards show only their own relationship analytics, including funded deals count and total funded volume together with the broker shop. ✅
+- Broker revenue reports are admin-only. ✅
+- Sales rep commission reports do not expose other reps' commissions to sales reps. ✅
+- Merchants cannot access report APIs. ✅
+- Lenders/funders cannot access broker report APIs and can access only their own scoped dashboard analytics endpoint. ✅
+- Report tables can export currently loaded rows to CSV. ✅
+- TypeScript passes. ✅
+- Production build passes. ✅
 
 ---
 

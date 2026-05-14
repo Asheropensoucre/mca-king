@@ -5,6 +5,7 @@ import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 import { MerchantDetailView } from './shared/MerchantDetailView';
 import { PayoffRequestsPanel } from './shared/PayoffRequestsPanel';
+import { LenderAnalyticsPanel } from './shared/LenderAnalyticsPanel';
 import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 import { api } from '../../src/lib/api-client';
 import { Chatbot } from '../Chatbot';
@@ -167,30 +168,33 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
                         <PrimaryButton label="Logout" size="small" onClick={onExit} />
                     </div>
                 </div>
-                {showSettings ? <UserSettingsPage currentUser={currentUser} onLogout={onExit} /> : <Card>
-                    <div className="p-6">
-                        <h2 className="text-xl font-black text-theme-maroon dark:text-theme-yellow mb-4">Assigned Merchants</h2>
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                                <thead className="bg-slate-950/90"><tr className="text-left text-xs font-black uppercase tracking-wider text-theme-yellow"><th>Business Name</th><th>Requested Amt</th><th>Revenue</th><th>Industry</th><th>Status</th><th></th></tr></thead>
-                                <tbody className="bg-white divide-y divide-slate-200 dark:bg-dark-card dark:divide-slate-700">
-                                    {assignedMerchants.length > 0 ? assignedMerchants.map((deal) => (
-                                        <tr key={deal.id}>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-100">{deal.businessInfo.legalName}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">${Number(deal.requestedAmount).toLocaleString()}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">${Number(deal.businessInfo.monthlyRevenue).toLocaleString()}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{deal.businessInfo.industryType}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{deal.status}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><PrimaryButton label="View Details" size="small" onClick={() => setSelectedDeal(deal)} /></td>
-                                        </tr>
-                                    )) : (
-                                        <tr><td colSpan={6} className="px-6 py-12 text-center text-sm text-slate-500 dark:text-slate-400">No merchants have been assigned to you yet.</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
+                {showSettings ? <UserSettingsPage currentUser={currentUser} onLogout={onExit} /> : <div className="space-y-6">
+                    <LenderAnalyticsPanel />
+                    <Card>
+                        <div className="p-6">
+                            <h2 className="text-xl font-black text-theme-maroon dark:text-theme-yellow mb-4">Assigned Merchants</h2>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                                    <thead className="bg-slate-950/90"><tr className="text-left text-xs font-black uppercase tracking-wider text-theme-yellow"><th>Business Name</th><th>Requested Amt</th><th>Revenue</th><th>Industry</th><th>Status</th><th></th></tr></thead>
+                                    <tbody className="bg-white divide-y divide-slate-200 dark:bg-dark-card dark:divide-slate-700">
+                                        {assignedMerchants.length > 0 ? assignedMerchants.map((deal) => (
+                                            <tr key={deal.id}>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-100">{deal.businessInfo.legalName}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">${Number(deal.requestedAmount).toLocaleString()}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">${Number(deal.businessInfo.monthlyRevenue).toLocaleString()}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{deal.businessInfo.industryType}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{deal.status}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><PrimaryButton label="View Details" size="small" onClick={() => setSelectedDeal(deal)} /></td>
+                                            </tr>
+                                        )) : (
+                                            <tr><td colSpan={6} className="px-6 py-12 text-center text-sm text-slate-500 dark:text-slate-400">No merchants have been assigned to you yet.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
-                </Card>}
+                    </Card>
+                </div>}
             </div>
         </div>
         <Chatbot

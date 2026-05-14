@@ -1,4 +1,4 @@
-import type { Activity, ActivityType, EntityType, LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch, Task, Funding, BrokerRevenue, SalesRepCommission, MerchantFileSubmission, SavedView, SearchResults, PaginatedResponse, SavedViewEntityType, UserProfile, UserRole, Renewal, PayoffRequest } from '../../types'
+import type { Activity, ActivityType, EntityType, LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch, Task, Funding, BrokerRevenue, SalesRepCommission, MerchantFileSubmission, SavedView, SearchResults, PaginatedResponse, SavedViewEntityType, UserProfile, UserRole, Renewal, PayoffRequest, OverviewReport, PipelineReport, FundingReport, LeadReport, LenderReport, RevenueReport, CommissionReport, RenewalReport, TaskReport, LenderDashboardAnalytics } from '../../types'
 
 function headers(extra?: HeadersInit): HeadersInit {
   return {
@@ -33,6 +33,20 @@ export const api = {
   settings: {
     me: () => request<UserProfile>('/api/settings/me'),
     changePassword: (data: { current_password: string; new_password: string }) => request<{ success: boolean }>('/api/settings/me/password', { method: 'PATCH', body: JSON.stringify(data) }),
+  },
+  reports: {
+    overview: (params?: Record<string, string | number | boolean | null | undefined>) => request<OverviewReport>(`/api/reports/overview${toQuery(params) ? `?${toQuery(params)}` : ''}`),
+    pipeline: (params?: Record<string, string | number | boolean | null | undefined>) => request<PipelineReport>(`/api/reports/pipeline${toQuery(params) ? `?${toQuery(params)}` : ''}`),
+    funding: (params?: Record<string, string | number | boolean | null | undefined>) => request<FundingReport>(`/api/reports/funding${toQuery(params) ? `?${toQuery(params)}` : ''}`),
+    leads: (params?: Record<string, string | number | boolean | null | undefined>) => request<LeadReport>(`/api/reports/leads${toQuery(params) ? `?${toQuery(params)}` : ''}`),
+    lenders: (params?: Record<string, string | number | boolean | null | undefined>) => request<LenderReport>(`/api/reports/lenders${toQuery(params) ? `?${toQuery(params)}` : ''}`),
+    revenue: (params?: Record<string, string | number | boolean | null | undefined>) => request<RevenueReport>(`/api/reports/revenue${toQuery(params) ? `?${toQuery(params)}` : ''}`),
+    commissions: (params?: Record<string, string | number | boolean | null | undefined>) => request<CommissionReport>(`/api/reports/commissions${toQuery(params) ? `?${toQuery(params)}` : ''}`),
+    renewals: (params?: Record<string, string | number | boolean | null | undefined>) => request<RenewalReport>(`/api/reports/renewals${toQuery(params) ? `?${toQuery(params)}` : ''}`),
+    tasks: (params?: Record<string, string | number | boolean | null | undefined>) => request<TaskReport>(`/api/reports/tasks${toQuery(params) ? `?${toQuery(params)}` : ''}`),
+  },
+  lenderDashboard: {
+    analytics: () => request<LenderDashboardAnalytics>('/api/lender-dashboard/analytics'),
   },
   adminUsers: {
     list: (params?: { role?: UserRole | ''; is_disabled?: string; status?: string; search?: string }) => {

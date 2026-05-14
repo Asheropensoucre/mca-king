@@ -6,6 +6,7 @@ import { DashboardShell } from './shared/DashboardShell';
 import { KanbanPipelineView } from './shared/KanbanPipelineView';
 import { LeadManager } from './LeadManager';
 import { RenewalsView } from './RenewalsView';
+import { ReportsView } from './ReportsView';
 import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 import { Chatbot } from '../Chatbot';
 import { TaskPanel } from './shared/TaskPanel';
@@ -26,7 +27,7 @@ interface SalesRepDashboardProps {
     salesReps: SalesRepresentative[];
 }
 
-type SalesRepSection = 'leads' | 'deals' | 'pipeline' | 'tasks' | 'renewals' | 'settings';
+type SalesRepSection = 'leads' | 'deals' | 'pipeline' | 'tasks' | 'renewals' | 'reports' | 'settings';
 
 export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUser, deals, rep, onExit, themeToggle, onPrint, lenders, onUpdateMerchant, salesReps }) => {
     const [selectedDeal, setSelectedDeal] = useState<FormData | null>(null);
@@ -87,6 +88,7 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
                 { id: 'pipeline', label: 'Kamba Pipeline' },
                 { id: 'tasks', label: 'Tasks' },
                 { id: 'renewals', label: 'Renewals' },
+                { id: 'reports', label: 'My Reports' },
                 { id: 'settings', label: '⚙ Settings' },
             ]}
             activeSection={activeSection}
@@ -161,6 +163,7 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
                     )}
                     {activeSection === 'tasks' && <TaskPanel currentUser={currentUser} title="My Tasks" />}
                     {activeSection === 'renewals' && <RenewalsView currentUser={currentUser} salesReps={salesReps} />}
+                    {activeSection === 'reports' && <ReportsView currentUser={currentUser} salesReps={salesReps} lenders={lenders} />}
                     {activeSection === 'settings' && <UserSettingsPage currentUser={currentUser} onLogout={onExit} />}
                 </div>
             )}

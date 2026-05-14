@@ -47623,6 +47623,677 @@ async function POST29(req, context) {
   return json({ success: true });
 }
 
+// src/lib/reporting.ts
+function isoDate(date) {
+  return date.toISOString().slice(0, 10);
+}
+function startOfDayIso(value) {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return date.toISOString();
+}
+function endOfDayIso(value) {
+  const date = new Date(`${value}T23:59:59.999Z`);
+  return date.toISOString();
+}
+function parseReportDateRange(url) {
+  const today = new Date;
+  const defaultFrom = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+  const from = url.searchParams.get("from") || isoDate(defaultFrom);
+  const to = url.searchParams.get("to") || isoDate(today);
+  return { from, to, label: `${from} to ${to}` };
+}
+function parseReportFilters(url) {
+  const range = parseReportDateRange(url);
+  const granularityParam = url.searchParams.get("granularity");
+  const granularity = granularityParam === "week" || granularityParam === "month" ? granularityParam : "day";
+  return {
+    ...range,
+    fromDate: new Date(startOfDayIso(range.from)),
+    toDate: new Date(endOfDayIso(range.to)),
+    rep_id: url.searchParams.get("rep_id") || undefined,
+    lender_id: url.searchParams.get("lender_id") || undefined,
+    status: url.searchParams.get("status") || undefined,
+    granularity
+  };
+}
+function moneyNumber(value) {
+  if (value === null || value === undefined || value === "")
+    return 0;
+  const parsed = Number(String(value).replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+function safeDivide(numerator, denominator) {
+  return denominator === 0 ? 0 : numerator / denominator;
+}
+function percent(numerator, denominator) {
+  return Math.round(safeDivide(numerator, denominator) * 1000) / 10;
+}
+function dateInRange(value, filters) {
+  if (!value)
+    return false;
+  const date = new Date(value);
+  return date.getTime() >= filters.fromDate.getTime() && date.getTime() <= filters.toDate.getTime();
+}
+function daysBetween(from, to = new Date) {
+  if (!from)
+    return 0;
+  const start = new Date(from).getTime();
+  if (!Number.isFinite(start))
+    return 0;
+  return Math.max(0, Math.floor((to.getTime() - start) / (24 * 60 * 60 * 1000)));
+}
+function periodKey(value, granularity) {
+  const date = new Date(value);
+  if (granularity === "month")
+    return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+  if (granularity === "week") {
+    const start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    const day = start.getUTCDay() || 7;
+    start.setUTCDate(start.getUTCDate() - day + 1);
+    return isoDate(start);
+  }
+  return isoDate(date);
+}
+function bucketByDate(rows, dateField, granularity, amountField) {
+  const map = new Map;
+  for (const row of rows) {
+    const raw = row[dateField];
+    if (typeof raw !== "string" || !raw)
+      continue;
+    const key = periodKey(raw, granularity);
+    const current = map.get(key) ?? { period: key, count: 0, amount: amountField ? 0 : undefined };
+    current.count += 1;
+    if (amountField)
+      current.amount = (current.amount ?? 0) + moneyNumber(row[amountField]);
+    map.set(key, current);
+  }
+  return [...map.values()].sort((a, b) => a.period.localeCompare(b.period));
+}
+function breakdownRows(map, totalCount) {
+  const total = totalCount ?? [...map.values()].reduce((sum, row) => sum + row.count, 0);
+  return [...map.entries()].map(([key, row]) => ({ key, label: row.label, count: row.count, amount: row.amount, percent: percent(row.count, total) })).sort((a, b) => (b.amount ?? b.count) - (a.amount ?? a.count));
+}
+function addBreakdown(map, key, label, amount) {
+  const safeKey = key || "unassigned";
+  const current = map.get(safeKey) ?? { label: label || "Unassigned", count: 0, amount: amount === undefined ? undefined : 0 };
+  current.count += 1;
+  if (amount !== undefined)
+    current.amount = (current.amount ?? 0) + amount;
+  map.set(safeKey, current);
+}
+function blockReportRole(user, adminOnly = false) {
+  if (user.role === "merchant" || user.role === "lender")
+    return forbidden();
+  if (adminOnly && user.role !== "admin")
+    return forbidden();
+  return null;
+}
+
+// src/routes/reports/common.ts
+function userName(user) {
+  return user?.full_name ?? user?.name ?? user?.email ?? "Unassigned";
+}
+async function merchantIdsForRep(user) {
+  if (user.role !== "sales_rep")
+    return null;
+  const { data, error } = await supabaseAdmin.from("merchants").select("id").eq("assigned_rep_id", user.id).returns();
+  if (error)
+    return badRequest(error.message);
+  return (data ?? []).map((row) => row.id);
+}
+function scopedByMerchant(rows, user, merchantIds) {
+  if (user.role !== "sales_rep")
+    return rows;
+  const idSet = new Set(merchantIds ?? []);
+  return rows.filter((row) => row.merchant_id && idSet.has(row.merchant_id) || row.merchant?.assigned_rep_id === user.id);
+}
+function range(url) {
+  return parseReportFilters(url);
+}
+
+// src/routes/reports/overview.ts
+async function GET29(req) {
+  const user = await requireAuth(req);
+  const roleError = blockReportRole(user);
+  if (roleError)
+    return roleError;
+  const filters = range(new URL(req.url));
+  const scopedIds = await merchantIdsForRep(user);
+  if (scopedIds instanceof Response)
+    return scopedIds;
+  const [merchantsRes, leadsRes, fundingsRes, offersRes, revenueRes, commissionsRes, renewalsRes, tasksRes] = await Promise.all([
+    supabaseAdmin.from("merchants").select("id,business_name,status,assigned_rep_id,requested_amount,created_at,updated_at,assigned_rep:users!merchants_assigned_rep_id_fkey(full_name,name,email)").returns(),
+    supabaseAdmin.from("leads").select("id,created_by,assigned_rep_id,business_name,owner_name,status,converted_to,created_at,updated_at,assigned_rep:users!leads_assigned_rep_id_fkey(full_name,name,email)").returns(),
+    supabaseAdmin.from("fundings").select("*, merchant:merchants(business_name,assigned_rep_id,assigned_rep:users!merchants_assigned_rep_id_fkey(full_name,name,email)), lender:lenders(company_name)").gte("funded_at", filters.from).lte("funded_at", filters.to).returns(),
+    supabaseAdmin.from("offers").select("id,merchant_id,lender_id,amount,status,created_at").gte("created_at", filters.from).lte("created_at", filters.to).returns(),
+    supabaseAdmin.from("broker_revenue").select("*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name)").returns(),
+    supabaseAdmin.from("sales_rep_commissions").select("*, sales_rep:sales_rep_id(full_name,name,email), funding:fundings(merchant_id,merchant:merchants(business_name))").returns(),
+    supabaseAdmin.from("renewals").select("*, merchant:merchants(business_name,assigned_rep_id), funding:fundings(funded_amount,lender:lenders(company_name)), assigned_rep:users!renewals_assigned_rep_id_fkey(full_name,name,email)").returns(),
+    supabaseAdmin.from("tasks").select("*, assignee:assigned_to(full_name,name,email)").returns()
+  ]);
+  for (const res of [merchantsRes, leadsRes, fundingsRes, offersRes, revenueRes, commissionsRes, renewalsRes, tasksRes]) {
+    if (res.error)
+      return badRequest(res.error.message);
+  }
+  const merchants = user.role === "sales_rep" ? (merchantsRes.data ?? []).filter((row) => row.assigned_rep_id === user.id) : merchantsRes.data ?? [];
+  const leads = user.role === "sales_rep" ? (leadsRes.data ?? []).filter((row) => row.assigned_rep_id === user.id || row.created_by === user.id) : leadsRes.data ?? [];
+  const fundings = scopedByMerchant(fundingsRes.data ?? [], user, scopedIds);
+  const offers = user.role === "sales_rep" ? (offersRes.data ?? []).filter((row) => scopedIds?.includes(row.merchant_id)) : offersRes.data ?? [];
+  const revenue = user.role === "admin" ? revenueRes.data ?? [] : [];
+  const commissions = user.role === "sales_rep" ? (commissionsRes.data ?? []).filter((row) => row.sales_rep_id === user.id) : commissionsRes.data ?? [];
+  const renewals = user.role === "sales_rep" ? (renewalsRes.data ?? []).filter((row) => row.assigned_rep_id === user.id || row.merchant?.assigned_rep_id === user.id) : renewalsRes.data ?? [];
+  const tasks = user.role === "sales_rep" ? (tasksRes.data ?? []).filter((row) => row.assigned_to === user.id || row.created_by === user.id) : tasksRes.data ?? [];
+  const rangedLeads = leads.filter((row) => dateInRange(row.created_at, filters));
+  const totalFunded = fundings.reduce((sum, row) => sum + moneyNumber(row.funded_amount), 0);
+  const pipelineMap = new Map;
+  merchants.forEach((row) => addBreakdown(pipelineMap, row.status, row.status));
+  const repMap = new Map;
+  fundings.forEach((row) => addBreakdown(repMap, row.merchant?.assigned_rep_id, userName(row.merchant?.assigned_rep), moneyNumber(row.funded_amount)));
+  const lenderMap = new Map;
+  fundings.forEach((row) => addBreakdown(lenderMap, row.lender_id, row.lender?.company_name ?? "Unknown Lender/Funder", moneyNumber(row.funded_amount)));
+  const report = {
+    range: { from: filters.from, to: filters.to, label: filters.label },
+    metrics: {
+      total_leads: rangedLeads.length,
+      converted_leads: rangedLeads.filter((row) => row.status === "converted" || row.converted_to).length,
+      total_merchants: merchants.length,
+      funded_deals: fundings.length,
+      funded_volume: totalFunded,
+      average_funding_amount: Math.round(totalFunded / Math.max(1, fundings.length)),
+      lead_conversion_rate: percent(rangedLeads.filter((row) => row.status === "converted" || row.converted_to).length, rangedLeads.length),
+      offer_to_funded_rate: percent(fundings.length, offers.length),
+      broker_revenue_expected: revenue.filter((row) => row.status !== "received" && row.status !== "waived").reduce((sum, row) => sum + moneyNumber(row.amount), 0),
+      broker_revenue_received: revenue.filter((row) => row.status === "received").reduce((sum, row) => sum + moneyNumber(row.amount), 0),
+      commissions_unpaid: commissions.filter((row) => row.status === "unpaid" || row.status === "approved").reduce((sum, row) => sum + moneyNumber(row.amount), 0),
+      overdue_tasks: tasks.filter((row) => row.status === "open" && row.due_at && new Date(row.due_at).getTime() < Date.now()).length,
+      eligible_renewals: renewals.filter((row) => new Date(`${row.eligibility_date}T00:00:00Z`).getTime() <= Date.now() && !["renewed", "declined", "not_interested"].includes(row.status)).length
+    },
+    funding_series: bucketByDate(fundings, "funded_at", filters.granularity, "funded_amount"),
+    pipeline_breakdown: breakdownRows(pipelineMap),
+    top_reps: breakdownRows(repMap).slice(0, 5),
+    top_lenders: user.role === "admin" ? breakdownRows(lenderMap).slice(0, 5) : []
+  };
+  return json(report);
+}
+
+// src/routes/reports/pipeline.ts
+async function GET30(req) {
+  const user = await requireAuth(req);
+  const roleError = blockReportRole(user);
+  if (roleError)
+    return roleError;
+  const now = new Date;
+  let query = supabaseAdmin.from("merchants").select("id,business_name,status,assigned_rep_id,requested_amount,created_at,updated_at,assigned_rep:users!merchants_assigned_rep_id_fkey(full_name,name,email)");
+  if (user.role === "sales_rep")
+    query = query.eq("assigned_rep_id", user.id);
+  const { data, error } = await query.returns();
+  if (error)
+    return badRequest(error.message);
+  const rows = data ?? [];
+  const statusMap = new Map;
+  const repMap = new Map;
+  rows.forEach((row) => {
+    addBreakdown(statusMap, row.status, row.status);
+    addBreakdown(repMap, row.assigned_rep_id, userName(row.assigned_rep));
+  });
+  const stale = rows.filter((row) => row.status !== "FUNDED" && daysBetween(row.updated_at, now) > 7).sort((a, b) => daysBetween(b.updated_at, now) - daysBetween(a.updated_at, now)).slice(0, 50);
+  const report = {
+    range: { from: "", to: "", label: "Current pipeline" },
+    metrics: {
+      total_deals: rows.length,
+      stale_deals: stale.length,
+      funded_count: rows.filter((row) => row.status === "FUNDED").length,
+      declined_count: rows.filter((row) => row.status.toLowerCase().includes("decline")).length,
+      average_age_days: Math.round(rows.reduce((sum, row) => sum + daysBetween(row.created_at, now), 0) / Math.max(1, rows.length)),
+      average_days_since_update: Math.round(rows.reduce((sum, row) => sum + daysBetween(row.updated_at, now), 0) / Math.max(1, rows.length))
+    },
+    by_status: breakdownRows(statusMap),
+    by_rep: user.role === "admin" ? breakdownRows(repMap) : [],
+    stale_deals: stale.map((row) => ({
+      id: row.id,
+      label: row.business_name,
+      secondary: userName(row.assigned_rep),
+      status: row.status,
+      amount: moneyNumber(row.requested_amount),
+      date: row.updated_at,
+      metadata: { days_stale: daysBetween(row.updated_at, now) }
+    }))
+  };
+  return json(report);
+}
+
+// src/routes/reports/funding.ts
+async function GET31(req) {
+  const user = await requireAuth(req);
+  const roleError = blockReportRole(user);
+  if (roleError)
+    return roleError;
+  const filters = range(new URL(req.url));
+  const scopedIds = await merchantIdsForRep(user);
+  if (scopedIds instanceof Response)
+    return scopedIds;
+  let query = supabaseAdmin.from("fundings").select("*, merchant:merchants(business_name,assigned_rep_id,assigned_rep:users!merchants_assigned_rep_id_fkey(full_name,name,email)), lender:lenders(company_name)").gte("funded_at", filters.from).lte("funded_at", filters.to);
+  if (filters.lender_id && user.role === "admin")
+    query = query.eq("lender_id", filters.lender_id);
+  const { data, error } = await query.order("funded_at", { ascending: false }).returns();
+  if (error)
+    return badRequest(error.message);
+  let rows = scopedByMerchant(data ?? [], user, scopedIds);
+  if (filters.rep_id && user.role === "admin")
+    rows = rows.filter((row) => row.merchant?.assigned_rep_id === filters.rep_id);
+  const totalFunded = rows.reduce((sum, row) => sum + moneyNumber(row.funded_amount), 0);
+  const repMap = new Map;
+  const lenderMap = new Map;
+  const typeMap = new Map;
+  const positionMap = new Map;
+  rows.forEach((row) => {
+    const amount = moneyNumber(row.funded_amount);
+    addBreakdown(repMap, row.merchant?.assigned_rep_id, userName(row.merchant?.assigned_rep), amount);
+    addBreakdown(lenderMap, row.lender_id, row.lender?.company_name ?? "Unknown Lender/Funder", amount);
+    addBreakdown(typeMap, row.funding_type, row.funding_type === "first_funding" ? "First Funding" : row.funding_type === "renewal" ? "Renewal" : "Additional Funding", amount);
+    addBreakdown(positionMap, String(row.funding_position || 1), `Position #${row.funding_position || 1}`, amount);
+  });
+  const report = {
+    range: { from: filters.from, to: filters.to, label: filters.label },
+    metrics: {
+      funded_volume: totalFunded,
+      funded_deals: rows.length,
+      average_funded_amount: Math.round(totalFunded / Math.max(1, rows.length)),
+      average_factor_rate: Number((rows.reduce((sum, row) => sum + moneyNumber(row.factor_rate), 0) / Math.max(1, rows.filter((row) => row.factor_rate !== null).length)).toFixed(3)),
+      average_term_days: Math.round(rows.reduce((sum, row) => sum + Number(row.term_days ?? 0), 0) / Math.max(1, rows.filter((row) => row.term_days).length)),
+      first_funding_count: rows.filter((row) => row.funding_type === "first_funding").length,
+      renewal_count: rows.filter((row) => row.funding_type === "renewal").length,
+      additional_funding_count: rows.filter((row) => row.funding_type === "additional_funding").length
+    },
+    series: bucketByDate(rows, "funded_at", filters.granularity, "funded_amount"),
+    by_rep: user.role === "admin" ? breakdownRows(repMap) : [],
+    by_lender: user.role === "admin" ? breakdownRows(lenderMap) : [],
+    by_funding_type: breakdownRows(typeMap),
+    by_position: breakdownRows(positionMap),
+    rows: rows.slice(0, 100).map((row) => ({
+      id: row.id,
+      label: row.merchant?.business_name ?? "Unknown Merchant",
+      secondary: row.lender?.company_name ?? "Unknown Lender/Funder",
+      status: row.funding_type,
+      amount: moneyNumber(row.funded_amount),
+      date: row.funded_at,
+      metadata: { renewal_number: row.renewal_number, funding_position: row.funding_position, factor_rate: moneyNumber(row.factor_rate), term_days: row.term_days }
+    }))
+  };
+  return json(report);
+}
+
+// src/routes/reports/leads.ts
+async function GET32(req) {
+  const user = await requireAuth(req);
+  const roleError = blockReportRole(user);
+  if (roleError)
+    return roleError;
+  const filters = range(new URL(req.url));
+  let query = supabaseAdmin.from("leads").select("id,created_by,assigned_rep_id,business_name,owner_name,status,converted_to,created_at,updated_at,assigned_rep:users!leads_assigned_rep_id_fkey(full_name,name,email)");
+  if (user.role === "sales_rep")
+    query = query.or(`assigned_rep_id.eq.${user.id},created_by.eq.${user.id}`);
+  if (filters.rep_id && user.role === "admin")
+    query = query.eq("assigned_rep_id", filters.rep_id);
+  const { data, error } = await query.returns();
+  if (error)
+    return badRequest(error.message);
+  const rows = (data ?? []).filter((row) => dateInRange(row.created_at, filters) || dateInRange(row.updated_at, filters));
+  const statusMap = new Map;
+  const repMap = new Map;
+  rows.forEach((row) => {
+    addBreakdown(statusMap, row.status, row.status);
+    addBreakdown(repMap, row.assigned_rep_id, userName(row.assigned_rep));
+  });
+  const converted = rows.filter((row) => row.status === "converted" || row.converted_to);
+  const report = {
+    range: { from: filters.from, to: filters.to, label: filters.label },
+    metrics: {
+      total_leads: rows.length,
+      converted_leads: converted.length,
+      conversion_rate: percent(converted.length, rows.length),
+      dead_leads: rows.filter((row) => row.status === "dead").length,
+      unassigned_leads: rows.filter((row) => !row.assigned_rep_id).length,
+      average_days_to_conversion: Math.round(converted.reduce((sum, row) => sum + daysBetween(row.created_at, new Date(row.updated_at)), 0) / Math.max(1, converted.length))
+    },
+    by_status: breakdownRows(statusMap),
+    by_rep: user.role === "admin" ? breakdownRows(repMap) : [],
+    series: bucketByDate(rows, "created_at", filters.granularity),
+    rows: rows.slice(0, 100).map((row) => ({ id: row.id, label: row.business_name, secondary: userName(row.assigned_rep), status: row.status, date: row.created_at, metadata: { owner_name: row.owner_name, converted_to: row.converted_to } }))
+  };
+  return json(report);
+}
+
+// src/routes/reports/lenders.ts
+async function GET33(req) {
+  const user = await requireAuth(req);
+  const roleError = blockReportRole(user);
+  if (roleError)
+    return roleError;
+  const filters = range(new URL(req.url));
+  const scopedIds = await merchantIdsForRep(user);
+  if (scopedIds instanceof Response)
+    return scopedIds;
+  const [lendersRes, submissionsRes, fundingsRes, payoffRes] = await Promise.all([
+    supabaseAdmin.from("lenders").select("id,company_name").returns(),
+    supabaseAdmin.from("merchant_file_submissions").select("*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name)").gte("submitted_at", filters.from).lte("submitted_at", filters.to).returns(),
+    supabaseAdmin.from("fundings").select("*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name)").gte("funded_at", filters.from).lte("funded_at", filters.to).returns(),
+    supabaseAdmin.from("payoff_requests").select("id,requested_from_lender_id,status,requested_at").gte("requested_at", filters.from).lte("requested_at", filters.to).returns()
+  ]);
+  for (const res of [lendersRes, submissionsRes, fundingsRes, payoffRes])
+    if (res.error)
+      return badRequest(res.error.message);
+  const submissions = scopedByMerchant(submissionsRes.data ?? [], user, scopedIds);
+  const fundings = scopedByMerchant(fundingsRes.data ?? [], user, scopedIds);
+  const rows = (lendersRes.data ?? []).map((lender) => {
+    const lenderSubs = submissions.filter((row) => row.lender_id === lender.id);
+    const lenderFundings = fundings.filter((row) => row.lender_id === lender.id);
+    const offers = lenderSubs.filter((row) => row.status === "offer_received").length;
+    const declines = lenderSubs.filter((row) => row.status === "declined").length;
+    const volume = lenderFundings.reduce((sum, row) => sum + moneyNumber(row.funded_amount), 0);
+    const responseRows = lenderSubs.filter((row) => row.response_at);
+    const avgResponseHours = responseRows.reduce((sum, row) => sum + Math.max(0, (new Date(row.response_at).getTime() - new Date(row.submitted_at).getTime()) / 3600000), 0) / Math.max(1, responseRows.length);
+    return {
+      id: lender.id,
+      label: lender.company_name,
+      secondary: `${lenderSubs.length} submissions • ${lenderFundings.length} funded`,
+      amount: volume,
+      metadata: {
+        submission_count: lenderSubs.length,
+        offer_count: offers,
+        decline_count: declines,
+        offer_rate: percent(offers, lenderSubs.length),
+        decline_rate: percent(declines, lenderSubs.length),
+        funded_count: lenderFundings.length,
+        funded_volume: volume,
+        average_funded_amount: Math.round(volume / Math.max(1, lenderFundings.length)),
+        avg_response_hours: Math.round(avgResponseHours),
+        payoff_requests: (payoffRes.data ?? []).filter((row) => row.requested_from_lender_id === lender.id).length
+      }
+    };
+  }).filter((row) => user.role === "admin" || Number(row.metadata?.submission_count ?? 0) > 0 || Number(row.metadata?.funded_count ?? 0) > 0);
+  const report = {
+    range: { from: filters.from, to: filters.to, label: filters.label },
+    metrics: {
+      lender_count: rows.length,
+      submission_count: submissions.length,
+      funded_count: fundings.length,
+      funded_volume: fundings.reduce((sum, row) => sum + moneyNumber(row.funded_amount), 0)
+    },
+    rows
+  };
+  return json(report);
+}
+
+// src/routes/reports/revenue.ts
+function agingKey(days) {
+  if (days <= 7)
+    return "0-7 days";
+  if (days <= 15)
+    return "8-15 days";
+  if (days <= 30)
+    return "16-30 days";
+  if (days <= 60)
+    return "31-60 days";
+  return "60+ days";
+}
+async function GET34(req) {
+  const user = await requireAuth(req);
+  const roleError = blockReportRole(user, true);
+  if (roleError)
+    return roleError;
+  const filters = range(new URL(req.url));
+  let query = supabaseAdmin.from("broker_revenue").select("*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name)");
+  if (filters.lender_id)
+    query = query.eq("lender_id", filters.lender_id);
+  const { data, error } = await query.order("created_at", { ascending: false }).returns();
+  if (error)
+    return badRequest(error.message);
+  const rows = (data ?? []).filter((row) => {
+    const relevant = row.status === "received" ? row.received_at : row.expected_payment_date ?? row.created_at;
+    const time = new Date(relevant ?? row.created_at).getTime();
+    return time >= filters.fromDate.getTime() && time <= filters.toDate.getTime();
+  });
+  const statusMap = new Map;
+  const lenderMap = new Map;
+  const agingMap = new Map;
+  rows.forEach((row) => {
+    const amount = moneyNumber(row.amount);
+    addBreakdown(statusMap, row.status, row.status, amount);
+    addBreakdown(lenderMap, row.lender_id, row.lender?.company_name ?? "Unknown Lender/Funder", amount);
+    if (row.status !== "received" && row.status !== "waived")
+      addBreakdown(agingMap, agingKey(daysBetween(row.expected_payment_date ?? row.created_at)), agingKey(daysBetween(row.expected_payment_date ?? row.created_at)), amount);
+  });
+  const report = {
+    range: { from: filters.from, to: filters.to, label: filters.label },
+    metrics: {
+      expected: rows.filter((row) => row.status === "expected").reduce((sum, row) => sum + moneyNumber(row.amount), 0),
+      invoiced: rows.filter((row) => row.status === "invoiced").reduce((sum, row) => sum + moneyNumber(row.amount), 0),
+      received: rows.filter((row) => row.status === "received").reduce((sum, row) => sum + moneyNumber(row.amount), 0),
+      short_paid: rows.filter((row) => row.status === "short_paid").reduce((sum, row) => sum + moneyNumber(row.amount), 0),
+      disputed: rows.filter((row) => row.status === "disputed").reduce((sum, row) => sum + moneyNumber(row.amount), 0),
+      waived: rows.filter((row) => row.status === "waived").reduce((sum, row) => sum + moneyNumber(row.amount), 0)
+    },
+    by_status: breakdownRows(statusMap),
+    by_lender: breakdownRows(lenderMap),
+    aging: breakdownRows(agingMap),
+    rows: rows.slice(0, 100).map((row) => ({ id: row.id, label: row.merchant?.business_name ?? "Unknown Merchant", secondary: row.lender?.company_name, status: row.status, amount: moneyNumber(row.amount), date: row.received_at ?? row.expected_payment_date ?? row.created_at, metadata: { revenue_type: row.revenue_type, age_days: daysBetween(row.expected_payment_date ?? row.created_at) } }))
+  };
+  return json(report);
+}
+
+// src/routes/reports/commissions.ts
+function agingKey2(days) {
+  if (days <= 7)
+    return "0-7 days";
+  if (days <= 15)
+    return "8-15 days";
+  if (days <= 30)
+    return "16-30 days";
+  if (days <= 60)
+    return "31-60 days";
+  return "60+ days";
+}
+async function GET35(req) {
+  const user = await requireAuth(req);
+  const roleError = blockReportRole(user);
+  if (roleError)
+    return roleError;
+  const filters = range(new URL(req.url));
+  let query = supabaseAdmin.from("sales_rep_commissions").select("*, sales_rep:sales_rep_id(full_name,name,email), funding:fundings(merchant_id,merchant:merchants(business_name))");
+  if (user.role === "sales_rep")
+    query = query.eq("sales_rep_id", user.id);
+  if (filters.rep_id && user.role === "admin")
+    query = query.eq("sales_rep_id", filters.rep_id);
+  const { data, error } = await query.order("created_at", { ascending: false }).returns();
+  if (error)
+    return badRequest(error.message);
+  const rows = (data ?? []).filter((row) => {
+    const relevant = row.status === "paid" ? row.paid_at : row.created_at;
+    const time = new Date(relevant ?? row.created_at).getTime();
+    return time >= filters.fromDate.getTime() && time <= filters.toDate.getTime();
+  });
+  const statusMap = new Map;
+  const repMap = new Map;
+  const agingMap = new Map;
+  rows.forEach((row) => {
+    const amount = moneyNumber(row.amount);
+    addBreakdown(statusMap, row.status, row.status, amount);
+    addBreakdown(repMap, row.sales_rep_id, userName(row.sales_rep), amount);
+    if (row.status === "unpaid" || row.status === "approved")
+      addBreakdown(agingMap, agingKey2(daysBetween(row.created_at)), agingKey2(daysBetween(row.created_at)), amount);
+  });
+  const report = {
+    range: { from: filters.from, to: filters.to, label: filters.label },
+    metrics: {
+      unpaid: rows.filter((row) => row.status === "unpaid").reduce((sum, row) => sum + moneyNumber(row.amount), 0),
+      approved: rows.filter((row) => row.status === "approved").reduce((sum, row) => sum + moneyNumber(row.amount), 0),
+      paid: rows.filter((row) => row.status === "paid").reduce((sum, row) => sum + moneyNumber(row.amount), 0),
+      adjusted: rows.filter((row) => row.status === "adjusted").reduce((sum, row) => sum + moneyNumber(row.amount), 0),
+      clawed_back: rows.filter((row) => row.status === "clawed_back").reduce((sum, row) => sum + moneyNumber(row.amount), 0),
+      void: rows.filter((row) => row.status === "void").reduce((sum, row) => sum + moneyNumber(row.amount), 0),
+      average_commission: Math.round(rows.reduce((sum, row) => sum + moneyNumber(row.amount), 0) / Math.max(1, rows.length))
+    },
+    by_status: breakdownRows(statusMap),
+    by_rep: user.role === "admin" ? breakdownRows(repMap) : [],
+    aging: breakdownRows(agingMap),
+    rows: rows.slice(0, 100).map((row) => ({ id: row.id, label: row.funding?.merchant?.business_name ?? "Unknown Merchant", secondary: userName(row.sales_rep), status: row.status, amount: moneyNumber(row.amount), date: row.paid_at ?? row.created_at, metadata: { basis_type: row.basis_type, age_days: daysBetween(row.created_at) } }))
+  };
+  return json(report);
+}
+
+// src/routes/reports/renewals.ts
+async function GET36(req) {
+  const user = await requireAuth(req);
+  const roleError = blockReportRole(user);
+  if (roleError)
+    return roleError;
+  const filters = range(new URL(req.url));
+  let query = supabaseAdmin.from("renewals").select("*, merchant:merchants(business_name,assigned_rep_id), funding:fundings(funded_amount,lender:lenders(company_name)), assigned_rep:users!renewals_assigned_rep_id_fkey(full_name,name,email)");
+  if (user.role === "sales_rep")
+    query = query.or(`assigned_rep_id.eq.${user.id}`);
+  if (filters.rep_id && user.role === "admin")
+    query = query.eq("assigned_rep_id", filters.rep_id);
+  const [renewalsRes, fundingsRes] = await Promise.all([
+    query.order("eligibility_date", { ascending: true }).returns(),
+    supabaseAdmin.from("fundings").select("*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name)").eq("funding_type", "renewal").gte("funded_at", filters.from).lte("funded_at", filters.to).returns()
+  ]);
+  if (renewalsRes.error)
+    return badRequest(renewalsRes.error.message);
+  if (fundingsRes.error)
+    return badRequest(fundingsRes.error.message);
+  const rows = (renewalsRes.data ?? []).filter((row) => dateInRange(row.eligibility_date, filters) || dateInRange(row.updated_at, filters));
+  const renewalFundings = user.role === "sales_rep" ? (fundingsRes.data ?? []).filter((row) => row.merchant?.assigned_rep_id === user.id) : fundingsRes.data ?? [];
+  const statusMap = new Map;
+  const repMap = new Map;
+  rows.forEach((row) => {
+    addBreakdown(statusMap, row.status, row.status);
+    addBreakdown(repMap, row.assigned_rep_id ?? row.merchant?.assigned_rep_id, userName(row.assigned_rep));
+  });
+  const now = Date.now();
+  const terminal = rows.filter((row) => ["renewed", "declined", "not_interested"].includes(row.status)).length;
+  const report = {
+    range: { from: filters.from, to: filters.to, label: filters.label },
+    metrics: {
+      eligible: rows.filter((row) => new Date(`${row.eligibility_date}T00:00:00Z`).getTime() <= now && !["renewed", "declined", "not_interested"].includes(row.status)).length,
+      not_ready: rows.filter((row) => row.status === "not_ready").length,
+      contacted: rows.filter((row) => row.status === "contacted").length,
+      application_started: rows.filter((row) => row.status === "application_started").length,
+      submitted: rows.filter((row) => row.status === "submitted").length,
+      renewed: rows.filter((row) => row.status === "renewed").length,
+      declined: rows.filter((row) => row.status === "declined").length,
+      not_interested: rows.filter((row) => row.status === "not_interested").length,
+      conversion_rate: percent(rows.filter((row) => row.status === "renewed").length, terminal),
+      renewal_funded_volume: renewalFundings.reduce((sum, row) => sum + moneyNumber(row.funded_amount), 0),
+      overdue_follow_ups: rows.filter((row) => row.next_follow_up_at && new Date(row.next_follow_up_at).getTime() < now && !["renewed", "declined", "not_interested"].includes(row.status)).length
+    },
+    by_status: breakdownRows(statusMap),
+    by_rep: user.role === "admin" ? breakdownRows(repMap) : [],
+    rows: rows.slice(0, 100).map((row) => ({ id: row.id, label: row.merchant?.business_name ?? "Unknown Merchant", secondary: row.funding?.lender?.company_name ?? userName(row.assigned_rep), status: row.status, amount: moneyNumber(row.funding?.funded_amount), date: row.next_follow_up_at ?? row.eligibility_date, metadata: { funding_id: row.funding_id } }))
+  };
+  return json(report);
+}
+
+// src/routes/reports/tasks.ts
+async function GET37(req) {
+  const user = await requireAuth(req);
+  const roleError = blockReportRole(user);
+  if (roleError)
+    return roleError;
+  const filters = range(new URL(req.url));
+  let query = supabaseAdmin.from("tasks").select("*, assignee:assigned_to(full_name,name,email)");
+  if (user.role === "sales_rep")
+    query = query.or(`assigned_to.eq.${user.id},created_by.eq.${user.id}`);
+  if (filters.rep_id && user.role === "admin")
+    query = query.eq("assigned_to", filters.rep_id);
+  const { data, error } = await query.order("due_at", { ascending: true, nullsFirst: false }).returns();
+  if (error)
+    return badRequest(error.message);
+  const rows = (data ?? []).filter((row) => dateInRange(row.due_at ?? row.created_at, filters) || dateInRange(row.completed_at, filters));
+  const statusMap = new Map;
+  const repMap = new Map;
+  const priorityMap = new Map;
+  rows.forEach((row) => {
+    addBreakdown(statusMap, row.status, row.status);
+    addBreakdown(repMap, row.assigned_to, userName(row.assignee));
+    addBreakdown(priorityMap, row.priority, row.priority);
+  });
+  const now = new Date;
+  const completedRows = rows.filter((row) => row.status === "completed" && row.completed_at);
+  const report = {
+    range: { from: filters.from, to: filters.to, label: filters.label },
+    metrics: {
+      open: rows.filter((row) => row.status === "open").length,
+      completed: completedRows.length,
+      cancelled: rows.filter((row) => row.status === "cancelled").length,
+      overdue: rows.filter((row) => row.status === "open" && row.due_at && new Date(row.due_at).getTime() < now.getTime()).length,
+      due_today: rows.filter((row) => row.status === "open" && row.due_at && new Date(row.due_at).toDateString() === now.toDateString()).length,
+      due_this_week: rows.filter((row) => row.status === "open" && row.due_at && new Date(row.due_at).getTime() <= now.getTime() + 7 * 24 * 60 * 60 * 1000).length,
+      completion_rate: percent(completedRows.length, rows.length),
+      average_completion_days: Math.round(completedRows.reduce((sum, row) => sum + daysBetween(row.created_at, new Date(row.completed_at)), 0) / Math.max(1, completedRows.length))
+    },
+    by_status: breakdownRows(statusMap),
+    by_rep: user.role === "admin" ? breakdownRows(repMap) : [],
+    by_priority: breakdownRows(priorityMap),
+    rows: rows.slice(0, 100).map((row) => ({ id: row.id, label: row.title, secondary: userName(row.assignee), status: row.status, date: row.due_at ?? row.created_at, metadata: { priority: row.priority, entity_type: row.entity_type, entity_id: row.entity_id } }))
+  };
+  return json(report);
+}
+
+// src/routes/lender-dashboard/analytics.ts
+async function GET38(req) {
+  const user = await requireAuth(req);
+  if (user.role !== "lender")
+    return forbidden();
+  const { data: lender, error: lenderError } = await supabaseAdmin.from("lenders").select("id,company_name").eq("user_id", user.id).maybeSingle();
+  if (lenderError)
+    return badRequest(lenderError.message);
+  if (!lender)
+    return forbidden("No lender profile found for this user");
+  const monthStart = new Date;
+  monthStart.setUTCDate(1);
+  monthStart.setUTCHours(0, 0, 0, 0);
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  const [submissionsRes, matchesRes, offersRes, fundingsRes, payoffsRes] = await Promise.all([
+    supabaseAdmin.from("merchant_file_submissions").select("id,merchant_id,status,submitted_at,merchant:merchants(business_name,status)").eq("lender_id", lender.id).order("submitted_at", { ascending: false }).returns(),
+    supabaseAdmin.from("lender_matches").select("id,merchant_id,created_at,merchant:merchants(business_name,status)").eq("lender_id", lender.id).order("created_at", { ascending: false }).returns(),
+    supabaseAdmin.from("offers").select("id,merchant_id,amount,status,created_at,merchant:merchants(business_name,status)").eq("lender_id", lender.id).order("created_at", { ascending: false }).returns(),
+    supabaseAdmin.from("fundings").select("id,merchant_id,funded_amount,payback_amount,funded_at,funding_type,renewal_number,funding_position,merchant:merchants(business_name,status)").eq("lender_id", lender.id).order("funded_at", { ascending: false }).returns(),
+    supabaseAdmin.from("payoff_requests").select("id,merchant_id,funding_id,status,requested_at,merchant:merchants(business_name,status)").eq("requested_from_lender_id", lender.id).order("requested_at", { ascending: false }).returns()
+  ]);
+  for (const res of [submissionsRes, matchesRes, offersRes, fundingsRes, payoffsRes]) {
+    if (res.error)
+      return badRequest(res.error.message);
+  }
+  const submissions = submissionsRes.data ?? [];
+  const matches = matchesRes.data ?? [];
+  const offers = offersRes.data ?? [];
+  const fundings = fundingsRes.data ?? [];
+  const payoffs = payoffsRes.data ?? [];
+  const submittedMerchantIds = new Set([...submissions.map((row) => row.merchant_id), ...matches.map((row) => row.merchant_id)]);
+  const totalFunded = fundings.reduce((sum, row) => sum + moneyNumber(row.funded_amount), 0);
+  const totalPayback = fundings.reduce((sum, row) => sum + moneyNumber(row.payback_amount), 0);
+  const report = {
+    metrics: {
+      files_sent: submittedMerchantIds.size,
+      pending_review: submissions.filter((row) => row.status === "submitted" || row.status === "viewed" || row.status === "no_response").length,
+      offers_sent: offers.filter((row) => row.status === "pending" || row.status === "accepted").length,
+      declines: submissions.filter((row) => row.status === "declined").length + offers.filter((row) => row.status === "declined").length,
+      funded_deals: fundings.length,
+      total_funded: totalFunded,
+      total_payback: totalPayback,
+      average_funded: Math.round(totalFunded / Math.max(1, fundings.length)),
+      this_month_funded: fundings.filter((row) => new Date(row.funded_at).getTime() >= monthStart.getTime()).reduce((sum, row) => sum + moneyNumber(row.funded_amount), 0),
+      last_90_days_funded: fundings.filter((row) => new Date(row.funded_at).getTime() >= ninetyDaysAgo.getTime()).reduce((sum, row) => sum + moneyNumber(row.funded_amount), 0),
+      payoff_requests_pending: payoffs.filter((row) => row.status === "requested").length
+    },
+    recent_submissions: submissions.slice(0, 8).map((row) => ({ id: row.id, label: row.merchant?.business_name ?? "Merchant File", status: row.status, date: row.submitted_at, metadata: { merchant_id: row.merchant_id } })),
+    recent_fundings: fundings.slice(0, 8).map((row) => ({ id: row.id, label: row.merchant?.business_name ?? "Merchant File", status: row.funding_type, amount: moneyNumber(row.funded_amount), date: row.funded_at, metadata: { merchant_id: row.merchant_id, renewal_number: row.renewal_number, funding_position: row.funding_position, payback_amount: moneyNumber(row.payback_amount) } })),
+    pending_payoff_requests: payoffs.filter((row) => row.status === "requested").slice(0, 8).map((row) => ({ id: row.id, label: row.merchant?.business_name ?? "Merchant File", status: row.status, date: row.requested_at, metadata: { merchant_id: row.merchant_id, funding_id: row.funding_id } }))
+  };
+  return json(report);
+}
+
 // node_modules/@google/genai/dist/node/index.mjs
 var import_p_retry = __toESM(require_p_retry(), 1);
 var import_google_auth_library = __toESM(require_src5(), 1);
@@ -64545,6 +65216,46 @@ ${message}`,
 
 // src/server/api.ts
 function matchRoute(method, pathname) {
+  if (pathname === "/api/lender-dashboard/analytics") {
+    if (method === "GET")
+      return { handler: GET38 };
+  }
+  if (pathname === "/api/reports/overview") {
+    if (method === "GET")
+      return { handler: GET29 };
+  }
+  if (pathname === "/api/reports/pipeline") {
+    if (method === "GET")
+      return { handler: GET30 };
+  }
+  if (pathname === "/api/reports/funding") {
+    if (method === "GET")
+      return { handler: GET31 };
+  }
+  if (pathname === "/api/reports/leads") {
+    if (method === "GET")
+      return { handler: GET32 };
+  }
+  if (pathname === "/api/reports/lenders") {
+    if (method === "GET")
+      return { handler: GET33 };
+  }
+  if (pathname === "/api/reports/revenue") {
+    if (method === "GET")
+      return { handler: GET34 };
+  }
+  if (pathname === "/api/reports/commissions") {
+    if (method === "GET")
+      return { handler: GET35 };
+  }
+  if (pathname === "/api/reports/renewals") {
+    if (method === "GET")
+      return { handler: GET36 };
+  }
+  if (pathname === "/api/reports/tasks") {
+    if (method === "GET")
+      return { handler: GET37 };
+  }
   if (pathname === "/api/ai/chat") {
     if (method === "POST")
       return { handler: POST30 };

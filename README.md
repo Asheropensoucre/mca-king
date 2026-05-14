@@ -43,6 +43,7 @@ The app is designed for MCA broker owners, broker shops, internal sales reps, me
 - **Search, filters, pagination, and saved views** so admins and sales reps can find merchants, leads, lenders, tasks, and funded records at scale.
 - **Account settings and admin user management** where users can change only their own password, while admins manage emails, roles, resets, account disable/close actions, and sales rep creation from a dedicated Settings area.
 - **Renewals tracking** for funded merchants, including broker-side eligibility queues, renewal funding history, and early-payoff request tracking. Merchants/admins/assigned reps can request payoff letters after funding; only the funding lender/funder for that deal or an admin can upload/link the official lender-provided payoff letter.
+- **Reporting and analytics** for admins and scoped sales reps, including overview, pipeline, funding, leads, lender/funder performance, broker revenue, commissions, renewals, tasks, and CSV exports. Lender/funder dashboards include only their own relationship analytics such as files sent, funded deals together, total funded together, and pending payoff requests.
 
 ## Tech Stack
 
@@ -129,7 +130,7 @@ If `.env.example` does not exist yet, create `.env.local` manually and add the v
 
 ### Supabase setup
 
-The app expects a Supabase project with Postgres tables for users, merchants, owners, lenders, lender matches, merchant file submissions, offers, documents, status history, stipulations, leads, lead notes, activities, tasks, fundings, broker revenue, sales rep commissions, renewals, payoff requests, saved views, account-status fields on users, and Better Auth-compatible session/account tables.
+The app expects a Supabase project with Postgres tables for users, merchants, owners, lenders, lender matches, merchant file submissions, offers, documents, status history, stipulations, leads, lead notes, activities, tasks, fundings, broker revenue, sales rep commissions, renewals, payoff requests, saved views, account-status fields on users, and Better Auth-compatible session/account tables. Reporting and dashboard analytics are generated from existing tables through server routes; no separate reporting schema is required for Phase G.
 
 There is currently no checked-in canonical SQL schema file in this repository. The schema is reflected by:
 

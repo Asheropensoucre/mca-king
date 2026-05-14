@@ -47,6 +47,16 @@ import { POST as resetAdminUserPassword } from '../routes/admin/users/[id]/reset
 import { POST as disableAdminUser } from '../routes/admin/users/[id]/disable'
 import { POST as reactivateAdminUser } from '../routes/admin/users/[id]/reactivate'
 import { POST as closeAdminUser } from '../routes/admin/users/[id]/close'
+import { GET as getReportOverview } from '../routes/reports/overview'
+import { GET as getReportPipeline } from '../routes/reports/pipeline'
+import { GET as getReportFunding } from '../routes/reports/funding'
+import { GET as getReportLeads } from '../routes/reports/leads'
+import { GET as getReportLenders } from '../routes/reports/lenders'
+import { GET as getReportRevenue } from '../routes/reports/revenue'
+import { GET as getReportCommissions } from '../routes/reports/commissions'
+import { GET as getReportRenewals } from '../routes/reports/renewals'
+import { GET as getReportTasks } from '../routes/reports/tasks'
+import { GET as getLenderDashboardAnalytics } from '../routes/lender-dashboard/analytics'
 import { POST as aiChat } from '../routes/ai/chat'
 import type { RouteContext } from '../lib/route-utils'
 
@@ -58,6 +68,47 @@ type RouteMatch = {
 }
 
 function matchRoute(method: string, pathname: string): RouteMatch | null {
+
+  if (pathname === '/api/lender-dashboard/analytics') {
+    if (method === 'GET') return { handler: getLenderDashboardAnalytics }
+  }
+
+  if (pathname === '/api/reports/overview') {
+    if (method === 'GET') return { handler: getReportOverview }
+  }
+
+  if (pathname === '/api/reports/pipeline') {
+    if (method === 'GET') return { handler: getReportPipeline }
+  }
+
+  if (pathname === '/api/reports/funding') {
+    if (method === 'GET') return { handler: getReportFunding }
+  }
+
+  if (pathname === '/api/reports/leads') {
+    if (method === 'GET') return { handler: getReportLeads }
+  }
+
+  if (pathname === '/api/reports/lenders') {
+    if (method === 'GET') return { handler: getReportLenders }
+  }
+
+  if (pathname === '/api/reports/revenue') {
+    if (method === 'GET') return { handler: getReportRevenue }
+  }
+
+  if (pathname === '/api/reports/commissions') {
+    if (method === 'GET') return { handler: getReportCommissions }
+  }
+
+  if (pathname === '/api/reports/renewals') {
+    if (method === 'GET') return { handler: getReportRenewals }
+  }
+
+  if (pathname === '/api/reports/tasks') {
+    if (method === 'GET') return { handler: getReportTasks }
+  }
+
   if (pathname === '/api/ai/chat') {
     if (method === 'POST') return { handler: aiChat }
   }

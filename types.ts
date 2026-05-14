@@ -394,3 +394,151 @@ export interface PaginatedResponse<T> {
   page: number;
   per_page: number;
 }
+
+export interface ReportDateRange {
+  from: string;
+  to: string;
+  label: string;
+}
+
+export interface ReportMetric {
+  label: string;
+  value: number | string;
+  helper?: string;
+  trend?: number | null;
+}
+
+export interface ReportBreakdownRow {
+  key: string;
+  label: string;
+  count: number;
+  amount?: number;
+  percent?: number;
+}
+
+export interface ReportSeriesPoint {
+  period: string;
+  count: number;
+  amount?: number;
+}
+
+export interface ReportDrilldownRow {
+  id: string;
+  label: string;
+  secondary?: string | null;
+  status?: string | null;
+  amount?: number | string | null;
+  date?: string | null;
+  metadata?: Record<string, string | number | null | undefined>;
+}
+
+export interface OverviewReport {
+  range: ReportDateRange;
+  metrics: {
+    total_leads: number;
+    converted_leads: number;
+    total_merchants: number;
+    funded_deals: number;
+    funded_volume: number;
+    average_funding_amount: number;
+    lead_conversion_rate: number;
+    offer_to_funded_rate: number;
+    broker_revenue_expected: number;
+    broker_revenue_received: number;
+    commissions_unpaid: number;
+    overdue_tasks: number;
+    eligible_renewals: number;
+  };
+  funding_series: ReportSeriesPoint[];
+  pipeline_breakdown: ReportBreakdownRow[];
+  top_reps: ReportBreakdownRow[];
+  top_lenders: ReportBreakdownRow[];
+}
+
+export interface PipelineReport {
+  range: ReportDateRange;
+  metrics: Record<string, number>;
+  by_status: ReportBreakdownRow[];
+  by_rep: ReportBreakdownRow[];
+  stale_deals: ReportDrilldownRow[];
+}
+
+export interface FundingReport {
+  range: ReportDateRange;
+  metrics: Record<string, number>;
+  series: ReportSeriesPoint[];
+  by_rep: ReportBreakdownRow[];
+  by_lender: ReportBreakdownRow[];
+  by_funding_type: ReportBreakdownRow[];
+  by_position: ReportBreakdownRow[];
+  rows: ReportDrilldownRow[];
+}
+
+export interface LeadReport {
+  range: ReportDateRange;
+  metrics: Record<string, number>;
+  by_status: ReportBreakdownRow[];
+  by_rep: ReportBreakdownRow[];
+  series: ReportSeriesPoint[];
+  rows: ReportDrilldownRow[];
+}
+
+export interface LenderReport {
+  range: ReportDateRange;
+  metrics: Record<string, number>;
+  rows: ReportDrilldownRow[];
+}
+
+export interface RevenueReport {
+  range: ReportDateRange;
+  metrics: Record<string, number>;
+  by_status: ReportBreakdownRow[];
+  by_lender: ReportBreakdownRow[];
+  aging: ReportBreakdownRow[];
+  rows: ReportDrilldownRow[];
+}
+
+export interface CommissionReport {
+  range: ReportDateRange;
+  metrics: Record<string, number>;
+  by_status: ReportBreakdownRow[];
+  by_rep: ReportBreakdownRow[];
+  aging: ReportBreakdownRow[];
+  rows: ReportDrilldownRow[];
+}
+
+export interface RenewalReport {
+  range: ReportDateRange;
+  metrics: Record<string, number>;
+  by_status: ReportBreakdownRow[];
+  by_rep: ReportBreakdownRow[];
+  rows: ReportDrilldownRow[];
+}
+
+export interface TaskReport {
+  range: ReportDateRange;
+  metrics: Record<string, number>;
+  by_status: ReportBreakdownRow[];
+  by_rep: ReportBreakdownRow[];
+  by_priority: ReportBreakdownRow[];
+  rows: ReportDrilldownRow[];
+}
+
+export interface LenderDashboardAnalytics {
+  metrics: {
+    files_sent: number;
+    pending_review: number;
+    offers_sent: number;
+    declines: number;
+    funded_deals: number;
+    total_funded: number;
+    total_payback: number;
+    average_funded: number;
+    this_month_funded: number;
+    last_90_days_funded: number;
+    payoff_requests_pending: number;
+  };
+  recent_submissions: ReportDrilldownRow[];
+  recent_fundings: ReportDrilldownRow[];
+  pending_payoff_requests: ReportDrilldownRow[];
+}

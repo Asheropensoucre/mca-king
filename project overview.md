@@ -96,6 +96,7 @@ Sales reps can:
 - Match files to lenders when permitted
 - Track assigned files in the Kamba pipeline
 - Change only their own password in User Settings
+- View scoped relationship analytics on their own dashboard, including files sent to them, funded deals together, total funded volume together, average funded amount, this-month funded volume, and pending payoff requests
 
 ### Lender/Funder Dashboard
 
@@ -108,6 +109,7 @@ Lenders/funders can:
 - Send offers to the broker/merchant workflow
 - See only their own offers/responses; competing lender/funder offers on the same merchant file are hidden server-side
 - Change only their own password in User Settings
+- View scoped relationship analytics on their own dashboard, including files sent to them, funded deals together, total funded volume together, average funded amount, this-month funded volume, and pending payoff requests
 
 ## Phase 6: Renewals
 
@@ -120,4 +122,4 @@ The broker shop can track renewal opportunities after a merchant is funded. Rene
 - Secure document storage and signed URL access
 - Broker-to-lender package generation and notification workflow
 - State machine for the 12-step Kamba pipeline
-- Activity history and tasks are implemented. Funding records, broker revenue, internal sales rep commissions, merchant-file submission outcomes, search/filter/saved-view work queues, account settings/admin user management, and renewals tracking with payoff request tracking are implemented. Reporting and compliance controls remain future expansion areas.
+- Activity history and tasks are implemented. Funding records, broker revenue, internal sales rep commissions, merchant-file submission outcomes, search/filter/saved-view work queues, account settings/admin user management, renewals tracking with payoff request tracking, and reporting/analytics are implemented. Compliance controls remain a future expansion area.
