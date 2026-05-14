@@ -3,16 +3,17 @@ import type { ReportSeriesPoint } from '../../../../types';
 import { formatMetricValue } from './ReportMetricCard';
 
 interface SimpleLineChartProps {
-  points: ReportSeriesPoint[];
+  points?: ReportSeriesPoint[] | null;
   amountMode?: boolean;
 }
 
 export const SimpleLineChart: React.FC<SimpleLineChartProps> = ({ points, amountMode }) => {
-  const max = Math.max(1, ...points.map(point => amountMode ? Number(point.amount ?? 0) : point.count));
-  if (points.length === 0) return <p className="text-sm text-slate-500">No trend data yet.</p>;
+  const safePoints = Array.isArray(points) ? points : [];
+  const max = Math.max(1, ...safePoints.map(point => amountMode ? Number(point.amount ?? 0) : point.count));
+  if (safePoints.length === 0) return <p className="text-sm text-slate-500">No trend data yet.</p>;
   return (
     <div className="flex h-48 items-end gap-2 overflow-x-auto border-b border-slate-200 pb-2 dark:border-slate-700">
-      {points.map(point => {
+      {safePoints.map(point => {
         const value = amountMode ? Number(point.amount ?? 0) : point.count;
         return (
           <div key={point.period} className="flex min-w-12 flex-1 flex-col items-center justify-end gap-2">

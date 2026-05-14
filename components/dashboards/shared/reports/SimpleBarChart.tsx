@@ -3,16 +3,17 @@ import type { ReportBreakdownRow } from '../../../../types';
 import { formatMetricValue } from './ReportMetricCard';
 
 interface SimpleBarChartProps {
-  rows: ReportBreakdownRow[];
+  rows?: ReportBreakdownRow[] | null;
   amountMode?: boolean;
 }
 
 export const SimpleBarChart: React.FC<SimpleBarChartProps> = ({ rows, amountMode }) => {
-  const max = Math.max(1, ...rows.map(row => amountMode ? Number(row.amount ?? 0) : row.count));
-  if (rows.length === 0) return <p className="text-sm text-slate-500">No data yet.</p>;
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const max = Math.max(1, ...safeRows.map(row => amountMode ? Number(row.amount ?? 0) : row.count));
+  if (safeRows.length === 0) return <p className="text-sm text-slate-500">No data yet.</p>;
   return (
     <div className="space-y-3">
-      {rows.slice(0, 12).map(row => {
+      {safeRows.slice(0, 12).map(row => {
         const value = amountMode ? Number(row.amount ?? 0) : row.count;
         return (
           <div key={row.key}>
