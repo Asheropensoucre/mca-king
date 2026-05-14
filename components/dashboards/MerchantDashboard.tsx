@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import type { ApplicationStatus, AuthUser, DocumentInfo, FormData, Stipulation } from '../../types';
+import type { ApplicationStatus, AuthUser, DocumentInfo, FormData, Renewal, Stipulation } from '../../types';
 import { Card } from '../ui/Card';
 import { DocumentUpload } from '../DocumentUpload';
 import { APPLICATION_STATUS_CONFIG, DEFAULT_APPLICATION_STATUS, getStatusIndex, getStatusThemeClasses } from './shared/applicationStatus';
@@ -91,18 +91,29 @@ const LockedApplicationView: React.FC<{ merchant: FormData }> = ({ merchant }) =
 export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUser, submission, onExit, themeToggle, onUpdateMerchant, onUpdateOffer }) => {
     const currentStatusIndex = getStatusIndex(submission.status);
     const [stipulations, setStipulations] = useState<Stipulation[]>([]);
+    const [renewals, setRenewals] = useState<Renewal[]>([]);
+    const [renewalMessage, setRenewalMessage] = useState<string | null>(null);
+    const [payoffMessage, setPayoffMessage] = useState<string | null>(null);
     const [refreshDocuments, setRefreshDocuments] = useState(0);
     const [isEditingApplication, setIsEditingApplication] = useState(false);
     const [applicationMessage, setApplicationMessage] = useState<string | null>(null);
     const [showSettings, setShowSettings] = useState(false);
     const formState = useMemo(() => getMerchantFormState(submission), [submission]);
     const monthsUntilReapply = useMemo(() => getMonthsUntilReapply(submission), [submission]);
+    const eligibleRenewal = useMemo(() => renewals.find(renewal => renewal.is_eligible), [renewals]);
 
     const loadStipulations = async () => {
         setStipulations(await api.stipulations.list(submission.id));
     };
 
-    useEffect(() => { void loadStipulations().catch(() => undefined); }, [submission.id]);
+    const loadRenewals = async () => {
+        setRenewals(await api.renewals.list({ merchant_id: submission.id, eligible: 'true' }));
+    };
+
+    useEffect(() => {
+        void loadStipulations().catch(() => undefined);
+        void loadRenewals().catch(() => undefined);
+    }, [submission.id]);
 
     const handleStipUpload = async () => {
         await loadStipulations();
@@ -127,6 +138,27 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
         onUpdateMerchant(resetApplication);
         setApplicationMessage('Your application has been reset. You can now update it for review.');
         setIsEditingApplication(true);
+    };
+
+    const handleRenewalReviewRequest = async () => {
+        const renewal = renewals.find(item => item.is_eligible);
+        if (!renewal) return;
+        try {
+            await api.renewals.requestReview(renewal.id);
+            setRenewalMessage('Renewal review requested. The broker shop will follow up with you.');
+            await loadRenewals();
+        } catch (err) {
+            setRenewalMessage(err instanceof Error ? err.message : 'Could not request renewal review.');
+        }
+    };
+
+    const handlePayoffRequest = async () => {
+        try {
+            await api.payoffRequests.create({ merchant_id: submission.id });
+            setPayoffMessage('Payoff letter requested. The broker shop and lender/funder will follow up.');
+        } catch (err) {
+            setPayoffMessage(err instanceof Error ? err.message : 'Could not request payoff letter.');
+        }
     };
 
     const renderApplicationSection = () => {
@@ -208,6 +240,28 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
                 </Card>
 
                 {renderApplicationSection()}
+
+                {eligibleRenewal && (
+                    <Card className="mb-6">
+                        <div className="p-6">
+                            <h2 className="text-xl font-black text-theme-maroon dark:text-theme-yellow">Renewal Review</h2>
+                            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">You may be eligible for renewal funding. Contact your broker shop to review options.</p>
+                            {renewalMessage && <p className="mt-2 text-sm font-semibold text-theme-teal">{renewalMessage}</p>}
+                            <div className="mt-4"><PrimaryButton label="Request Renewal Review" size="small" onClick={() => void handleRenewalReviewRequest()} /></div>
+                        </div>
+                    </Card>
+                )}
+
+                {submission.status === 'FUNDED' && (
+                    <Card className="mb-6">
+                        <div className="p-6">
+                            <h2 className="text-xl font-black text-theme-maroon dark:text-theme-yellow">Early Payoff</h2>
+                            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">If you want to pay off early, request an official payoff letter from your current lender/funder. MCA King tracks the request only; the lender/funder provides the official payoff letter.</p>
+                            {payoffMessage && <p className="mt-2 text-sm font-semibold text-theme-teal">{payoffMessage}</p>}
+                            <div className="mt-4"><PrimaryButton label="Request Payoff Letter" size="small" onClick={() => void handlePayoffRequest()} /></div>
+                        </div>
+                    </Card>
+                )}
 
                 <div className="mb-6">
                     <DocumentsPanel key={refreshDocuments} merchantId={submission.id} canUpload={true} title="My Documents" />

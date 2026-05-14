@@ -278,6 +278,55 @@ export interface SalesRepCommission {
   sales_rep_name?: string;
 }
 
+export type RenewalStatus = 'not_ready' | 'eligible' | 'contacted' | 'application_started' | 'submitted' | 'renewed' | 'declined' | 'not_interested';
+
+export interface Renewal {
+  id: string;
+  merchant_id: string;
+  funding_id: string | null;
+  eligibility_date: string;
+  status: RenewalStatus;
+  estimated_balance: number | string | null;
+  payoff_amount: number | string | null;
+  assigned_rep_id: string | null;
+  last_contacted_at: string | null;
+  next_follow_up_at: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  merchant_name?: string;
+  lender_name?: string | null;
+  funded_amount?: number | string | null;
+  funded_at?: string | null;
+  assigned_rep_name?: string | null;
+  is_eligible?: boolean;
+}
+
+export type PayoffRequestStatus = 'requested' | 'received' | 'expired' | 'used' | 'cancelled';
+
+export interface PayoffRequest {
+  id: string;
+  merchant_id: string;
+  funding_id: string | null;
+  renewal_id: string | null;
+  requested_from_lender_id: string | null;
+  requested_from_name: string | null;
+  payoff_amount: number | string | null;
+  requested_at: string;
+  received_at: string | null;
+  expires_at: string | null;
+  file_document_id: string | null;
+  status: PayoffRequestStatus;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  merchant_name?: string;
+  document_name?: string | null;
+  funding_lender_id?: string | null;
+}
+
 export type DocType = 'bank_statement' | 'contract' | 'stipulation' | 'id' | 'other';
 
 export interface Document {

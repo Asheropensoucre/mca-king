@@ -2,6 +2,7 @@ import type { ApplicationStatus, BrokerRevenue, Funding, SalesRepCommission } fr
 import { recordActivity } from '../../lib/activity'
 import { rowToMerchant, type MerchantRow, type OfferRow } from '../../lib/data-shapes'
 import { getPagination, paginatedJson, hasListParams } from '../../lib/list-query'
+import { ensureRenewalForFunding } from '../../lib/renewals'
 import { triggerMerchantStatusEmail } from '../../lib/email-triggers'
 import { requireAuth } from '../../lib/requireAuth'
 import { assertRole, badRequest, forbidden, json } from '../../lib/route-utils'
@@ -247,6 +248,29 @@ export async function POST(req: Request): Promise<Response> {
       status: body.sales_rep_commission_status ?? 'unpaid',
     })
     if (error) return badRequest(error.message)
+  }
+
+  try {
+    const renewal = await ensureRenewalForFunding({
+      funding_id: fundingRow.id,
+      merchant_id: body.merchant_id,
+      funded_at: fundingRow.funded_at,
+      assigned_rep_id: merchantRow.assigned_rep_id,
+      created_by: user.id,
+    })
+
+    if (renewal) {
+      recordActivity({
+        entity_type: 'merchant',
+        entity_id: body.merchant_id,
+        user_id: user.id,
+        activity_type: 'system',
+        body: `Renewal opportunity created; eligible on ${renewal.eligibility_date}`,
+        metadata: { renewal_id: renewal.id, funding_id: fundingRow.id, eligibility_date: renewal.eligibility_date },
+      })
+    }
+  } catch (err) {
+    console.error('[fundings] Failed to create renewal opportunity:', err)
   }
 
   recordActivity({

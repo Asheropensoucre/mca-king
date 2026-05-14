@@ -44292,6 +44292,12 @@ function toMerchantFileSubmission(row) {
     lender_contact_email: row.lender?.contact_email
   };
 }
+async function getLenderIdForUser(userId) {
+  const { data, error } = await supabaseAdmin.from("lenders").select("id").eq("user_id", userId).maybeSingle();
+  if (error)
+    throw error;
+  return data?.id ?? null;
+}
 async function getLenderMatch(merchantId, lenderId) {
   const { data, error } = await supabaseAdmin.from("lender_matches").select("id").eq("merchant_id", merchantId).eq("lender_id", lenderId).maybeSingle();
   if (error)
@@ -44848,15 +44854,38 @@ async function POST6(req, context) {
 // src/routes/documents/upload.ts
 var DOC_TYPES = ["bank_statement", "contract", "stipulation", "id", "other"];
 var isDocType = (value) => typeof value === "string" && DOC_TYPES.includes(value);
-async function canUpload(userId, role, merchantId) {
-  if (role === "admin" || role === "sales_rep" || role === "lender")
+async function canUploadRegularDocument(userId, role, merchantId) {
+  if (role === "admin" || role === "sales_rep")
     return true;
-  if (role !== "merchant")
-    return false;
-  const { data, error } = await supabaseAdmin.from("merchants").select("id").eq("id", merchantId).eq("user_id", userId).maybeSingle();
+  if (role === "merchant") {
+    const { data, error } = await supabaseAdmin.from("merchants").select("id").eq("id", merchantId).eq("user_id", userId).maybeSingle();
+    if (error)
+      return badRequest(error.message);
+    return Boolean(data);
+  }
+  if (role === "lender") {
+    const lenderId = await getLenderIdForUser(userId);
+    if (!lenderId)
+      return false;
+    const { data, error } = await supabaseAdmin.from("lender_matches").select("id").eq("merchant_id", merchantId).eq("lender_id", lenderId).maybeSingle();
+    if (error)
+      return badRequest(error.message);
+    return Boolean(data);
+  }
+  return false;
+}
+async function canUploadPayoffLetter(userId, role, merchantId, payoffRequestId) {
+  const { data: payoffRequest, error } = await supabaseAdmin.from("payoff_requests").select("id,merchant_id,funding:fundings(lender_id)").eq("id", payoffRequestId).maybeSingle();
   if (error)
     return badRequest(error.message);
-  return Boolean(data);
+  if (!payoffRequest || payoffRequest.merchant_id !== merchantId)
+    return badRequest("payoff request does not belong to merchant");
+  if (role === "admin")
+    return true;
+  if (role !== "lender")
+    return false;
+  const lenderId = await getLenderIdForUser(userId);
+  return Boolean(lenderId && payoffRequest.funding?.lender_id === lenderId);
 }
 async function POST7(req) {
   const user = await requireAuth(req);
@@ -44865,17 +44894,19 @@ async function POST7(req) {
   const merchantIdValue = formData.get("merchant_id");
   const docTypeValue = formData.get("doc_type");
   const stipulationIdValue = formData.get("stipulation_id");
+  const payoffRequestIdValue = formData.get("payoff_request_id");
   if (!(fileValue instanceof File))
     return badRequest("file is required");
   if (typeof merchantIdValue !== "string" || !merchantIdValue)
     return badRequest("merchant_id is required");
   if (!isDocType(docTypeValue))
     return badRequest("invalid doc_type");
-  const allowed = await canUpload(user.id, user.role, merchantIdValue);
+  const isPayoffUpload = typeof payoffRequestIdValue === "string" && payoffRequestIdValue.length > 0;
+  const allowed = isPayoffUpload ? await canUploadPayoffLetter(user.id, user.role, merchantIdValue, payoffRequestIdValue) : await canUploadRegularDocument(user.id, user.role, merchantIdValue);
   if (allowed instanceof Response)
     return allowed;
   if (!allowed)
-    return forbidden();
+    return forbidden(isPayoffUpload ? "Only the funding lender/funder or admin can upload this payoff letter" : "Forbidden");
   const safeName = fileValue.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const storagePath = `${merchantIdValue}/${docTypeValue}/${Date.now()}-${safeName}`;
   const { error: uploadError } = await supabaseAdmin.storage.from("documents").upload(storagePath, fileValue, { contentType: fileValue.type || "application/octet-stream" });
@@ -44895,8 +44926,14 @@ async function POST7(req) {
     if (stipError)
       return badRequest(stipError.message);
   }
-  const activityBody = `Document uploaded: ${fileValue.name} (${docTypeValue})`;
-  const activityMetadata = { doc_type: docTypeValue, file_name: fileValue.name, document_id: data.id };
+  if (isPayoffUpload) {
+    const now = new Date().toISOString();
+    const { error: payoffError } = await supabaseAdmin.from("payoff_requests").update({ file_document_id: data.id, status: "received", received_at: now, updated_at: now }).eq("id", payoffRequestIdValue).eq("merchant_id", merchantIdValue);
+    if (payoffError)
+      return badRequest(payoffError.message);
+  }
+  const activityBody = isPayoffUpload ? `Payoff letter uploaded: ${fileValue.name}` : `Document uploaded: ${fileValue.name} (${docTypeValue})`;
+  const activityMetadata = { doc_type: docTypeValue, file_name: fileValue.name, document_id: data.id, payoff_request_id: isPayoffUpload ? payoffRequestIdValue : undefined };
   recordActivity({
     entity_type: "document",
     entity_id: merchantIdValue,
@@ -44930,7 +44967,10 @@ async function canAccessMerchant(userId, role, merchantId) {
   if (role === "merchant")
     return merchant.user_id === userId;
   if (role === "lender") {
-    const { data, error: matchError } = await supabaseAdmin.from("lender_matches").select("id").eq("merchant_id", merchantId).eq("lender_id", userId).maybeSingle();
+    const lenderId = await getLenderIdForUser(userId);
+    if (!lenderId)
+      return false;
+    const { data, error: matchError } = await supabaseAdmin.from("lender_matches").select("id").eq("merchant_id", merchantId).eq("lender_id", lenderId).maybeSingle();
     if (matchError)
       return badRequest(matchError.message);
     return Boolean(data);
@@ -45678,6 +45718,88 @@ async function DELETE6(req, context) {
   return new Response(null, { status: 204 });
 }
 
+// src/lib/renewals.ts
+var RENEWAL_STATUSES = ["not_ready", "eligible", "contacted", "application_started", "submitted", "renewed", "declined", "not_interested"];
+var PAYOFF_REQUEST_STATUSES = ["requested", "received", "expired", "used", "cancelled"];
+function isRenewalStatus(value) {
+  return typeof value === "string" && RENEWAL_STATUSES.includes(value);
+}
+function isPayoffRequestStatus(value) {
+  return typeof value === "string" && PAYOFF_REQUEST_STATUSES.includes(value);
+}
+function defaultRenewalEligibilityDate(fundedAt) {
+  const date = new Date(fundedAt);
+  date.setDate(date.getDate() + 90);
+  return date.toISOString().slice(0, 10);
+}
+function isRenewalEligible(eligibilityDate, status) {
+  if (status === "renewed" || status === "declined" || status === "not_interested")
+    return false;
+  return new Date(`${eligibilityDate}T00:00:00Z`).getTime() <= Date.now();
+}
+function toRenewal(row) {
+  return {
+    id: row.id,
+    merchant_id: row.merchant_id,
+    funding_id: row.funding_id,
+    eligibility_date: row.eligibility_date,
+    status: row.status,
+    estimated_balance: row.estimated_balance,
+    payoff_amount: row.payoff_amount,
+    assigned_rep_id: row.assigned_rep_id,
+    last_contacted_at: row.last_contacted_at,
+    next_follow_up_at: row.next_follow_up_at,
+    notes: row.notes,
+    created_by: row.created_by,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    merchant_name: row.merchant?.business_name,
+    lender_name: row.funding?.lender?.company_name ?? null,
+    funded_amount: row.funding?.funded_amount ?? null,
+    funded_at: row.funding?.funded_at ?? null,
+    assigned_rep_name: row.assigned_rep?.full_name ?? row.assigned_rep?.name ?? row.assigned_rep?.email ?? null,
+    is_eligible: isRenewalEligible(row.eligibility_date, row.status)
+  };
+}
+function toPayoffRequest(row) {
+  return {
+    id: row.id,
+    merchant_id: row.merchant_id,
+    funding_id: row.funding_id,
+    renewal_id: row.renewal_id,
+    requested_from_lender_id: row.requested_from_lender_id,
+    requested_from_name: row.requested_from_name,
+    payoff_amount: row.payoff_amount,
+    requested_at: row.requested_at,
+    received_at: row.received_at,
+    expires_at: row.expires_at,
+    file_document_id: row.file_document_id,
+    status: row.status,
+    notes: row.notes,
+    created_by: row.created_by,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    merchant_name: row.merchant?.business_name,
+    document_name: row.document?.file_name ?? null,
+    funding_lender_id: row.funding?.lender_id ?? null
+  };
+}
+async function ensureRenewalForFunding(params) {
+  const eligibilityDate = defaultRenewalEligibilityDate(params.funded_at);
+  const { data, error } = await supabaseAdmin.from("renewals").upsert({
+    merchant_id: params.merchant_id,
+    funding_id: params.funding_id,
+    eligibility_date: eligibilityDate,
+    status: "not_ready",
+    assigned_rep_id: params.assigned_rep_id ?? null,
+    created_by: params.created_by ?? null,
+    updated_at: new Date().toISOString()
+  }, { onConflict: "merchant_id,funding_id", ignoreDuplicates: true }).select("*, merchant:merchants(business_name,assigned_rep_id,user_id), funding:fundings(funded_amount,funded_at,lender:lenders(company_name)), assigned_rep:users!renewals_assigned_rep_id_fkey(full_name,name,email)").maybeSingle();
+  if (error)
+    throw new Error(error.message);
+  return data ? toRenewal(data) : null;
+}
+
 // src/routes/fundings/index.ts
 var FUNDED_STATUS = "FUNDED";
 var PAYMENT_FREQUENCIES = ["daily", "weekly", "biweekly", "monthly"];
@@ -45855,6 +45977,27 @@ async function POST17(req) {
     if (error)
       return badRequest(error.message);
   }
+  try {
+    const renewal = await ensureRenewalForFunding({
+      funding_id: fundingRow.id,
+      merchant_id: body.merchant_id,
+      funded_at: fundingRow.funded_at,
+      assigned_rep_id: merchantRow.assigned_rep_id,
+      created_by: user.id
+    });
+    if (renewal) {
+      recordActivity({
+        entity_type: "merchant",
+        entity_id: body.merchant_id,
+        user_id: user.id,
+        activity_type: "system",
+        body: `Renewal opportunity created; eligible on ${renewal.eligibility_date}`,
+        metadata: { renewal_id: renewal.id, funding_id: fundingRow.id, eligibility_date: renewal.eligibility_date }
+      });
+    }
+  } catch (err) {
+    console.error("[fundings] Failed to create renewal opportunity:", err);
+  }
   recordActivity({
     entity_type: "funding",
     entity_id: fundingRow.id,
@@ -45973,8 +46116,563 @@ async function PATCH6(req, context) {
   return json(toFunding2(data));
 }
 
-// src/routes/broker-revenue/index.ts
+// src/routes/renewals/index.ts
+var renewalSelect = "*, merchant:merchants(business_name,assigned_rep_id,user_id), funding:fundings(funded_amount,funded_at,lender:lenders(company_name)), assigned_rep:users!renewals_assigned_rep_id_fkey(full_name,name,email)";
 function toNumber5(value) {
+  if (value === null || value === undefined || value === "")
+    return null;
+  const parsed = Number(String(value).replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+async function getMerchant(merchantId) {
+  const { data, error } = await supabaseAdmin.from("merchants").select("id,user_id,assigned_rep_id,business_name").eq("id", merchantId).maybeSingle();
+  if (error)
+    return badRequest(error.message);
+  if (!data)
+    return badRequest("merchant not found");
+  return data;
+}
+function safeRenewalForMerchant(renewal) {
+  return { ...renewal, estimated_balance: null, payoff_amount: null, notes: null, assigned_rep_id: null, assigned_rep_name: null };
+}
+async function GET17(req) {
+  const user = await requireAuth(req);
+  if (user.role === "lender")
+    return forbidden();
+  const url = new URL(req.url);
+  const shouldPaginate = hasListParams(url);
+  const pagination = getPagination(url);
+  const merchantId = url.searchParams.get("merchant_id");
+  const fundingId = url.searchParams.get("funding_id");
+  const status = url.searchParams.get("status");
+  const assignedRepId = url.searchParams.get("assigned_rep_id");
+  const eligible = url.searchParams.get("eligible");
+  const from = url.searchParams.get("from");
+  const to = url.searchParams.get("to");
+  if (status && !isRenewalStatus(status))
+    return badRequest("status is invalid");
+  let query = supabaseAdmin.from("renewals").select(renewalSelect, { count: shouldPaginate ? "exact" : undefined });
+  if (merchantId)
+    query = query.eq("merchant_id", merchantId);
+  if (fundingId)
+    query = query.eq("funding_id", fundingId);
+  if (status)
+    query = query.eq("status", status);
+  if (from)
+    query = query.gte("eligibility_date", from);
+  if (to)
+    query = query.lte("eligibility_date", to);
+  if (eligible === "true")
+    query = query.lte("eligibility_date", new Date().toISOString().slice(0, 10)).not("status", "in", "(renewed,declined,not_interested)");
+  if (user.role === "sales_rep") {
+    const { data: merchants, error: error2 } = await supabaseAdmin.from("merchants").select("id").eq("assigned_rep_id", user.id).returns();
+    if (error2)
+      return badRequest(error2.message);
+    const ids = (merchants ?? []).map((merchant) => merchant.id);
+    if (ids.length === 0)
+      return shouldPaginate ? paginatedJson([], 0, pagination.page, pagination.perPage) : json([]);
+    query = query.in("merchant_id", ids);
+  } else if (user.role === "merchant") {
+    const { data: merchants, error: error2 } = await supabaseAdmin.from("merchants").select("id").eq("user_id", user.id).returns();
+    if (error2)
+      return badRequest(error2.message);
+    const ids = (merchants ?? []).map((merchant) => merchant.id);
+    if (ids.length === 0)
+      return shouldPaginate ? paginatedJson([], 0, pagination.page, pagination.perPage) : json([]);
+    query = query.in("merchant_id", ids);
+  } else if (assignedRepId) {
+    query = query.eq("assigned_rep_id", assignedRepId);
+  }
+  query = query.order("eligibility_date", { ascending: true }).order("created_at", { ascending: false });
+  if (shouldPaginate)
+    query = query.range(pagination.from, pagination.to);
+  const { data, error, count } = await query.returns();
+  if (error)
+    return badRequest(error.message);
+  if (user.role === "merchant") {
+    const requestedStatuses = new Set(["eligible", "application_started"]);
+    const filtered = (data ?? []).filter((row) => row.merchant?.user_id === user.id && isRenewalEligible(row.eligibility_date, row.status) && requestedStatuses.has(row.status));
+    const renewals2 = filtered.map(toRenewal).map(safeRenewalForMerchant);
+    return shouldPaginate ? paginatedJson(renewals2, renewals2.length, pagination.page, pagination.perPage) : json(renewals2);
+  }
+  const renewals = (data ?? []).filter((row) => user.role !== "sales_rep" || row.merchant?.assigned_rep_id === user.id).filter((row) => user.role !== "merchant" || row.merchant?.user_id === user.id).map(toRenewal).map((renewal) => user.role === "merchant" ? safeRenewalForMerchant(renewal) : renewal);
+  return shouldPaginate ? paginatedJson(renewals, count, pagination.page, pagination.perPage) : json(renewals);
+}
+async function POST18(req) {
+  const user = await requireAuth(req);
+  const roleError = assertRole(user, ["admin", "sales_rep"]);
+  if (roleError)
+    return roleError;
+  const body = await req.json();
+  if (!body.merchant_id)
+    return badRequest("merchant_id is required");
+  if (!body.eligibility_date)
+    return badRequest("eligibility_date is required");
+  if (body.status && !isRenewalStatus(body.status))
+    return badRequest("status is invalid");
+  const merchant = await getMerchant(body.merchant_id);
+  if (merchant instanceof Response)
+    return merchant;
+  if (user.role === "sales_rep" && merchant.assigned_rep_id !== user.id)
+    return forbidden();
+  if (body.funding_id) {
+    const { data: funding, error: error2 } = await supabaseAdmin.from("fundings").select("id,merchant_id").eq("id", body.funding_id).maybeSingle();
+    if (error2)
+      return badRequest(error2.message);
+    if (!funding || funding.merchant_id !== body.merchant_id)
+      return badRequest("funding does not belong to merchant");
+  }
+  const status = body.status ?? (isRenewalEligible(body.eligibility_date, "not_ready") ? "eligible" : "not_ready");
+  const { data, error } = await supabaseAdmin.from("renewals").insert({
+    merchant_id: body.merchant_id,
+    funding_id: body.funding_id ?? null,
+    eligibility_date: body.eligibility_date,
+    status,
+    estimated_balance: toNumber5(body.estimated_balance),
+    payoff_amount: toNumber5(body.payoff_amount),
+    assigned_rep_id: user.role === "sales_rep" ? user.id : body.assigned_rep_id ?? merchant.assigned_rep_id,
+    last_contacted_at: body.last_contacted_at ?? null,
+    next_follow_up_at: body.next_follow_up_at ?? null,
+    notes: body.notes?.trim() || null,
+    created_by: user.id
+  }).select(renewalSelect).single();
+  if (error)
+    return badRequest(error.message);
+  const renewal = toRenewal(data);
+  recordActivity({
+    entity_type: "merchant",
+    entity_id: body.merchant_id,
+    user_id: user.id,
+    activity_type: "system",
+    body: `Renewal opportunity created; eligible on ${body.eligibility_date}`,
+    metadata: { renewal_id: renewal.id, funding_id: body.funding_id ?? null, status }
+  });
+  return json(renewal, { status: 201 });
+}
+
+// src/routes/renewals/[id].ts
+var renewalSelect2 = "*, merchant:merchants(business_name,assigned_rep_id,user_id), funding:fundings(funded_amount,funded_at,lender:lenders(company_name)), assigned_rep:users!renewals_assigned_rep_id_fkey(full_name,name,email)";
+function toNumber6(value) {
+  if (value === null || value === undefined || value === "")
+    return null;
+  const parsed = Number(String(value).replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+function canAccess2(userId, role, renewal) {
+  if (role === "admin")
+    return true;
+  if (role === "sales_rep")
+    return renewal.merchant?.assigned_rep_id === userId;
+  if (role === "merchant")
+    return renewal.merchant?.user_id === userId;
+  return false;
+}
+function safeRenewalForMerchant2(renewal) {
+  return { ...renewal, estimated_balance: null, payoff_amount: null, notes: null, assigned_rep_id: null, assigned_rep_name: null };
+}
+async function fetchRenewal(id) {
+  const { data, error } = await supabaseAdmin.from("renewals").select(renewalSelect2).eq("id", id).maybeSingle();
+  if (error)
+    return badRequest(error.message);
+  return data ?? null;
+}
+async function GET18(req, context) {
+  const user = await requireAuth(req);
+  if (user.role === "lender")
+    return forbidden();
+  const id = getId(context);
+  if (!id)
+    return badRequest("id is required");
+  const renewal = await fetchRenewal(id);
+  if (renewal instanceof Response)
+    return renewal;
+  if (!renewal)
+    return notFound();
+  if (!canAccess2(user.id, user.role, renewal))
+    return forbidden();
+  const mapped = toRenewal(renewal);
+  return json(user.role === "merchant" ? safeRenewalForMerchant2(mapped) : mapped);
+}
+async function PATCH7(req, context) {
+  const user = await requireAuth(req);
+  if (user.role !== "admin" && user.role !== "sales_rep")
+    return forbidden();
+  const id = getId(context);
+  if (!id)
+    return badRequest("id is required");
+  const existing = await fetchRenewal(id);
+  if (existing instanceof Response)
+    return existing;
+  if (!existing)
+    return notFound();
+  if (!canAccess2(user.id, user.role, existing))
+    return forbidden();
+  const body = await req.json();
+  if (body.status && !isRenewalStatus(body.status))
+    return badRequest("status is invalid");
+  const update = { updated_at: new Date().toISOString() };
+  if (body.eligibility_date !== undefined)
+    update.eligibility_date = body.eligibility_date;
+  if (body.status !== undefined)
+    update.status = body.status;
+  if (body.estimated_balance !== undefined)
+    update.estimated_balance = toNumber6(body.estimated_balance);
+  if (body.payoff_amount !== undefined)
+    update.payoff_amount = toNumber6(body.payoff_amount);
+  if (body.last_contacted_at !== undefined)
+    update.last_contacted_at = body.last_contacted_at;
+  if (body.next_follow_up_at !== undefined)
+    update.next_follow_up_at = body.next_follow_up_at;
+  if (body.notes !== undefined)
+    update.notes = body.notes?.trim() || null;
+  if (body.assigned_rep_id !== undefined && user.role === "admin")
+    update.assigned_rep_id = body.assigned_rep_id;
+  const { data, error } = await supabaseAdmin.from("renewals").update(update).eq("id", id).select(renewalSelect2).single();
+  if (error)
+    return badRequest(error.message);
+  const renewal = toRenewal(data);
+  if (body.status && body.status !== existing.status) {
+    recordActivity({
+      entity_type: "merchant",
+      entity_id: existing.merchant_id,
+      user_id: user.id,
+      activity_type: "system",
+      body: `Renewal status changed from ${existing.status} to ${body.status}`,
+      metadata: { renewal_id: id, previous_status: existing.status, new_status: body.status }
+    });
+  }
+  if (body.last_contacted_at || body.status === "contacted") {
+    recordActivity({
+      entity_type: "merchant",
+      entity_id: existing.merchant_id,
+      user_id: user.id,
+      activity_type: "call",
+      body: "Merchant contacted for renewal",
+      metadata: { renewal_id: id, last_contacted_at: body.last_contacted_at ?? new Date().toISOString() }
+    });
+  }
+  return json(renewal);
+}
+
+// src/routes/renewals/[id]/request-review.ts
+async function POST19(req, context) {
+  const user = await requireAuth(req);
+  if (user.role !== "merchant")
+    return forbidden();
+  const id = getId(context);
+  if (!id)
+    return badRequest("id is required");
+  const { data: renewal, error } = await supabaseAdmin.from("renewals").select("*, merchant:merchants(business_name,assigned_rep_id,user_id)").eq("id", id).maybeSingle();
+  if (error)
+    return badRequest(error.message);
+  if (!renewal)
+    return notFound();
+  if (renewal.merchant?.user_id !== user.id)
+    return forbidden();
+  if (!isRenewalEligible(renewal.eligibility_date, renewal.status))
+    return badRequest("renewal is not currently eligible");
+  await supabaseAdmin.from("renewals").update({ status: "application_started", updated_at: new Date().toISOString() }).eq("id", id);
+  await writeActivity({
+    entity_type: "merchant",
+    entity_id: renewal.merchant_id,
+    user_id: user.id,
+    activity_type: "system",
+    body: "Merchant requested renewal review.",
+    metadata: { renewal_id: id }
+  });
+  return json({ success: true });
+}
+
+// src/routes/payoff-requests/index.ts
+var payoffSelect = "*, merchant:merchants(business_name,assigned_rep_id,user_id), funding:fundings(lender_id,lender:lenders(company_name)), document:documents(file_name)";
+async function getMerchant2(merchantId) {
+  const { data, error } = await supabaseAdmin.from("merchants").select("id,user_id,assigned_rep_id,business_name").eq("id", merchantId).maybeSingle();
+  if (error)
+    return badRequest(error.message);
+  if (!data)
+    return badRequest("merchant not found");
+  return data;
+}
+async function getFundingForRequest(merchantId, fundingId) {
+  let query = supabaseAdmin.from("fundings").select("id,merchant_id,lender_id,funded_at,lender:lenders(company_name)").eq("merchant_id", merchantId);
+  if (fundingId)
+    query = query.eq("id", fundingId);
+  query = query.order("funded_at", { ascending: false }).limit(1);
+  const { data, error } = await query.returns();
+  if (error)
+    return badRequest(error.message);
+  const funding = data?.[0];
+  if (!funding)
+    return badRequest("A funded deal is required before requesting a payoff letter");
+  return funding;
+}
+async function validateRenewal(merchantId, renewalId) {
+  if (!renewalId)
+    return null;
+  const { data, error } = await supabaseAdmin.from("renewals").select("id,merchant_id").eq("id", renewalId).maybeSingle();
+  if (error)
+    return badRequest(error.message);
+  if (!data || data.merchant_id !== merchantId)
+    return badRequest("renewal does not belong to merchant");
+  return null;
+}
+function safePayoffRequest(request) {
+  return { ...request, notes: null };
+}
+async function GET19(req) {
+  const user = await requireAuth(req);
+  const url = new URL(req.url);
+  const shouldPaginate = hasListParams(url);
+  const pagination = getPagination(url);
+  const merchantId = url.searchParams.get("merchant_id");
+  const fundingId = url.searchParams.get("funding_id");
+  const renewalId = url.searchParams.get("renewal_id");
+  const status = url.searchParams.get("status");
+  const expiresBefore = url.searchParams.get("expires_before");
+  if (status && !isPayoffRequestStatus(status))
+    return badRequest("status is invalid");
+  let query = supabaseAdmin.from("payoff_requests").select(payoffSelect, { count: shouldPaginate ? "exact" : undefined });
+  if (merchantId)
+    query = query.eq("merchant_id", merchantId);
+  if (fundingId)
+    query = query.eq("funding_id", fundingId);
+  if (renewalId)
+    query = query.eq("renewal_id", renewalId);
+  if (status)
+    query = query.eq("status", status);
+  if (expiresBefore)
+    query = query.lte("expires_at", expiresBefore);
+  if (user.role === "sales_rep") {
+    const { data: merchants, error: error2 } = await supabaseAdmin.from("merchants").select("id").eq("assigned_rep_id", user.id).returns();
+    if (error2)
+      return badRequest(error2.message);
+    const ids = (merchants ?? []).map((merchant) => merchant.id);
+    if (ids.length === 0)
+      return shouldPaginate ? paginatedJson([], 0, pagination.page, pagination.perPage) : json([]);
+    query = query.in("merchant_id", ids);
+  } else if (user.role === "merchant") {
+    const { data: merchants, error: error2 } = await supabaseAdmin.from("merchants").select("id").eq("user_id", user.id).returns();
+    if (error2)
+      return badRequest(error2.message);
+    const ids = (merchants ?? []).map((merchant) => merchant.id);
+    if (ids.length === 0)
+      return shouldPaginate ? paginatedJson([], 0, pagination.page, pagination.perPage) : json([]);
+    query = query.in("merchant_id", ids);
+  } else if (user.role === "lender") {
+    const lenderId = await getLenderIdForUser(user.id);
+    if (!lenderId)
+      return shouldPaginate ? paginatedJson([], 0, pagination.page, pagination.perPage) : json([]);
+    const { data: fundings, error: error2 } = await supabaseAdmin.from("fundings").select("id").eq("lender_id", lenderId).returns();
+    if (error2)
+      return badRequest(error2.message);
+    const ids = (fundings ?? []).map((funding) => funding.id);
+    if (ids.length === 0)
+      return shouldPaginate ? paginatedJson([], 0, pagination.page, pagination.perPage) : json([]);
+    query = query.in("funding_id", ids);
+  }
+  query = query.order("requested_at", { ascending: false }).order("created_at", { ascending: false });
+  if (shouldPaginate)
+    query = query.range(pagination.from, pagination.to);
+  const { data, error, count } = await query.returns();
+  if (error)
+    return badRequest(error.message);
+  const requests = (data ?? []).filter((row) => user.role !== "sales_rep" || row.merchant?.assigned_rep_id === user.id).map(toPayoffRequest).map((request) => user.role === "merchant" || user.role === "lender" ? safePayoffRequest(request) : request);
+  return shouldPaginate ? paginatedJson(requests, count, pagination.page, pagination.perPage) : json(requests);
+}
+async function POST20(req) {
+  const user = await requireAuth(req);
+  if (!["admin", "sales_rep", "merchant"].includes(user.role))
+    return forbidden();
+  const body = await req.json();
+  if (!body.merchant_id)
+    return badRequest("merchant_id is required");
+  const merchant = await getMerchant2(body.merchant_id);
+  if (merchant instanceof Response)
+    return merchant;
+  if (user.role === "sales_rep" && merchant.assigned_rep_id !== user.id)
+    return forbidden();
+  if (user.role === "merchant" && merchant.user_id !== user.id)
+    return forbidden();
+  const funding = await getFundingForRequest(body.merchant_id, body.funding_id);
+  if (funding instanceof Response)
+    return funding;
+  const renewalError = await validateRenewal(body.merchant_id, body.renewal_id);
+  if (renewalError)
+    return renewalError;
+  const { data, error } = await supabaseAdmin.from("payoff_requests").insert({
+    merchant_id: body.merchant_id,
+    funding_id: funding.id,
+    renewal_id: body.renewal_id ?? null,
+    requested_from_lender_id: funding.lender_id,
+    requested_from_name: funding.lender?.company_name ?? null,
+    requested_at: body.requested_at ?? new Date().toISOString(),
+    status: "requested",
+    notes: user.role === "merchant" ? null : body.notes?.trim() || null,
+    created_by: user.id
+  }).select(payoffSelect).single();
+  if (error)
+    return badRequest(error.message);
+  const request = toPayoffRequest(data);
+  recordActivity({
+    entity_type: "merchant",
+    entity_id: body.merchant_id,
+    user_id: user.id,
+    activity_type: "system",
+    body: `Payoff letter requested${request.requested_from_name ? ` from ${request.requested_from_name}` : ""}`,
+    metadata: { payoff_request_id: request.id, funding_id: funding.id, requested_from_lender_id: funding.lender_id, status: request.status }
+  });
+  return json(user.role === "merchant" ? safePayoffRequest(request) : request, { status: 201 });
+}
+
+// src/routes/payoff-requests/[id].ts
+var payoffSelect2 = "*, merchant:merchants(business_name,assigned_rep_id,user_id), funding:fundings(lender_id,lender:lenders(company_name)), document:documents(file_name)";
+function toNumber7(value) {
+  if (value === null || value === undefined || value === "")
+    return null;
+  const parsed = Number(String(value).replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+function safePayoffRequest2(request) {
+  return { ...request, notes: null };
+}
+async function getCurrentLenderId2(userId, role) {
+  if (role !== "lender")
+    return null;
+  return await getLenderIdForUser(userId);
+}
+function canRead2(userId, role, request, lenderId) {
+  if (role === "admin")
+    return true;
+  if (role === "sales_rep")
+    return request.merchant?.assigned_rep_id === userId;
+  if (role === "merchant")
+    return request.merchant?.user_id === userId;
+  if (role === "lender")
+    return Boolean(lenderId && request.funding?.lender_id === lenderId);
+  return false;
+}
+function canFulfill(role, request, lenderId) {
+  if (role === "admin")
+    return true;
+  if (role === "lender")
+    return Boolean(lenderId && request.funding?.lender_id === lenderId);
+  return false;
+}
+async function fetchPayoffRequest(id) {
+  const { data, error } = await supabaseAdmin.from("payoff_requests").select(payoffSelect2).eq("id", id).maybeSingle();
+  if (error)
+    return badRequest(error.message);
+  return data ?? null;
+}
+async function validateDocument(merchantId, documentId) {
+  if (!documentId)
+    return null;
+  const { data, error } = await supabaseAdmin.from("documents").select("id,merchant_id").eq("id", documentId).maybeSingle();
+  if (error)
+    return badRequest(error.message);
+  if (!data || data.merchant_id !== merchantId)
+    return badRequest("document does not belong to merchant");
+  return null;
+}
+function containsFulfillmentFields(body) {
+  return body.file_document_id !== undefined || body.payoff_amount !== undefined || body.received_at !== undefined || body.expires_at !== undefined || body.status === "received" || body.status === "used";
+}
+async function GET20(req, context) {
+  const user = await requireAuth(req);
+  const id = getId(context);
+  if (!id)
+    return badRequest("id is required");
+  const request = await fetchPayoffRequest(id);
+  if (request instanceof Response)
+    return request;
+  if (!request)
+    return notFound();
+  const lenderId = await getCurrentLenderId2(user.id, user.role);
+  if (!canRead2(user.id, user.role, request, lenderId))
+    return forbidden();
+  const mapped = toPayoffRequest(request);
+  return json(user.role === "merchant" || user.role === "lender" ? safePayoffRequest2(mapped) : mapped);
+}
+async function PATCH8(req, context) {
+  const user = await requireAuth(req);
+  const id = getId(context);
+  if (!id)
+    return badRequest("id is required");
+  const existing = await fetchPayoffRequest(id);
+  if (existing instanceof Response)
+    return existing;
+  if (!existing)
+    return notFound();
+  const lenderId = await getCurrentLenderId2(user.id, user.role);
+  if (!canRead2(user.id, user.role, existing, lenderId))
+    return forbidden();
+  const body = await req.json();
+  if (body.status && !isPayoffRequestStatus(body.status))
+    return badRequest("status is invalid");
+  if (containsFulfillmentFields(body) && !canFulfill(user.role, existing, lenderId)) {
+    return forbidden("Only the funding lender/funder or admin can upload/link the payoff letter");
+  }
+  if ((user.role === "merchant" || user.role === "lender") && body.notes !== undefined) {
+    return forbidden("Internal notes are admin/sales rep only");
+  }
+  if (user.role === "sales_rep") {
+    const allowedSalesRepFields = ["notes", "requested_at", "status", "requested_from_name"];
+    const fieldKeys = Object.keys(body);
+    const disallowed = fieldKeys.some((key) => !allowedSalesRepFields.includes(key) || body.status === "received" || body.status === "used");
+    if (disallowed)
+      return forbidden("Sales reps can update request tracking only; only admin or the funding lender can fulfill payoff requests");
+  }
+  const documentError = await validateDocument(existing.merchant_id, body.file_document_id);
+  if (documentError)
+    return documentError;
+  const update = { updated_at: new Date().toISOString() };
+  if (body.requested_from_lender_id !== undefined && user.role === "admin")
+    update.requested_from_lender_id = body.requested_from_lender_id;
+  if (body.requested_from_name !== undefined && (user.role === "admin" || user.role === "sales_rep"))
+    update.requested_from_name = body.requested_from_name?.trim() || null;
+  if (body.payoff_amount !== undefined)
+    update.payoff_amount = toNumber7(body.payoff_amount);
+  if (body.requested_at !== undefined && user.role !== "lender")
+    update.requested_at = body.requested_at;
+  if (body.received_at !== undefined)
+    update.received_at = body.received_at;
+  if (body.expires_at !== undefined)
+    update.expires_at = body.expires_at;
+  if (body.file_document_id !== undefined)
+    update.file_document_id = body.file_document_id;
+  if (body.status !== undefined)
+    update.status = body.status;
+  if (body.notes !== undefined && user.role !== "lender" && user.role !== "merchant")
+    update.notes = body.notes?.trim() || null;
+  const { data, error } = await supabaseAdmin.from("payoff_requests").update(update).eq("id", id).select(payoffSelect2).single();
+  if (error)
+    return badRequest(error.message);
+  const request = toPayoffRequest(data);
+  if (body.status && body.status !== existing.status) {
+    recordActivity({
+      entity_type: "merchant",
+      entity_id: existing.merchant_id,
+      user_id: user.id,
+      activity_type: "system",
+      body: `Payoff request status changed from ${existing.status} to ${body.status}`,
+      metadata: { payoff_request_id: id, previous_status: existing.status, new_status: body.status }
+    });
+  }
+  if (body.file_document_id || body.received_at || body.status === "received") {
+    recordActivity({
+      entity_type: "merchant",
+      entity_id: existing.merchant_id,
+      user_id: user.id,
+      activity_type: "upload",
+      body: "Lender/funder payoff letter received and linked",
+      metadata: { payoff_request_id: id, file_document_id: body.file_document_id ?? existing.file_document_id }
+    });
+  }
+  return json(user.role === "merchant" || user.role === "lender" ? safePayoffRequest2(request) : request);
+}
+
+// src/routes/broker-revenue/index.ts
+function toNumber8(value) {
   if (value === null || value === undefined || value === "")
     return null;
   const parsed = Number(String(value).replace(/[^0-9.-]/g, ""));
@@ -46000,7 +46698,7 @@ function toBrokerRevenue(row) {
     lender_name: row.lender?.company_name
   };
 }
-async function GET17(req) {
+async function GET21(req) {
   const user = await requireAuth(req);
   if (user.role === "merchant" || user.role === "lender" || user.role === "sales_rep")
     return forbidden();
@@ -46017,13 +46715,13 @@ async function GET17(req) {
     return badRequest(error.message);
   return json((data ?? []).map(toBrokerRevenue));
 }
-async function POST18(req) {
+async function POST21(req) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin"]);
   if (roleError)
     return roleError;
   const body = await req.json();
-  const amount = toNumber5(body.amount);
+  const amount = toNumber8(body.amount);
   if (amount === null || amount < 0)
     return badRequest("amount is required");
   const { data, error } = await supabaseAdmin.from("broker_revenue").insert({
@@ -46031,8 +46729,8 @@ async function POST18(req) {
     merchant_id: body.merchant_id ?? null,
     lender_id: body.lender_id ?? null,
     revenue_type: body.revenue_type ?? "commission",
-    basis_amount: toNumber5(body.basis_amount),
-    rate: toNumber5(body.rate),
+    basis_amount: toNumber8(body.basis_amount),
+    rate: toNumber8(body.rate),
     amount,
     status: body.status ?? "expected",
     expected_payment_date: body.expected_payment_date ?? null,
@@ -46045,7 +46743,7 @@ async function POST18(req) {
 }
 
 // src/routes/broker-revenue/[id].ts
-function toNumber6(value) {
+function toNumber9(value) {
   if (value === null || value === undefined || value === "")
     return null;
   const parsed = Number(String(value).replace(/[^0-9.-]/g, ""));
@@ -46071,7 +46769,7 @@ function toBrokerRevenue2(row) {
     lender_name: row.lender?.company_name
   };
 }
-async function PATCH7(req, context) {
+async function PATCH9(req, context) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin"]);
   if (roleError)
@@ -46084,11 +46782,11 @@ async function PATCH7(req, context) {
   if (body.revenue_type !== undefined)
     update.revenue_type = body.revenue_type;
   if (body.basis_amount !== undefined)
-    update.basis_amount = toNumber6(body.basis_amount);
+    update.basis_amount = toNumber9(body.basis_amount);
   if (body.rate !== undefined)
-    update.rate = toNumber6(body.rate);
+    update.rate = toNumber9(body.rate);
   if (body.amount !== undefined) {
-    const amount = toNumber6(body.amount);
+    const amount = toNumber9(body.amount);
     if (amount === null || amount < 0)
       return badRequest("amount is invalid");
     update.amount = amount;
@@ -46108,7 +46806,7 @@ async function PATCH7(req, context) {
 }
 
 // src/routes/sales-rep-commissions/index.ts
-function toNumber7(value) {
+function toNumber10(value) {
   if (value === null || value === undefined || value === "")
     return null;
   const parsed = Number(String(value).replace(/[^0-9.-]/g, ""));
@@ -46132,7 +46830,7 @@ function toCommission(row) {
     sales_rep_name: row.sales_rep?.full_name ?? row.sales_rep?.name ?? row.sales_rep?.email
   };
 }
-async function GET18(req) {
+async function GET22(req) {
   const user = await requireAuth(req);
   if (user.role === "merchant" || user.role === "lender")
     return forbidden();
@@ -46148,13 +46846,13 @@ async function GET18(req) {
     return badRequest(error.message);
   return json((data ?? []).map(toCommission));
 }
-async function POST19(req) {
+async function POST22(req) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin"]);
   if (roleError)
     return roleError;
   const body = await req.json();
-  const amount = toNumber7(body.amount);
+  const amount = toNumber10(body.amount);
   if (amount === null || amount < 0)
     return badRequest("amount is required");
   if (!body.sales_rep_id)
@@ -46163,8 +46861,8 @@ async function POST19(req) {
     funding_id: body.funding_id ?? null,
     sales_rep_id: body.sales_rep_id,
     basis_type: body.basis_type ?? "broker_revenue",
-    basis_amount: toNumber7(body.basis_amount),
-    rate: toNumber7(body.rate),
+    basis_amount: toNumber10(body.basis_amount),
+    rate: toNumber10(body.rate),
     amount,
     status: body.status ?? "unpaid",
     paid_at: body.paid_at ?? null,
@@ -46176,7 +46874,7 @@ async function POST19(req) {
 }
 
 // src/routes/sales-rep-commissions/[id].ts
-function toNumber8(value) {
+function toNumber11(value) {
   if (value === null || value === undefined || value === "")
     return null;
   const parsed = Number(String(value).replace(/[^0-9.-]/g, ""));
@@ -46200,7 +46898,7 @@ function toCommission2(row) {
     sales_rep_name: row.sales_rep?.full_name ?? row.sales_rep?.name ?? row.sales_rep?.email
   };
 }
-async function PATCH8(req, context) {
+async function PATCH10(req, context) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin"]);
   if (roleError)
@@ -46213,11 +46911,11 @@ async function PATCH8(req, context) {
   if (body.basis_type !== undefined)
     update.basis_type = body.basis_type;
   if (body.basis_amount !== undefined)
-    update.basis_amount = toNumber8(body.basis_amount);
+    update.basis_amount = toNumber11(body.basis_amount);
   if (body.rate !== undefined)
-    update.rate = toNumber8(body.rate);
+    update.rate = toNumber11(body.rate);
   if (body.amount !== undefined) {
-    const amount = toNumber8(body.amount);
+    const amount = toNumber11(body.amount);
     if (amount === null || amount < 0)
       return badRequest("amount is invalid");
     update.amount = amount;
@@ -46241,13 +46939,13 @@ async function salesRepCanAccessMerchant2(userId, merchantId) {
     return badRequest(error.message);
   return Boolean(data);
 }
-async function getCurrentLenderId2(userId) {
+async function getCurrentLenderId3(userId) {
   const { data, error } = await supabaseAdmin.from("lenders").select("id").eq("user_id", userId).maybeSingle();
   if (error)
     return badRequest(error.message);
   return data?.id ?? null;
 }
-async function GET19(req) {
+async function GET23(req) {
   const user = await requireAuth(req);
   if (user.role === "merchant")
     return forbidden();
@@ -46264,7 +46962,7 @@ async function GET19(req) {
       return forbidden();
   }
   if (user.role === "lender") {
-    const lenderId = await getCurrentLenderId2(user.id);
+    const lenderId = await getCurrentLenderId3(user.id);
     if (lenderId instanceof Response)
       return lenderId;
     if (!lenderId)
@@ -46276,7 +46974,7 @@ async function GET19(req) {
     return badRequest(error.message);
   return json((data ?? []).map(toMerchantFileSubmission));
 }
-async function POST20(req) {
+async function POST23(req) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin", "sales_rep"]);
   if (roleError)
@@ -46338,7 +47036,7 @@ function canManageSubmission(userId, role, submission) {
     return submission.merchant?.assigned_rep_id === userId;
   return false;
 }
-async function PATCH9(req, context) {
+async function PATCH11(req, context) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin", "sales_rep"]);
   if (roleError)
@@ -46383,7 +47081,7 @@ async function PATCH9(req, context) {
 }
 
 // src/routes/search/index.ts
-async function GET20(req) {
+async function GET24(req) {
   const user = await requireAuth(req);
   if (user.role === "merchant" || user.role === "lender")
     return forbidden();
@@ -46434,7 +47132,7 @@ function toSavedView(row) {
     updated_at: row.updated_at
   };
 }
-async function GET21(req) {
+async function GET25(req) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin", "sales_rep"]);
   if (roleError)
@@ -46451,7 +47149,7 @@ async function GET21(req) {
     return badRequest(error.message);
   return json((data ?? []).map(toSavedView));
 }
-async function POST21(req) {
+async function POST24(req) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin", "sales_rep"]);
   if (roleError)
@@ -46488,7 +47186,7 @@ async function getSavedView(id) {
 function canModify(user, view) {
   return user.role === "admin" || view.user_id === user.id;
 }
-async function PATCH10(req, context) {
+async function PATCH12(req, context) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin", "sales_rep"]);
   if (roleError)
@@ -46588,14 +47286,14 @@ async function revokeUserSessions(userId) {
 }
 
 // src/routes/settings/me.ts
-async function GET22(req) {
+async function GET26(req) {
   const user = await requireAuth(req);
   const row = await getAccountUserById(user.id);
   if (!row)
     return new Response("User not found", { status: 404 });
   return json(toUserProfile(row));
 }
-async function PATCH11(req) {
+async function PATCH13(req) {
   const user = await requireAuth(req);
   const body = await req.json();
   if (!body.current_password || !body.new_password)
@@ -46627,7 +47325,7 @@ async function PATCH11(req) {
 }
 
 // src/routes/admin/users/index.ts
-async function GET23(req) {
+async function GET27(req) {
   const user = await requireAuth(req);
   if (user.role !== "admin")
     return forbidden();
@@ -46654,7 +47352,7 @@ async function GET23(req) {
     return badRequest(error.message);
   return json((data ?? []).map(toUserProfile));
 }
-async function POST22(req) {
+async function POST25(req) {
   const user = await requireAuth(req);
   if (user.role !== "admin")
     return forbidden();
@@ -46694,7 +47392,7 @@ async function POST22(req) {
 }
 
 // src/routes/admin/users/[id].ts
-async function GET24(req, context) {
+async function GET28(req, context) {
   const currentUser = await requireAuth(req);
   if (currentUser.role !== "admin")
     return forbidden();
@@ -46706,7 +47404,7 @@ async function GET24(req, context) {
     return notFound("User not found");
   return json(toUserProfile(row));
 }
-async function PATCH12(req, context) {
+async function PATCH14(req, context) {
   const currentUser = await requireAuth(req);
   if (currentUser.role !== "admin")
     return forbidden();
@@ -46762,7 +47460,7 @@ async function PATCH12(req, context) {
 }
 
 // src/routes/admin/users/[id]/reset-password.ts
-async function POST23(req, context) {
+async function POST26(req, context) {
   const currentUser = await requireAuth(req);
   if (currentUser.role !== "admin")
     return forbidden();
@@ -46794,7 +47492,7 @@ async function POST23(req, context) {
 }
 
 // src/routes/admin/users/[id]/disable.ts
-async function POST24(req, context) {
+async function POST27(req, context) {
   const currentUser = await requireAuth(req);
   if (currentUser.role !== "admin")
     return forbidden();
@@ -46824,7 +47522,7 @@ async function POST24(req, context) {
 }
 
 // src/routes/admin/users/[id]/reactivate.ts
-async function POST25(req, context) {
+async function POST28(req, context) {
   const currentUser = await requireAuth(req);
   if (currentUser.role !== "admin")
     return forbidden();
@@ -46851,7 +47549,7 @@ async function POST25(req, context) {
 }
 
 // src/routes/admin/users/[id]/close.ts
-async function POST26(req, context) {
+async function POST29(req, context) {
   const currentUser = await requireAuth(req);
   if (currentUser.role !== "admin")
     return forbidden();
@@ -63768,7 +64466,7 @@ Role-specific guidance:
 Tone: professional, helpful, and concise. Never make up information. If unsure, say so clearly and recommend checking the actual dashboard or asking an admin.
 `.trim();
 var displayName2 = (user) => user.full_name ?? user.email;
-async function POST27(req) {
+async function POST30(req) {
   const user = await requireAuth(req);
   const body = await readJson(req);
   const message = typeof body.message === "string" ? body.message.trim() : "";
@@ -63804,7 +64502,7 @@ ${message}`,
 function matchRoute(method, pathname) {
   if (pathname === "/api/ai/chat") {
     if (method === "POST")
-      return { handler: POST27 };
+      return { handler: POST30 };
   }
   if (pathname === "/api/auth/register") {
     if (method === "POST")
@@ -63834,53 +64532,53 @@ function matchRoute(method, pathname) {
   }
   if (pathname === "/api/search") {
     if (method === "GET")
-      return { handler: GET20 };
+      return { handler: GET24 };
   }
   if (pathname === "/api/settings/me") {
     if (method === "GET")
-      return { handler: GET22 };
+      return { handler: GET26 };
   }
   if (pathname === "/api/settings/me/password") {
     if (method === "PATCH")
-      return { handler: PATCH11 };
+      return { handler: PATCH13 };
   }
   if (pathname === "/api/admin/users") {
     if (method === "GET")
-      return { handler: GET23 };
+      return { handler: GET27 };
     if (method === "POST")
-      return { handler: POST22 };
+      return { handler: POST25 };
   }
   const adminUserActionMatch = pathname.match(/^\/api\/admin\/users\/([^/]+)\/(reset-password|disable|reactivate|close)$/);
   if (adminUserActionMatch) {
     const params = { id: decodeURIComponent(adminUserActionMatch[1]) };
     if (method === "POST" && adminUserActionMatch[2] === "reset-password")
-      return { handler: POST23, params };
-    if (method === "POST" && adminUserActionMatch[2] === "disable")
-      return { handler: POST24, params };
-    if (method === "POST" && adminUserActionMatch[2] === "reactivate")
-      return { handler: POST25, params };
-    if (method === "POST" && adminUserActionMatch[2] === "close")
       return { handler: POST26, params };
+    if (method === "POST" && adminUserActionMatch[2] === "disable")
+      return { handler: POST27, params };
+    if (method === "POST" && adminUserActionMatch[2] === "reactivate")
+      return { handler: POST28, params };
+    if (method === "POST" && adminUserActionMatch[2] === "close")
+      return { handler: POST29, params };
   }
   const adminUserMatch = pathname.match(/^\/api\/admin\/users\/([^/]+)$/);
   if (adminUserMatch) {
     const params = { id: decodeURIComponent(adminUserMatch[1]) };
     if (method === "GET")
-      return { handler: GET24, params };
+      return { handler: GET28, params };
     if (method === "PATCH")
-      return { handler: PATCH12, params };
+      return { handler: PATCH14, params };
   }
   if (pathname === "/api/saved-views") {
     if (method === "GET")
-      return { handler: GET21 };
+      return { handler: GET25 };
     if (method === "POST")
-      return { handler: POST21 };
+      return { handler: POST24 };
   }
   const savedViewMatch = pathname.match(/^\/api\/saved-views\/([^/]+)$/);
   if (savedViewMatch) {
     const params = { id: decodeURIComponent(savedViewMatch[1]) };
     if (method === "PATCH")
-      return { handler: PATCH10, params };
+      return { handler: PATCH12, params };
     if (method === "DELETE")
       return { handler: DELETE7, params };
   }
@@ -63912,41 +64610,75 @@ function matchRoute(method, pathname) {
     if (method === "PATCH")
       return { handler: PATCH6, params };
   }
-  if (pathname === "/api/broker-revenue") {
+  if (pathname === "/api/renewals") {
     if (method === "GET")
       return { handler: GET17 };
     if (method === "POST")
       return { handler: POST18 };
   }
-  const brokerRevenueMatch = pathname.match(/^\/api\/broker-revenue\/([^/]+)$/);
-  if (brokerRevenueMatch) {
-    const params = { id: decodeURIComponent(brokerRevenueMatch[1]) };
+  const renewalReviewMatch = pathname.match(/^\/api\/renewals\/([^/]+)\/request-review$/);
+  if (renewalReviewMatch) {
+    const params = { id: decodeURIComponent(renewalReviewMatch[1]) };
+    if (method === "POST")
+      return { handler: POST19, params };
+  }
+  const renewalMatch = pathname.match(/^\/api\/renewals\/([^/]+)$/);
+  if (renewalMatch) {
+    const params = { id: decodeURIComponent(renewalMatch[1]) };
+    if (method === "GET")
+      return { handler: GET18, params };
     if (method === "PATCH")
       return { handler: PATCH7, params };
   }
-  if (pathname === "/api/sales-rep-commissions") {
-    if (method === "GET")
-      return { handler: GET18 };
-    if (method === "POST")
-      return { handler: POST19 };
-  }
-  const salesRepCommissionMatch = pathname.match(/^\/api\/sales-rep-commissions\/([^/]+)$/);
-  if (salesRepCommissionMatch) {
-    const params = { id: decodeURIComponent(salesRepCommissionMatch[1]) };
-    if (method === "PATCH")
-      return { handler: PATCH8, params };
-  }
-  if (pathname === "/api/merchant-file-submissions") {
+  if (pathname === "/api/payoff-requests") {
     if (method === "GET")
       return { handler: GET19 };
     if (method === "POST")
       return { handler: POST20 };
   }
+  const payoffRequestMatch = pathname.match(/^\/api\/payoff-requests\/([^/]+)$/);
+  if (payoffRequestMatch) {
+    const params = { id: decodeURIComponent(payoffRequestMatch[1]) };
+    if (method === "GET")
+      return { handler: GET20, params };
+    if (method === "PATCH")
+      return { handler: PATCH8, params };
+  }
+  if (pathname === "/api/broker-revenue") {
+    if (method === "GET")
+      return { handler: GET21 };
+    if (method === "POST")
+      return { handler: POST21 };
+  }
+  const brokerRevenueMatch = pathname.match(/^\/api\/broker-revenue\/([^/]+)$/);
+  if (brokerRevenueMatch) {
+    const params = { id: decodeURIComponent(brokerRevenueMatch[1]) };
+    if (method === "PATCH")
+      return { handler: PATCH9, params };
+  }
+  if (pathname === "/api/sales-rep-commissions") {
+    if (method === "GET")
+      return { handler: GET22 };
+    if (method === "POST")
+      return { handler: POST22 };
+  }
+  const salesRepCommissionMatch = pathname.match(/^\/api\/sales-rep-commissions\/([^/]+)$/);
+  if (salesRepCommissionMatch) {
+    const params = { id: decodeURIComponent(salesRepCommissionMatch[1]) };
+    if (method === "PATCH")
+      return { handler: PATCH10, params };
+  }
+  if (pathname === "/api/merchant-file-submissions") {
+    if (method === "GET")
+      return { handler: GET23 };
+    if (method === "POST")
+      return { handler: POST23 };
+  }
   const merchantFileSubmissionMatch = pathname.match(/^\/api\/merchant-file-submissions\/([^/]+)$/);
   if (merchantFileSubmissionMatch) {
     const params = { id: decodeURIComponent(merchantFileSubmissionMatch[1]) };
     if (method === "PATCH")
-      return { handler: PATCH9, params };
+      return { handler: PATCH11, params };
   }
   if (pathname === "/api/matching") {
     if (method === "GET")

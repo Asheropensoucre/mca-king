@@ -10,10 +10,11 @@ interface DocumentUploadProps {
     merchantId?: string;
     docType?: DocType;
     stipulationId?: string;
+    payoffRequestId?: string;
     onUploaded?: () => void;
 }
 
-export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onDocumentsChange, accept, merchantId, docType, stipulationId, onUploaded }) => {
+export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onDocumentsChange, accept, merchantId, docType, stipulationId, payoffRequestId, onUploaded }) => {
     const [files, setFiles] = useState<File[]>([]);
     const [uploading, setUploading] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
@@ -36,7 +37,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onDocumentsChang
             const targetDocType: DocType = docType ?? 'bank_statement';
             setUploading(true);
             try {
-                await Promise.all(selectedFiles.map(file => api.documents.upload(targetMerchantId, targetDocType, file, stipulationId)));
+                await Promise.all(selectedFiles.map(file => api.documents.upload(targetMerchantId, targetDocType, file, stipulationId, payoffRequestId)));
                 setMessage('Upload complete.');
                 onUploaded?.();
             } catch (err) {
@@ -45,7 +46,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onDocumentsChang
                 setUploading(false);
             }
         }
-    }, [docType, files, merchantId, onDocumentsChange, onUploaded, stipulationId]);
+    }, [docType, files, merchantId, onDocumentsChange, onUploaded, payoffRequestId, stipulationId]);
 
     const removeFile = (indexToRemove: number) => {
         const newFiles = files.filter((_, index) => index !== indexToRemove);

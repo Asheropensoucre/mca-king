@@ -1,4 +1,5 @@
 import type { Document } from '../../../types'
+import { getLenderIdForUser } from '../../lib/merchant-file-submissions'
 import { requireAuth } from '../../lib/requireAuth'
 import { badRequest, forbidden, json } from '../../lib/route-utils'
 import { supabaseAdmin } from '../../lib/supabase-server'
@@ -15,7 +16,9 @@ async function canAccessMerchant(userId: string, role: string, merchantId: strin
   if (role === 'sales_rep') return merchant.assigned_rep_id === userId
   if (role === 'merchant') return merchant.user_id === userId
   if (role === 'lender') {
-    const { data, error: matchError } = await supabaseAdmin.from('lender_matches').select('id').eq('merchant_id', merchantId).eq('lender_id', userId).maybeSingle<{ id: string }>()
+    const lenderId = await getLenderIdForUser(userId)
+    if (!lenderId) return false
+    const { data, error: matchError } = await supabaseAdmin.from('lender_matches').select('id').eq('merchant_id', merchantId).eq('lender_id', lenderId).maybeSingle<{ id: string }>()
     if (matchError) return badRequest(matchError.message)
     return Boolean(data)
   }

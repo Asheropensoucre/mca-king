@@ -4,6 +4,7 @@ import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 import { MerchantDetailView } from './shared/MerchantDetailView';
+import { PayoffRequestsPanel } from './shared/PayoffRequestsPanel';
 import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 import { api } from '../../src/lib/api-client';
 import { Chatbot } from '../Chatbot';
@@ -97,6 +98,9 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
                     </div>
                     {message && <p className="mb-4 text-sm text-theme-teal">{message}</p>}
                     <MerchantDetailView item={sanitizedSelectedDeal} currentUser={currentUser} />
+                    <div className="mt-6">
+                        <PayoffRequestsPanel merchantId={sanitizedSelectedDeal.id} currentUser={currentUser} currentLenderId={profile.id} showCreate={false} />
+                    </div>
                 </div>
                 {isCreatingOffer && (
                      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">

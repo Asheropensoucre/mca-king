@@ -109,6 +109,10 @@ Lenders/funders can:
 - See only their own offers/responses; competing lender/funder offers on the same merchant file are hidden server-side
 - Change only their own password in User Settings
 
+## Phase 6: Renewals / Refinance
+
+The broker shop can track renewal opportunities after a merchant is funded. Renewal records are broker-controlled follow-up queues for admins and assigned sales reps. MCA King tracks early payoff letter requests sent to current lenders/funders and links the lender/funder-provided payoff document when received. Merchants, admins, and assigned sales reps can request a payoff letter after funding; only the funding lender/funder for that deal or an admin can upload/link the official payoff letter. MCA King does not generate official payoff letters on behalf of lenders/funders.
+
 ## Key Technical Requirements
 
 - Rules engine for broker-controlled lender matching
@@ -116,4 +120,4 @@ Lenders/funders can:
 - Secure document storage and signed URL access
 - Broker-to-lender package generation and notification workflow
 - State machine for the 12-step Kamba pipeline
-- Activity history and tasks are implemented. Funding records, broker revenue, internal sales rep commissions, merchant-file submission outcomes, search/filter/saved-view work queues, and account settings/admin user management are implemented. Renewals, reporting, and compliance controls remain future expansion areas.
+- Activity history and tasks are implemented. Funding records, broker revenue, internal sales rep commissions, merchant-file submission outcomes, search/filter/saved-view work queues, account settings/admin user management, and renewals/refinance tracking with payoff request tracking are implemented. Reporting and compliance controls remain future expansion areas.

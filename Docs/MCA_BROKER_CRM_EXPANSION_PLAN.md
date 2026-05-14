@@ -97,7 +97,7 @@ Phase B — Funded Deals + Broker Revenue + Sales Rep Commissions ✅ complete
 Phase C — Merchant-File Submissions ✅ complete
 Phase D — Search, Filters, Saved Views ✅ complete
 Phase E — Account Settings + Admin User Management ✅ complete
-Phase F — Renewals / Refinance
+Phase F — Renewals / Refinance ✅ complete
 Phase G — Reporting
 Phase H — Compliance + Audit Hardening
 Phase I — Advanced Communications
@@ -751,7 +751,7 @@ Required server-side rules:
 
 ## Frontend work implemented
 
-Added dashboard settings sections:
+Added dashboard sections and panels:
 
 ```txt
 Admin Settings
@@ -798,7 +798,7 @@ These actions must write audit/activity records, and can connect into the later 
 
 ---
 
-# Phase F — Renewal / Refinance Module
+# Phase F — Renewal / Refinance Module ✅ COMPLETE
 
 ## Goal
 
@@ -827,18 +827,25 @@ created_at           timestamptz default now()
 updated_at           timestamptz default now()
 ```
 
-### `payoff_letters`
+### `payoff_requests`
 
 ```sql
-id                  uuid primary key default gen_random_uuid()
-merchant_id          uuid references merchants(id) on delete cascade
-funding_id           uuid references fundings(id)
-funder_name          text
-payoff_amount        numeric
-expires_at           timestamptz
-file_document_id     uuid references documents(id)
-status               text default 'requested' -- requested | received | expired | used
-created_at           timestamptz default now()
+id                         uuid primary key default gen_random_uuid()
+merchant_id                 uuid references merchants(id) on delete cascade
+funding_id                  uuid references fundings(id) on delete set null
+renewal_id                  uuid references renewals(id) on delete set null
+requested_from_lender_id    uuid references lenders(id) on delete set null
+requested_from_name         text
+payoff_amount               numeric
+requested_at                timestamptz default now()
+received_at                 timestamptz
+expires_at                  timestamptz
+file_document_id            uuid references documents(id)
+status                      text default 'requested' -- requested | received | expired | used | cancelled
+notes                       text
+created_by                  uuid references users(id) on delete set null
+created_at                  timestamptz default now()
+updated_at                  timestamptz default now()
 ```
 
 ## Backend/API work implemented
@@ -849,36 +856,44 @@ Created routes:
 GET    /api/renewals
 POST   /api/renewals
 PATCH  /api/renewals/:id
-GET    /api/payoff-letters
-POST   /api/payoff-letters
-PATCH  /api/payoff-letters/:id
+GET    /api/payoff-requests
+POST   /api/payoff-requests
+GET    /api/payoff-requests/:id
+PATCH  /api/payoff-requests/:id
 ```
 
-Add scheduled or computed renewal logic:
+Implemented renewal logic:
 
-- Renewal eligible after configured days/months from funding.
-- Merchant reapply grace logic should align with renewal/refi rules.
+- Renewal records are created automatically from the funding workflow with default eligibility at funded_at + 90 days.
+- Admins/sales reps can manually adjust renewal status, eligibility date, estimated balance, payoff amount, contact dates, follow-up date, assignment, and notes.
+- Merchant-facing renewal review CTA is safe and does not expose internal payoff strategy or broker notes.
 
 ## Frontend work implemented
 
-Added dashboard settings sections:
+Added dashboard sections and panels:
 
 ```txt
 Renewals
-Payoff Letters
+Payoff Requests
 ```
 
 Add merchant view:
 
-- Renewal eligibility card
-- Payoff letter request/upload
-- Renewal application CTA when eligible
+- Admin/sales rep renewal queue
+- Merchant detail renewal panel
+- Merchant detail payoff request panel
+- Merchant-safe renewal eligibility card and review CTA
 
 ## Acceptance criteria
 
-- Admin/sales rep can view renewal-eligible merchants.
-- Funded merchants can be contacted for renewals.
-- Payoff letters can be tracked and linked to documents.
+- Admin/sales rep can view renewal-eligible merchants. ✅
+- Funded merchants can be contacted for renewals. ✅
+- Payoff requests can be tracked and linked to received lender/funder-provided payoff documents. ✅
+- Funded merchants can request an early-payoff letter from their current funding lender/funder. ✅
+- Admins and assigned sales reps can request payoff letters for funded deals. ✅
+- Only the funding lender/funder for that deal or an admin can upload/link the official payoff letter. ✅
+- MCA King does not generate official payoff letters on behalf of lenders/funders. ✅
+- Lenders/funders cannot access renewal queues or payoff request strategy. ✅
 
 ---
 
@@ -1363,7 +1378,7 @@ Funded Deals + Broker Revenue + Sales Rep Commissions ✅ complete
 Merchant-File Submissions ✅ complete
 Search + Saved Views ✅ complete
 Account Settings + Admin User Management ✅ complete
-Renewals
+Renewals ✅ complete
 Reports
 Compliance/Audit
 Communications

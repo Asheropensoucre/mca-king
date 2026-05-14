@@ -26,6 +26,11 @@ import { GET as getTasks, POST as postTask } from '../routes/tasks/index'
 import { PATCH as patchTask, DELETE as deleteTask } from '../routes/tasks/[id]'
 import { GET as getFundings, POST as postFunding } from '../routes/fundings/index'
 import { GET as getFunding, PATCH as patchFunding } from '../routes/fundings/[id]'
+import { GET as getRenewals, POST as postRenewal } from '../routes/renewals/index'
+import { GET as getRenewal, PATCH as patchRenewal } from '../routes/renewals/[id]'
+import { POST as requestRenewalReview } from '../routes/renewals/[id]/request-review'
+import { GET as getPayoffRequests, POST as postPayoffRequest } from '../routes/payoff-requests/index'
+import { GET as getPayoffRequest, PATCH as patchPayoffRequest } from '../routes/payoff-requests/[id]'
 import { GET as getBrokerRevenue, POST as postBrokerRevenue } from '../routes/broker-revenue/index'
 import { PATCH as patchBrokerRevenue } from '../routes/broker-revenue/[id]'
 import { GET as getSalesRepCommissions, POST as postSalesRepCommission } from '../routes/sales-rep-commissions/index'
@@ -149,6 +154,36 @@ function matchRoute(method: string, pathname: string): RouteMatch | null {
     const params = { id: decodeURIComponent(fundingMatch[1]) }
     if (method === 'GET') return { handler: getFunding, params }
     if (method === 'PATCH') return { handler: patchFunding, params }
+  }
+
+  if (pathname === '/api/renewals') {
+    if (method === 'GET') return { handler: getRenewals }
+    if (method === 'POST') return { handler: postRenewal }
+  }
+
+  const renewalReviewMatch = pathname.match(/^\/api\/renewals\/([^/]+)\/request-review$/)
+  if (renewalReviewMatch) {
+    const params = { id: decodeURIComponent(renewalReviewMatch[1]) }
+    if (method === 'POST') return { handler: requestRenewalReview, params }
+  }
+
+  const renewalMatch = pathname.match(/^\/api\/renewals\/([^/]+)$/)
+  if (renewalMatch) {
+    const params = { id: decodeURIComponent(renewalMatch[1]) }
+    if (method === 'GET') return { handler: getRenewal, params }
+    if (method === 'PATCH') return { handler: patchRenewal, params }
+  }
+
+  if (pathname === '/api/payoff-requests') {
+    if (method === 'GET') return { handler: getPayoffRequests }
+    if (method === 'POST') return { handler: postPayoffRequest }
+  }
+
+  const payoffRequestMatch = pathname.match(/^\/api\/payoff-requests\/([^/]+)$/)
+  if (payoffRequestMatch) {
+    const params = { id: decodeURIComponent(payoffRequestMatch[1]) }
+    if (method === 'GET') return { handler: getPayoffRequest, params }
+    if (method === 'PATCH') return { handler: patchPayoffRequest, params }
   }
 
   if (pathname === '/api/broker-revenue') {

@@ -1,4 +1,4 @@
-import type { Activity, ActivityType, EntityType, LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch, Task, Funding, BrokerRevenue, SalesRepCommission, MerchantFileSubmission, SavedView, SearchResults, PaginatedResponse, SavedViewEntityType, UserProfile, UserRole } from '../../types'
+import type { Activity, ActivityType, EntityType, LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch, Task, Funding, BrokerRevenue, SalesRepCommission, MerchantFileSubmission, SavedView, SearchResults, PaginatedResponse, SavedViewEntityType, UserProfile, UserRole, Renewal, PayoffRequest } from '../../types'
 
 function headers(extra?: HeadersInit): HeadersInit {
   return {
@@ -97,12 +97,13 @@ export const api = {
   },
   documents: {
     list: (merchantId: string) => request<Document[]>(`/api/documents?merchant_id=${encodeURIComponent(merchantId)}`),
-    upload: (merchantId: string, docType: DocType, file: File, stipulationId?: string) => {
+    upload: (merchantId: string, docType: DocType, file: File, stipulationId?: string, payoffRequestId?: string) => {
       const body = new globalThis.FormData()
       body.append('file', file)
       body.append('merchant_id', merchantId)
       body.append('doc_type', docType)
       if (stipulationId) body.append('stipulation_id', stipulationId)
+      if (payoffRequestId) body.append('payoff_request_id', payoffRequestId)
       return uploadRequest<Document>('/api/documents/upload', body)
     },
     delete: (id: string) => request<{ success: boolean }>(`/api/documents/${id}`, { method: 'DELETE' }),
@@ -140,6 +141,29 @@ export const api = {
     create: (data: Partial<Funding> & { merchant_id: string; funded_amount: number | string; broker_revenue_amount?: number | string | null; broker_revenue_rate?: number | string | null; sales_rep_commission_amount?: number | string | null; sales_rep_commission_rate?: number | string | null }) => request<Funding>('/api/fundings', { method: 'POST', body: JSON.stringify(data) }),
     get: (id: string) => request<Funding>(`/api/fundings/${id}`),
     update: (id: string, data: Partial<Funding>) => request<Funding>(`/api/fundings/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  },
+  renewals: {
+    list: (params?: Record<string, string | number | boolean | null | undefined>) => {
+      const qs = toQuery(params)
+      return request<Renewal[]>(`/api/renewals${qs ? `?${qs}` : ''}`)
+    },
+    listFiltered: (params: Record<string, string | number | boolean | null | undefined>) => {
+      const qs = toQuery(params)
+      return request<PaginatedResponse<Renewal>>(`/api/renewals${qs ? `?${qs}` : ''}`)
+    },
+    create: (data: Partial<Renewal> & { merchant_id: string; eligibility_date: string }) => request<Renewal>('/api/renewals', { method: 'POST', body: JSON.stringify(data) }),
+    get: (id: string) => request<Renewal>(`/api/renewals/${id}`),
+    update: (id: string, data: Partial<Renewal>) => request<Renewal>(`/api/renewals/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    requestReview: (id: string) => request<{ success: boolean }>(`/api/renewals/${id}/request-review`, { method: 'POST' }),
+  },
+  payoffRequests: {
+    list: (params?: Record<string, string | number | boolean | null | undefined>) => {
+      const qs = toQuery(params)
+      return request<PayoffRequest[]>(`/api/payoff-requests${qs ? `?${qs}` : ''}`)
+    },
+    create: (data: Partial<PayoffRequest> & { merchant_id: string }) => request<PayoffRequest>('/api/payoff-requests', { method: 'POST', body: JSON.stringify(data) }),
+    get: (id: string) => request<PayoffRequest>(`/api/payoff-requests/${id}`),
+    update: (id: string, data: Partial<PayoffRequest>) => request<PayoffRequest>(`/api/payoff-requests/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   },
   brokerRevenue: {
     list: (params?: { funding_id?: string; merchant_id?: string }) => {

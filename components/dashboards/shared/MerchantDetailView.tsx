@@ -11,6 +11,8 @@ import { TaskPanel } from './TaskPanel';
 import { FundingSummary } from './FundingSummary';
 import { FundingModal } from './FundingModal';
 import { MerchantFileSubmissionsPanel } from './MerchantFileSubmissionsPanel';
+import { RenewalPanel } from './RenewalPanel';
+import { PayoffRequestsPanel } from './PayoffRequestsPanel';
 
 interface MerchantDetailViewProps { 
     item: FormData, 
@@ -206,6 +208,8 @@ export const MerchantDetailView: React.FC<MerchantDetailViewProps> = ({ item, le
         {(currentUser.role === 'admin' || currentUser.role === 'sales_rep') && (
             <>
                 <FundingSummary merchantId={item.id} currentUser={currentUser} refreshKey={fundingRefreshKey} />
+                <RenewalPanel merchantId={item.id} currentUser={currentUser} />
+                <PayoffRequestsPanel merchantId={item.id} lenders={lenders} currentUser={currentUser} />
                 <div className="flex justify-end">
                     <PrimaryButton label={item.status === 'FUNDED' ? 'Add Funding Record' : 'Mark Funded'} variant="funded" onClick={() => setShowFundingModal(true)} disabled={!canMarkFunded} />
                 </div>
