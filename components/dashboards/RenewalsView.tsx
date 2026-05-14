@@ -56,7 +56,7 @@ export const RenewalsView: React.FC<RenewalsViewProps> = ({ currentUser, salesRe
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-black text-theme-maroon dark:text-theme-yellow">Renewals / Refinance</h2>
+        <h2 className="text-2xl font-black text-theme-maroon dark:text-theme-yellow">Renewals</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Broker-shop queue for funded merchants who may be ready for renewal funding.</p>
       </div>
 

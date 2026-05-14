@@ -10,6 +10,7 @@ import { supabaseAdmin } from '../../lib/supabase-server'
 
 const FUNDED_STATUS: ApplicationStatus = 'FUNDED'
 const PAYMENT_FREQUENCIES = ['daily', 'weekly', 'biweekly', 'monthly'] as const
+const FUNDING_TYPES: Funding['funding_type'][] = ['first_funding', 'renewal', 'additional_funding']
 
 type FundingRow = Funding & {
   merchant?: { business_name: string; assigned_rep_id: string | null } | null
@@ -28,6 +29,9 @@ type FundingBody = {
   payment_frequency?: string | null
   term_days?: number | string | null
   funded_at?: string | null
+  funding_type?: Funding['funding_type'] | null
+  renewal_number?: number | string | null
+  funding_position?: number | string | null
   notes?: string | null
   broker_revenue_amount?: number | string | null
   broker_revenue_rate?: number | string | null
@@ -52,6 +56,10 @@ function isPaymentFrequency(value: string | null | undefined): value is Funding[
   return typeof value === 'string' && PAYMENT_FREQUENCIES.includes(value as NonNullable<Funding['payment_frequency']>)
 }
 
+function isFundingType(value: string | null | undefined): value is Funding['funding_type'] {
+  return typeof value === 'string' && FUNDING_TYPES.includes(value as Funding['funding_type'])
+}
+
 function toFunding(row: FundingRow): Funding {
   return {
     id: row.id,
@@ -66,6 +74,9 @@ function toFunding(row: FundingRow): Funding {
     payment_frequency: row.payment_frequency,
     term_days: row.term_days,
     funded_at: row.funded_at,
+    funding_type: row.funding_type ?? 'first_funding',
+    renewal_number: row.renewal_number ?? 0,
+    funding_position: row.funding_position ?? 1,
     created_by: row.created_by,
     notes: row.notes,
     created_at: row.created_at,
@@ -153,6 +164,24 @@ export async function POST(req: Request): Promise<Response> {
 
   if (body.payment_frequency && !isPaymentFrequency(body.payment_frequency)) return badRequest('payment_frequency is invalid')
 
+  const requestedFundingType = body.funding_type ?? undefined
+  if (requestedFundingType && !isFundingType(requestedFundingType)) return badRequest('funding_type is invalid')
+
+  const renewalNumber = toInt(body.renewal_number)
+  const fundingPosition = toInt(body.funding_position)
+
+  const { data: existingFundings, error: existingFundingsError } = await supabaseAdmin
+    .from('fundings')
+    .select('id')
+    .eq('merchant_id', body.merchant_id)
+    .returns<{ id: string }[]>()
+  if (existingFundingsError) return badRequest(existingFundingsError.message)
+
+  const existingCount = existingFundings?.length ?? 0
+  const fundingType: Funding['funding_type'] = requestedFundingType ?? (existingCount === 0 ? 'first_funding' : 'renewal')
+  const finalRenewalNumber = fundingType === 'renewal' ? (renewalNumber && renewalNumber > 0 ? renewalNumber : Math.max(1, existingCount)) : 0
+  const finalFundingPosition = fundingPosition && fundingPosition > 0 ? fundingPosition : existingCount + 1
+
   const { data: merchantRow, error: merchantError } = await supabaseAdmin
     .from('merchants')
     .select('*')
@@ -193,6 +222,9 @@ export async function POST(req: Request): Promise<Response> {
       payment_frequency: body.payment_frequency ?? null,
       term_days: toInt(body.term_days),
       funded_at: body.funded_at || new Date().toISOString(),
+      funding_type: fundingType,
+      renewal_number: finalRenewalNumber,
+      funding_position: finalFundingPosition,
       created_by: user.id,
       notes: body.notes?.trim() || null,
     })

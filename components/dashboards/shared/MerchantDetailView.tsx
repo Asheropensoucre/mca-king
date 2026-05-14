@@ -211,7 +211,7 @@ export const MerchantDetailView: React.FC<MerchantDetailViewProps> = ({ item, le
                 <RenewalPanel merchantId={item.id} currentUser={currentUser} />
                 <PayoffRequestsPanel merchantId={item.id} lenders={lenders} currentUser={currentUser} />
                 <div className="flex justify-end">
-                    <PrimaryButton label={item.status === 'FUNDED' ? 'Add Funding Record' : 'Mark Funded'} variant="funded" onClick={() => setShowFundingModal(true)} disabled={!canMarkFunded} />
+                    <PrimaryButton label={item.status === 'FUNDED' ? 'Add Funding / Renewal' : 'Mark Funded'} variant="funded" onClick={() => setShowFundingModal(true)} disabled={!canMarkFunded} />
                 </div>
                 <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                     <ActivityTimeline entityType="merchant" entityId={item.id} currentUserRole={currentUser.role} />

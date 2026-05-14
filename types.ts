@@ -216,6 +216,7 @@ export interface MerchantFileSubmission {
 }
 
 export type PaymentFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly';
+export type FundingType = 'first_funding' | 'renewal' | 'additional_funding';
 export type BrokerRevenueType = 'commission' | 'points' | 'origination_fee' | 'bonus' | 'other';
 export type BrokerRevenueStatus = 'expected' | 'invoiced' | 'received' | 'short_paid' | 'disputed' | 'waived';
 export type CommissionBasisType = 'broker_revenue' | 'funded_amount' | 'flat';
@@ -234,6 +235,9 @@ export interface Funding {
   payment_frequency: PaymentFrequency | null;
   term_days: number | null;
   funded_at: string;
+  funding_type: FundingType;
+  renewal_number: number;
+  funding_position: number;
   created_by: string | null;
   notes: string | null;
   created_at: string;

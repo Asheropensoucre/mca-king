@@ -38,11 +38,11 @@ The app is designed for MCA broker owners, broker shops, internal sales reps, me
 - **AI Assistant with page-aware context** through the MCA King Assistant powered by Gemini.
 - **Dark/light mode** using the Corporate Tech/MCA King theme and global wallpaper background.
 - **Grace period reapply logic** for merchants after terminal statuses such as `FUNDED`, `all lenders decline`, or `Declined by funder`.
-- **Funded-deal finance tracking** for funding records, broker revenue receivable from lenders/funders, and internal sales rep commission status.
+- **Funded-deal finance tracking** for first funding, renewal funding, and additional/split funding positions, plus broker revenue receivable from lenders/funders and internal sales rep commission status.
 - **Merchant-file submission tracking** for broker-to-lender/funder package submissions, response statuses, declines, no-response outcomes, offers, and stipulation requests.
 - **Search, filters, pagination, and saved views** so admins and sales reps can find merchants, leads, lenders, tasks, and funded records at scale.
 - **Account settings and admin user management** where users can change only their own password, while admins manage emails, roles, resets, account disable/close actions, and sales rep creation from a dedicated Settings area.
-- **Renewals/refinance tracking** for funded merchants, including broker-side eligibility queues and early-payoff request tracking. Merchants/admins/assigned reps can request payoff letters after funding; only the funding lender/funder for that deal or an admin can upload/link the official lender-provided payoff letter.
+- **Renewals tracking** for funded merchants, including broker-side eligibility queues, renewal funding history, and early-payoff request tracking. Merchants/admins/assigned reps can request payoff letters after funding; only the funding lender/funder for that deal or an admin can upload/link the official lender-provided payoff letter.
 
 ## Tech Stack
 
@@ -177,7 +177,7 @@ bun run preview
 | `BETTER_AUTH_SECRET` | Secret for Better Auth deployments that use Better Auth runtime/session features. | Recommended |
 | `RESEND_API_KEY` | Resend API key used for outbound email automation. | Yes for email |
 | `EMAIL_FROM` | Verified sender address used for Resend emails. | Yes for email |
-| `GEMINI_API_KEY` | Server-only Google Gemini API key used by MCA King Assistant through `/api/ai/chat`. Do not prefix with `VITE_`. | Yes for AI |
+| `GEMINI_API_KEY` | Server-only Google Gemini API key used by MCA King Assistant through `/api/ai/chat`. Do not prenewalx with `VITE_`. | Yes for AI |
 
 ## Project Structure
 
@@ -225,7 +225,7 @@ Brokerage CRM/
 │       ├── DashboardController.tsx # Loads data and routes users to role dashboards
 │       ├── AdminDashboard.tsx      # Admin dashboard, directories, reps, pipeline
 │       ├── AdminSettingsPage.tsx   # Admin user management and sales rep creation
-│       ├── RenewalsView.tsx        # Admin/rep renewal and refinance queue
+│       ├── RenewalsView.tsx        # Admin/rep renewal queue
 │       ├── SalesRepDashboard.tsx   # Sales rep leads/deals/pipeline dashboard
 │       ├── MerchantDashboard.tsx   # Merchant application, docs, stips, offers, reapply logic
 │       ├── LenderDashboard.tsx     # Lender matched merchants, offers, stip requests
@@ -289,7 +289,7 @@ Brokerage CRM/
         ├── matching/               # auto/manual matching and lender notify
         ├── search/                 # global admin/rep search
         ├── saved-views/            # saved filters/work queues
-        ├── renewals/               # renewal/refinance tracking
+        ├── renewals/               # renewal tracking
         ├── payoff-requests/        # broker payoff-letter request tracking
         ├── settings/               # own-account settings and password change
         ├── admin/users/            # admin-only user management

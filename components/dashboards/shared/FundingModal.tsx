@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import type { AuthUser, FormData, LenderInfo, Offer } from '../../../types';
+import React, { useEffect, useMemo, useState } from 'react';
+import type { AuthUser, FormData, Funding, LenderInfo, Offer } from '../../../types';
 import { Card } from '../../ui/Card';
 import { Input } from '../../ui/Input';
 import { Select } from '../../ui/Select';
@@ -23,6 +23,13 @@ export const FundingModal: React.FC<FundingModalProps> = ({ merchant, lenders, c
   const selectedOffer: Offer | null = useMemo(() => (merchant.offers ?? []).find(offer => offer.id === offerId) ?? acceptedOffer, [merchant.offers, offerId, acceptedOffer]);
   const initialLenderId = selectedOffer?.lenderId ?? merchant.offers?.[0]?.lenderId ?? '';
 
+  const [existingFundings, setExistingFundings] = useState<Funding[]>([]);
+  const existingFundingCount = existingFundings.length;
+  const defaultFundingType: Funding['funding_type'] = existingFundingCount === 0 ? 'first_funding' : 'renewal';
+
+  const [fundingType, setFundingType] = useState<Funding['funding_type']>(defaultFundingType);
+  const [renewalNumber, setRenewalNumber] = useState(existingFundingCount > 0 ? String(existingFundingCount) : '0');
+  const [fundingPosition, setFundingPosition] = useState(String(existingFundingCount + 1));
   const [lenderId, setLenderId] = useState(initialLenderId);
   const [fundedAmount, setFundedAmount] = useState(numberValue(selectedOffer?.amount));
   const [paybackAmount, setPaybackAmount] = useState('');
@@ -38,6 +45,33 @@ export const FundingModal: React.FC<FundingModalProps> = ({ merchant, lenders, c
   const [error, setError] = useState<string | null>(null);
 
   const canCreateFinanceRecords = currentUser.role === 'admin';
+
+  useEffect(() => {
+    api.fundings.list({ merchant_id: merchant.id })
+      .then(records => {
+        setExistingFundings(records);
+        if (records.length > 0) {
+          setFundingType('renewal');
+          setRenewalNumber(String(records.length));
+          setFundingPosition(String(records.length + 1));
+        }
+      })
+      .catch(() => undefined);
+  }, [merchant.id]);
+
+  const fundingRoundValue = fundingType === 'renewal' ? `renewal_${renewalNumber || Math.max(1, existingFundingCount)}` : fundingType;
+  const renewalRoundOptions = Array.from({ length: Math.max(3, existingFundingCount + 2) }, (_, index) => index + 1);
+
+  const handleFundingRoundChange = (value: string) => {
+    if (value.startsWith('renewal_')) {
+      setFundingType('renewal');
+      setRenewalNumber(value.replace('renewal_', ''));
+      return;
+    }
+    const nextType = value as Funding['funding_type'];
+    setFundingType(nextType);
+    if (nextType === 'first_funding' || nextType === 'additional_funding') setRenewalNumber('0');
+  };
 
   const handleOfferChange = (nextOfferId: string) => {
     setOfferId(nextOfferId);
@@ -59,6 +93,9 @@ export const FundingModal: React.FC<FundingModalProps> = ({ merchant, lenders, c
         lender_id: lenderId || null,
         offer_id: offerId || null,
         funded_amount: fundedAmount,
+        funding_type: fundingType,
+        renewal_number: fundingType === 'renewal' ? renewalNumber : 0,
+        funding_position: fundingPosition,
         payback_amount: paybackAmount || null,
         factor_rate: factorRate || null,
         payment_frequency: paymentFrequency,
@@ -87,6 +124,20 @@ export const FundingModal: React.FC<FundingModalProps> = ({ merchant, lenders, c
             <h3 className="text-xl font-black text-theme-maroon dark:text-theme-yellow">Mark Deal Funded</h3>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Create a funding record for {merchant.businessInfo.legalName} and move the merchant to FUNDED.</p>
             {error && <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</p>}
+
+            <div className="mt-6 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+              <h4 className="font-black text-theme-maroon dark:text-theme-yellow">Funding Record Type</h4>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Track first-time funding, later renewals, and multiple lender/funder positions on the same merchant.</p>
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+                <Select label="Funding Round" value={fundingRoundValue} onChange={event => handleFundingRoundChange(event.target.value)}>
+                  <option value="first_funding">First Funding</option>
+                  {renewalRoundOptions.map(round => <option key={round} value={`renewal_${round}`}>{round === 1 ? '1st' : round === 2 ? '2nd' : round === 3 ? '3rd' : `${round}th`} Renewal</option>)}
+                  <option value="additional_funding">Additional Funding / Split Position</option>
+                </Select>
+                <Input label="Renewal #" type="number" min="0" step="1" value={renewalNumber} onChange={event => setRenewalNumber(event.target.value)} disabled={fundingType !== 'renewal'} />
+                <Input label="Funding Position #" type="number" min="1" step="1" value={fundingPosition} onChange={event => setFundingPosition(event.target.value)} />
+              </div>
+            </div>
 
             <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
               <Select label="Accepted Offer" value={offerId} onChange={event => handleOfferChange(event.target.value)}>

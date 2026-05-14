@@ -109,9 +109,9 @@ Lenders/funders can:
 - See only their own offers/responses; competing lender/funder offers on the same merchant file are hidden server-side
 - Change only their own password in User Settings
 
-## Phase 6: Renewals / Refinance
+## Phase 6: Renewals
 
-The broker shop can track renewal opportunities after a merchant is funded. Renewal records are broker-controlled follow-up queues for admins and assigned sales reps. MCA King tracks early payoff letter requests sent to current lenders/funders and links the lender/funder-provided payoff document when received. Merchants, admins, and assigned sales reps can request a payoff letter after funding; only the funding lender/funder for that deal or an admin can upload/link the official payoff letter. MCA King does not generate official payoff letters on behalf of lenders/funders.
+The broker shop can track renewal opportunities after a merchant is funded. Renewal records are broker-controlled follow-up queues for admins and assigned sales reps. Funding history is dynamic: one merchant can have a first funding, later renewal fundings, and additional/split funding positions from one or more lenders/funders. MCA King tracks early payoff letter requests sent to current lenders/funders and links the lender/funder-provided payoff document when received. Merchants, admins, and assigned sales reps can request a payoff letter after funding; only the funding lender/funder for that deal or an admin can upload/link the official payoff letter. MCA King does not generate official payoff letters on behalf of lenders/funders.
 
 ## Key Technical Requirements
 
@@ -120,4 +120,4 @@ The broker shop can track renewal opportunities after a merchant is funded. Rene
 - Secure document storage and signed URL access
 - Broker-to-lender package generation and notification workflow
 - State machine for the 12-step Kamba pipeline
-- Activity history and tasks are implemented. Funding records, broker revenue, internal sales rep commissions, merchant-file submission outcomes, search/filter/saved-view work queues, account settings/admin user management, and renewals/refinance tracking with payoff request tracking are implemented. Reporting and compliance controls remain future expansion areas.
+- Activity history and tasks are implemented. Funding records, broker revenue, internal sales rep commissions, merchant-file submission outcomes, search/filter/saved-view work queues, account settings/admin user management, and renewals tracking with payoff request tracking are implemented. Reporting and compliance controls remain future expansion areas.

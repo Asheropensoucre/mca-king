@@ -46,10 +46,10 @@ export const RenewalPanel: React.FC<RenewalPanelProps> = ({ merchantId, currentU
       <div className="p-6">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Renewals / Refinance</h3>
+            <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Renewals</h3>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Broker-shop renewal follow-up after funding.</p>
           </div>
-          <PrimaryButton label="Add Renewal" size="small" onClick={() => setCreating(true)} />
+          <PrimaryButton label="Add Follow-Up" size="small" onClick={() => setCreating(true)} />
         </div>
         {loading ? <div className="mt-4"><MCAKingLoader label="Loading renewals..." size="small" /></div> : error ? <p className="mt-4 text-sm text-red-600">{error}</p> : renewals.length > 0 ? (
           <div className="mt-4 space-y-3">

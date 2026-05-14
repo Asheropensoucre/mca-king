@@ -8,7 +8,7 @@ type FundingRow = Funding & {
   lender?: { company_name: string } | null
 }
 
-type FundingPatchBody = Partial<Pick<Funding, 'funded_amount' | 'payback_amount' | 'factor_rate' | 'buy_rate' | 'sell_rate' | 'payment_frequency' | 'term_days' | 'funded_at' | 'notes'>>
+type FundingPatchBody = Partial<Pick<Funding, 'funded_amount' | 'payback_amount' | 'factor_rate' | 'buy_rate' | 'sell_rate' | 'payment_frequency' | 'term_days' | 'funded_at' | 'funding_type' | 'renewal_number' | 'funding_position' | 'notes'>>
 
 function toNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null
@@ -19,6 +19,10 @@ function toNumber(value: unknown): number | null {
 function toInt(value: unknown): number | null {
   const parsed = toNumber(value)
   return parsed === null ? null : Math.trunc(parsed)
+}
+
+function isFundingType(value: string | null | undefined): value is Funding['funding_type'] {
+  return value === 'first_funding' || value === 'renewal' || value === 'additional_funding'
 }
 
 function toFunding(row: FundingRow): Funding {
@@ -35,6 +39,9 @@ function toFunding(row: FundingRow): Funding {
     payment_frequency: row.payment_frequency,
     term_days: row.term_days,
     funded_at: row.funded_at,
+    funding_type: row.funding_type ?? 'first_funding',
+    renewal_number: row.renewal_number ?? 0,
+    funding_position: row.funding_position ?? 1,
     created_by: row.created_by,
     notes: row.notes,
     created_at: row.created_at,
@@ -95,6 +102,20 @@ export async function PATCH(req: Request, context?: RouteContext): Promise<Respo
   if (body.payment_frequency !== undefined) update.payment_frequency = body.payment_frequency
   if (body.term_days !== undefined) update.term_days = toInt(body.term_days)
   if (body.funded_at !== undefined) update.funded_at = body.funded_at
+  if (body.funding_type !== undefined) {
+    if (!isFundingType(body.funding_type)) return badRequest('funding_type is invalid')
+    update.funding_type = body.funding_type
+  }
+  if (body.renewal_number !== undefined) {
+    const value = toInt(body.renewal_number)
+    if (value === null || value < 0) return badRequest('renewal_number is invalid')
+    update.renewal_number = value
+  }
+  if (body.funding_position !== undefined) {
+    const value = toInt(body.funding_position)
+    if (value === null || value < 1) return badRequest('funding_position is invalid')
+    update.funding_position = value
+  }
   if (body.notes !== undefined) update.notes = body.notes?.trim() || null
 
   const { data, error } = await supabaseAdmin

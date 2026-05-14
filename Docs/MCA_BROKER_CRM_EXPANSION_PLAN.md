@@ -83,7 +83,7 @@ The highest-value missing modules are:
 5. Outbound merchant-file submission tracking beyond simple matches
 6. Search, filters, and saved views
 7. Account settings and admin user management
-8. Renewal/refinance tracking
+8. Renewal/renewal tracking
 9. Rich offer and contract management
 10. Document review/checklist workflows
 11. Compliance, audit, and sensitive-data controls
@@ -97,7 +97,7 @@ Phase B — Funded Deals + Broker Revenue + Sales Rep Commissions ✅ complete
 Phase C — Merchant-File Submissions ✅ complete
 Phase D — Search, Filters, Saved Views ✅ complete
 Phase E — Account Settings + Admin User Management ✅ complete
-Phase F — Renewals / Refinance ✅ complete
+Phase F — Renewals ✅ complete
 Phase G — Reporting
 Phase H — Compliance + Audit Hardening
 Phase I — Advanced Communications
@@ -370,6 +370,10 @@ sell_rate            numeric
 payment_frequency    text -- daily | weekly | biweekly | monthly
 term_days            int
 funded_at            timestamptz not null default now()
+funding_type         text not null default 'first_funding'
+-- first_funding | renewal | additional_funding
+renewal_number       int not null default 0
+funding_position     int not null default 1
 created_by           uuid references users(id)
 notes                text
 created_at           timestamptz default now()
@@ -798,7 +802,7 @@ These actions must write audit/activity records, and can connect into the later 
 
 ---
 
-# Phase F — Renewal / Refinance Module ✅ COMPLETE
+# Phase F — Renewals Module ✅ COMPLETE
 
 ## Goal
 
@@ -866,6 +870,7 @@ Implemented renewal logic:
 
 - Renewal records are created automatically from the funding workflow with default eligibility at funded_at + 90 days.
 - Admins/sales reps can manually adjust renewal status, eligibility date, estimated balance, payoff amount, contact dates, follow-up date, assignment, and notes.
+- Funding records distinguish first funding, renewals, and additional/split funding positions so renewal history is tied to actual funded records.
 - Merchant-facing renewal review CTA is safe and does not expose internal payoff strategy or broker notes.
 
 ## Frontend work implemented
@@ -888,6 +893,7 @@ Add merchant view:
 
 - Admin/sales rep can view renewal-eligible merchants. ✅
 - Funded merchants can be contacted for renewals. ✅
+- Funding history supports first funding, renewal funding, and additional/split positions dynamically. ✅
 - Payoff requests can be tracked and linked to received lender/funder-provided payoff documents. ✅
 - Funded merchants can request an early-payoff letter from their current funding lender/funder. ✅
 - Admins and assigned sales reps can request payoff letters for funded deals. ✅

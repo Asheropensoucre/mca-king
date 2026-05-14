@@ -1,6 +1,6 @@
-# Goose Agent Prompt — Phase F: Renewals / Refinance Module
+# Goose Agent Prompt — Phase F: Renewals Module
 
-> Phases A through E are complete. MCA King now has activity/tasks, lender offer isolation, funded deals + broker revenue + internal sales rep commissions, merchant-file submissions, search/saved views, and account settings/admin user management. Phase F adds renewal/refinance tracking so the broker shop can follow up with funded merchants for additional funding opportunities and request payoff letters from current lenders/funders when needed.
+> Phases A through E are complete. MCA King now has activity/tasks, lender offer isolation, funded deals + broker revenue + internal sales rep commissions, merchant-file submissions, search/saved views, and account settings/admin user management. Phase F adds renewal tracking so the broker shop can follow up with funded merchants for additional funding opportunities and request payoff letters from current lenders/funders when needed.
 
 ---
 
@@ -20,7 +20,7 @@ Hard business rules:
 ```txt
 Lenders do not submit merchant deals into MCA King.
 Lenders review merchant files that the broker shop submits/matches to them.
-Renewals/refinance are broker-shop follow-up workflows after a merchant has funded.
+Renewals are broker-shop follow-up workflows after a merchant has funded.
 No ISO payout model.
 No referral partner model.
 No outside broker commission model.
@@ -32,7 +32,7 @@ For Phase F specifically:
 ```txt
 Renewal = broker shop opportunity to re-engage a previously funded merchant.
 Payoff/consolidation workflow = broker shop tracks payoff information from current funders/lenders.
-Lenders/funders should not see broker renewal queues, payoff strategy, or competing renewal/refi opportunities.
+Lenders/funders should not see broker renewal queues, payoff strategy, or competing renewal opportunities.
 Merchants may see safe renewal eligibility messaging/CTA only for their own account.
 MCA King must not generate, create, or represent an official payoff letter on behalf of a lender/funder.
 The broker shop only requests a payoff letter from the current lender/funder, tracks the request, and uploads/links the received lender/funder-provided document.
@@ -61,14 +61,14 @@ The broker shop only requests a payoff letter from the current lender/funder, tr
 
 ## Goal
 
-Create a first-class **Renewals / Refinance** workflow:
+Create a first-class **Renewals** workflow:
 
 1. Track renewal eligibility for funded merchants.
 2. Give admins and sales reps a renewal queue.
-3. Allow broker users to record contact attempts, renewal/refi status, estimated balances, payoff amounts, and notes.
+3. Allow broker users to record contact attempts, renewal status, estimated balances, payoff amounts, and notes.
 4. Track payoff requests sent to current lenders/funders, and link the received payoff letter document when the lender/funder provides it.
 5. Surface safe merchant-facing renewal eligibility messaging and CTA.
-6. Keep lenders/funders out of broker renewal/refi strategy and payoff workflow.
+6. Keep lenders/funders out of broker renewal strategy and payoff workflow.
 
 ---
 
@@ -842,7 +842,7 @@ Phase B — Funded Deals + Broker Revenue + Sales Rep Commissions ✅ complete
 Phase C — Merchant-File Submissions ✅ complete
 Phase D — Search, Filters, Saved Views ✅ complete
 Phase E — Account Settings + Admin User Management ✅ complete
-Phase F — Renewals / Refinance ✅ complete
+Phase F — Renewals ✅ complete
 Phase G — Reporting
 Phase H — Compliance + Audit Hardening
 Phase I — Advanced Communications

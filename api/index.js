@@ -45803,6 +45803,7 @@ async function ensureRenewalForFunding(params) {
 // src/routes/fundings/index.ts
 var FUNDED_STATUS = "FUNDED";
 var PAYMENT_FREQUENCIES = ["daily", "weekly", "biweekly", "monthly"];
+var FUNDING_TYPES = ["first_funding", "renewal", "additional_funding"];
 function toNumber3(value) {
   if (value === null || value === undefined || value === "")
     return null;
@@ -45815,6 +45816,9 @@ function toInt(value) {
 }
 function isPaymentFrequency(value) {
   return typeof value === "string" && PAYMENT_FREQUENCIES.includes(value);
+}
+function isFundingType(value) {
+  return typeof value === "string" && FUNDING_TYPES.includes(value);
 }
 function toFunding(row) {
   return {
@@ -45830,6 +45834,9 @@ function toFunding(row) {
     payment_frequency: row.payment_frequency,
     term_days: row.term_days,
     funded_at: row.funded_at,
+    funding_type: row.funding_type ?? "first_funding",
+    renewal_number: row.renewal_number ?? 0,
+    funding_position: row.funding_position ?? 1,
     created_by: row.created_by,
     notes: row.notes,
     created_at: row.created_at,
@@ -45898,6 +45905,18 @@ async function POST17(req) {
     return badRequest("funded_amount is required");
   if (body.payment_frequency && !isPaymentFrequency(body.payment_frequency))
     return badRequest("payment_frequency is invalid");
+  const requestedFundingType = body.funding_type ?? undefined;
+  if (requestedFundingType && !isFundingType(requestedFundingType))
+    return badRequest("funding_type is invalid");
+  const renewalNumber = toInt(body.renewal_number);
+  const fundingPosition = toInt(body.funding_position);
+  const { data: existingFundings, error: existingFundingsError } = await supabaseAdmin.from("fundings").select("id").eq("merchant_id", body.merchant_id).returns();
+  if (existingFundingsError)
+    return badRequest(existingFundingsError.message);
+  const existingCount = existingFundings?.length ?? 0;
+  const fundingType = requestedFundingType ?? (existingCount === 0 ? "first_funding" : "renewal");
+  const finalRenewalNumber = fundingType === "renewal" ? renewalNumber && renewalNumber > 0 ? renewalNumber : Math.max(1, existingCount) : 0;
+  const finalFundingPosition = fundingPosition && fundingPosition > 0 ? fundingPosition : existingCount + 1;
   const { data: merchantRow, error: merchantError } = await supabaseAdmin.from("merchants").select("*").eq("id", body.merchant_id).single();
   if (merchantError)
     return badRequest(merchantError.message);
@@ -45927,6 +45946,9 @@ async function POST17(req) {
     payment_frequency: body.payment_frequency ?? null,
     term_days: toInt(body.term_days),
     funded_at: body.funded_at || new Date().toISOString(),
+    funding_type: fundingType,
+    renewal_number: finalRenewalNumber,
+    funding_position: finalFundingPosition,
     created_by: user.id,
     notes: body.notes?.trim() || null
   }).select("*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name)").single();
@@ -46029,6 +46051,9 @@ function toInt2(value) {
   const parsed = toNumber4(value);
   return parsed === null ? null : Math.trunc(parsed);
 }
+function isFundingType2(value) {
+  return value === "first_funding" || value === "renewal" || value === "additional_funding";
+}
 function toFunding2(row) {
   return {
     id: row.id,
@@ -46043,6 +46068,9 @@ function toFunding2(row) {
     payment_frequency: row.payment_frequency,
     term_days: row.term_days,
     funded_at: row.funded_at,
+    funding_type: row.funding_type ?? "first_funding",
+    renewal_number: row.renewal_number ?? 0,
+    funding_position: row.funding_position ?? 1,
     created_by: row.created_by,
     notes: row.notes,
     created_at: row.created_at,
@@ -46108,6 +46136,23 @@ async function PATCH6(req, context) {
     update.term_days = toInt2(body.term_days);
   if (body.funded_at !== undefined)
     update.funded_at = body.funded_at;
+  if (body.funding_type !== undefined) {
+    if (!isFundingType2(body.funding_type))
+      return badRequest("funding_type is invalid");
+    update.funding_type = body.funding_type;
+  }
+  if (body.renewal_number !== undefined) {
+    const value = toInt2(body.renewal_number);
+    if (value === null || value < 0)
+      return badRequest("renewal_number is invalid");
+    update.renewal_number = value;
+  }
+  if (body.funding_position !== undefined) {
+    const value = toInt2(body.funding_position);
+    if (value === null || value < 1)
+      return badRequest("funding_position is invalid");
+    update.funding_position = value;
+  }
   if (body.notes !== undefined)
     update.notes = body.notes?.trim() || null;
   const { data, error } = await supabaseAdmin.from("fundings").update(update).eq("id", id).select("*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name)").single();

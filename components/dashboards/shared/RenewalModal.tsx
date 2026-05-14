@@ -63,7 +63,7 @@ export const RenewalModal: React.FC<RenewalModalProps> = ({ renewal, merchantId,
         <form onSubmit={submit}>
           <div className="border-b p-6 dark:border-slate-700">
             <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">{renewal ? 'Update Renewal' : 'Create Renewal'}</h3>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Track broker-shop renewal/refinance follow-up for this funded merchant.</p>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Track broker-shop renewal follow-up for this funded merchant.</p>
           </div>
           <div className="grid grid-cols-1 gap-4 p-6 md:grid-cols-2">
             <Input label="Eligibility Date" type="date" value={form.eligibility_date} onChange={event => setForm({ ...form, eligibility_date: event.target.value })} required />
