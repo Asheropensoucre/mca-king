@@ -90,14 +90,12 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
              <>
              <div className="p-4 sm:p-6 lg:p-8">
                 <div className="max-w-4xl mx-auto">
-                    <div className="mb-5 rounded-xl border-2 border-line-strong/80 bg-surface/95 p-4 shadow-[6px_6px_0_var(--ct-primary)] dark:border-accent/80 dark:shadow-[6px_6px_0_var(--ct-secondary-fixed-dim)]">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <PrimaryButton label="← Back to My Deals" size="small" onClick={() => setSelectedDeal(null)} />
-                            <div className="flex flex-wrap items-center gap-2">
-                                {themeToggle}
-                                <PrimaryButton label="⚙ Settings" size="small" onClick={() => setShowSettings(true)} />
-                                <PrimaryButton label="Logout" size="small" onClick={onExit} />
-                            </div>
+                    <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <PrimaryButton label="← Back to My Deals" size="small" onClick={() => setSelectedDeal(null)} />
+                        <div className="flex flex-wrap items-center gap-3">
+                            {themeToggle}
+                            <PrimaryButton label="⚙ Settings" size="small" onClick={() => setShowSettings(true)} />
+                            <PrimaryButton label="Logout" size="small" onClick={onExit} />
                         </div>
                     </div>
                     <div className="flex justify-between items-center mb-4 gap-3 flex-wrap">
