@@ -58,11 +58,28 @@ function getRequestUrl(req: VercelRequest): string {
   return `${protocol}://${host}${getOriginalApiPath(req)}`
 }
 
+function splitCombinedSetCookie(value: string): string[] {
+  // Our cookies use Max-Age, not Expires, so splitting at comma before the next cookie name is safe here.
+  return value.split(/,\s*(?=[^;,=]+=[^;,]+)/g).map(cookie => cookie.trim()).filter(Boolean)
+}
+
 async function sendWebResponse(res: VercelResponse, response: Response): Promise<void> {
   res.status(response.status)
+
+  const headersWithCookies = response.headers as Headers & { getSetCookie?: () => string[] }
+  const setCookies = headersWithCookies.getSetCookie?.() ?? []
+
   response.headers.forEach((value, key) => {
+    if (key.toLowerCase() === 'set-cookie') return
     res.setHeader(key, value)
   })
+
+  if (setCookies.length > 0) {
+    res.setHeader('set-cookie', setCookies)
+  } else {
+    const combinedSetCookie = response.headers.get('set-cookie')
+    if (combinedSetCookie) res.setHeader('set-cookie', splitCombinedSetCookie(combinedSetCookie))
+  }
 
   res.send(Buffer.from(await response.arrayBuffer()))
 }

@@ -50,7 +50,7 @@ export function csrfResponseHeaders(token: string): HeadersInit {
 
 export function isCsrfExempt(method: string, pathname: string): boolean {
   if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return true
-  if (pathname === '/api/auth/login' || pathname === '/api/auth/register') return true
+  if (pathname === '/api/auth/login' || pathname === '/api/auth/register' || pathname === '/api/auth/logout') return true
   if (pathname === '/api/webhooks/resend') return true
   if (pathname === '/api/communications/unsubscribe') return true
   return false

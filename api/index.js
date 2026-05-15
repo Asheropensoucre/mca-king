@@ -45527,7 +45527,7 @@ function requestCookie(req, name) {
 function isCsrfExempt(method, pathname) {
   if (method === "GET" || method === "HEAD" || method === "OPTIONS")
     return true;
-  if (pathname === "/api/auth/login" || pathname === "/api/auth/register")
+  if (pathname === "/api/auth/login" || pathname === "/api/auth/register" || pathname === "/api/auth/logout")
     return true;
   if (pathname === "/api/webhooks/resend")
     return true;
@@ -67239,11 +67239,25 @@ function getRequestUrl(req) {
   const host = req.headers.host ?? "localhost:3000";
   return `${protocol}://${host}${getOriginalApiPath(req)}`;
 }
+function splitCombinedSetCookie(value) {
+  return value.split(/,\s*(?=[^;,=]+=[^;,]+)/g).map((cookie) => cookie.trim()).filter(Boolean);
+}
 async function sendWebResponse(res, response) {
   res.status(response.status);
+  const headersWithCookies = response.headers;
+  const setCookies = headersWithCookies.getSetCookie?.() ?? [];
   response.headers.forEach((value, key) => {
+    if (key.toLowerCase() === "set-cookie")
+      return;
     res.setHeader(key, value);
   });
+  if (setCookies.length > 0) {
+    res.setHeader("set-cookie", setCookies);
+  } else {
+    const combinedSetCookie = response.headers.get("set-cookie");
+    if (combinedSetCookie)
+      res.setHeader("set-cookie", splitCombinedSetCookie(combinedSetCookie));
+  }
   res.send(Buffer.from(await response.arrayBuffer()));
 }
 async function handler(req, res) {
