@@ -87,7 +87,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ currentUser, currentPage, cont
 
     return (
         <>
-            <div className={`fixed bottom-24 right-4 sm:right-8 w-80 sm:w-96 h-[500px] bg-surface shadow-2xl rounded-lg border-2 border-accent dark:border-accent flex flex-col transition-transform duration-300 ease-in-out ${isOpen ? 'transform translate-y-0 opacity-100' : 'transform translate-y-10 opacity-0 pointer-events-none'}`}>
+            <div className={`fixed inset-x-2 bottom-20 z-50 h-[min(78dvh,560px)] bg-surface shadow-2xl rounded-lg border-2 border-accent dark:border-accent flex flex-col transition-transform duration-300 ease-in-out sm:inset-x-auto sm:bottom-24 sm:right-8 sm:h-[500px] sm:w-96 ${isOpen ? 'transform translate-y-0 opacity-100' : 'transform translate-y-10 opacity-0 pointer-events-none'}`}>
                 <div className="flex justify-between items-center p-4 border-b-2 border-accent bg-primary -strong rounded-t-lg">
                     <div className="flex items-center gap-3">
                         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-on-accent text-lg font-black">👑</div>
@@ -160,7 +160,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ currentUser, currentPage, cont
                 </div>
             </div>
 
-            <div className="fixed bottom-6 right-6 z-50">
+            <div className="fixed bottom-safe right-4 z-50 sm:right-6">
                 <PrimaryButton label={isOpen ? 'Close AI' : 'Ask AI'} onClick={() => setIsOpen(!isOpen)} />
             </div>
         </>

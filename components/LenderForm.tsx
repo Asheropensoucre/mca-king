@@ -23,9 +23,9 @@ export const LenderForm: React.FC<LenderFormProps> = ({ data, updateData, onSubm
         <div className="min-h-screen p-4 sm:p-6 lg:p-8">
             <div className="max-w-4xl mx-auto">
                  <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-6">
-                    <div className="flex items-center space-x-4">
-                        <img src="/logo.png" alt="MCA King Logo" className="h-12 w-auto" />
-                        <h1 className="text-3xl font-bold text-main">Lender Criteria Submission</h1>
+                    <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                        <img src="/logo.png" alt="MCA King Logo" className="h-10 w-auto shrink-0 sm:h-12" />
+                        <h1 className="text-2xl font-bold text-main sm:text-3xl">Lender Criteria Submission</h1>
                     </div>
                     <div className="flex items-center gap-3 self-start sm:self-auto">
                         {headerAction}

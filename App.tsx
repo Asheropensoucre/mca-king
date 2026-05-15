@@ -18,6 +18,7 @@ import { api } from './src/lib/api-client';
 import { csrfHeaders } from './src/lib/client-security';
 import { LoginPage } from './src/components/auth/LoginPage';
 import { RegisterPage } from './src/components/auth/RegisterPage';
+import { MobileProgressStepper } from './components/dashboards/shared/mobile/MobileProgressStepper';
 
 const STEPS = [
     { name: 'Business Info', description: 'Tell us about your company.' },
@@ -208,19 +209,20 @@ const App: React.FC = () => {
 
   if (setupView === 'merchant_form') {
     return (
-      <div className="min-h-screen flex flex-col justify-center items-center p-8 pb-36 sm:p-12 sm:pb-36">
-        <img src="/logo.png" alt="MCA King Logo" className="mb-8 h-24 w-auto" />
+      <div className="min-h-screen flex flex-col justify-center items-center p-4 pb-32 sm:p-8 sm:pb-36 lg:p-12 lg:pb-36">
+        <img src="/logo.png" alt="MCA King Logo" className="mb-5 h-16 w-auto sm:mb-8 sm:h-24" />
         <div className="w-full max-w-6xl relative">
           <div className="mb-4 flex justify-end">{darkModeToggle}</div>
+          <div className="mb-4 md:hidden"><MobileProgressStepper steps={STEPS.map(s => s.name)} descriptions={STEPS.map(s => s.description)} currentStep={currentStep} /></div>
           <div className="bg-surface rounded-xl shadow-lg grid md:grid-cols-3">
             <div className="p-12 border-r border-line -strong/50 hidden md:block"><StepIndicator steps={STEPS.map(s => s.name)} descriptions={STEPS.map(s => s.description)} currentStep={currentStep} /></div>
-            <div className="md:col-span-2 p-12">
-              <header className="mb-8"><h1 className="text-4xl font-bold text-main">{STEPS[currentStep].name}</h1><p className="text-muted mt-1">{STEPS[currentStep].description}</p></header>
+            <div className="p-5 sm:p-8 md:col-span-2 lg:p-12">
+              <header className="mb-6 sm:mb-8"><h1 className="text-2xl font-bold text-main sm:text-3xl lg:text-4xl">{STEPS[currentStep].name}</h1><p className="text-muted mt-1">{STEPS[currentStep].description}</p></header>
               <form onSubmit={handleMerchantSubmit} noValidate>
-                <div className="mb-8">{renderStepContent()}</div>
-                <div className="mt-8 pt-5 border-t border-line flex justify-between">
-                  <PrimaryButton label="Back" size="small" variant="danger" onClick={() => setCurrentStep(Math.max(0, currentStep - 1))} disabled={currentStep === 0} />
-                  {currentStep < STEPS.length - 1 ? <PrimaryButton label="Next" onClick={() => isStepValid && setCurrentStep(currentStep + 1)} disabled={!isStepValid} /> : <PrimaryButton type="submit" label="Submit Application" disabled={formData.documents.length === 0} variant="funded" />}
+                <div className="mb-6 sm:mb-8">{renderStepContent()}</div>
+                <div className="mt-8 pt-5 border-t border-line flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+                  <PrimaryButton label="Back" size="small" variant="danger" onClick={() => setCurrentStep(Math.max(0, currentStep - 1))} disabled={currentStep === 0} className="w-full sm:w-auto" />
+                  {currentStep < STEPS.length - 1 ? <PrimaryButton label="Next" onClick={() => isStepValid && setCurrentStep(currentStep + 1)} disabled={!isStepValid} className="w-full sm:w-auto" /> : <PrimaryButton type="submit" label="Submit Application" disabled={formData.documents.length === 0} variant="funded" className="w-full sm:w-auto" />}
                 </div>
               </form>
             </div>
@@ -239,7 +241,7 @@ const App: React.FC = () => {
   return (
     <>
       {currentUser.role === 'lender' && (
-        <div className="fixed bottom-6 left-6 z-50">
+        <div className="fixed bottom-safe left-4 z-50 sm:left-6">
           <PrimaryButton
             label="Edit Profile"
             onClick={() => setSetupView('lender_form')}

@@ -54,9 +54,9 @@ export const OwnersForm: React.FC<OwnersFormProps> = ({ data, updateData }) => {
           </div>
         </div>
       ))}
-      <div className="flex justify-between items-center mt-6">
-        <PrimaryButton label="+ Add Another Owner" size="small" onClick={addOwner} />
-        <div className="text-right">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mt-6">
+        <PrimaryButton label="+ Add Another Owner" size="small" onClick={addOwner} className="w-full sm:w-auto" />
+        <div className="text-left sm:text-right">
             <p className="text-sm font-medium text-main">Total Ownership: <span className={`font-bold ${totalOwnership === 100 ? 'text-secondary' : 'text-danger'}`}>{totalOwnership}%</span></p>
             {totalOwnership !== 100 && <p className="text-xs text-danger">Total ownership must equal 100%.</p>}
         </div>

@@ -62,7 +62,7 @@ export const SavedViewsMenu: React.FC<SavedViewsMenuProps> = ({ entityType, filt
     <div className="relative">
       <PrimaryButton label="Saved Views" size="small" onClick={() => setOpen(prev => !prev)} />
       {open && (
-        <div className="absolute right-0 z-40 mt-2 w-80 rounded-xl border-2 border-line-strong bg-surface p-4 shadow-[6px_6px_0_var(--ct-primary)] dark:border-accent  dark:shadow-[6px_6px_0_var(--ct-secondary-fixed-dim)]">
+        <div className="absolute right-0 z-40 mt-2 w-[calc(100vw-2rem)] max-w-80 rounded-xl border-2 border-line-strong bg-surface p-4 shadow-[6px_6px_0_var(--ct-primary)] dark:border-accent  dark:shadow-[6px_6px_0_var(--ct-secondary-fixed-dim)]">
           <div className="mb-3 flex items-center justify-between">
             <h4 className="font-black text-main ">Saved Views</h4>
             <button className="text-sm font-bold text-secondary" onClick={() => setSaving(prev => !prev)}>{saving ? 'Cancel' : 'Save current'}</button>

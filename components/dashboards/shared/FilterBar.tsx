@@ -32,7 +32,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ entityType, filters, onFil
   return (
     <div className="mb-4 rounded-xl border-2 border-line-strong/70 bg-surface/95 p-4 shadow-[5px_5px_0_var(--ct-primary)] dark:border-accent/70 /95 dark:shadow-[5px_5px_0_var(--ct-secondary-fixed-dim)]">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div className="flex flex-1 flex-wrap items-end gap-3">
+        <div className="flex flex-1 flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-end">
           {(entityType === 'merchants' || entityType === 'leads' || entityType === 'lenders') && (
             <label className="min-w-48 flex-1 text-xs font-black uppercase tracking-wider text-secondary">
               Search
@@ -66,7 +66,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ entityType, filters, onFil
             </>
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <PrimaryButton label="Reset" size="small" variant="danger" onClick={onReset} />
           <SavedViewsMenu entityType={entityType} filters={filters} currentUserRole={currentUserRole} onLoadView={view => onFilterChange(view.filters)} />
         </div>
@@ -76,7 +76,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ entityType, filters, onFil
 };
 
 const Select: React.FC<{ label: string; value: string; options: { value: string; label: string }[]; onChange: (value: string) => void }> = ({ label, value, options, onChange }) => (
-  <label className="min-w-40 text-xs font-black uppercase tracking-wider text-secondary">
+  <label className="w-full text-xs font-black uppercase tracking-wider text-secondary sm:min-w-40 sm:w-auto">
     {label}
     <select value={value} onChange={event => onChange(event.target.value)} className={`${inputClass} mt-1 w-full`}>
       <option value="">All</option>
@@ -86,7 +86,7 @@ const Select: React.FC<{ label: string; value: string; options: { value: string;
 );
 
 const RepSelect: React.FC<{ value: string; reps: SalesRepresentative[]; onChange: (value: string) => void }> = ({ value, reps, onChange }) => (
-  <label className="min-w-44 text-xs font-black uppercase tracking-wider text-secondary">
+  <label className="w-full text-xs font-black uppercase tracking-wider text-secondary sm:min-w-44 sm:w-auto">
     Rep
     <select value={value} onChange={event => onChange(event.target.value)} className={`${inputClass} mt-1 w-full`}>
       <option value="">All</option>

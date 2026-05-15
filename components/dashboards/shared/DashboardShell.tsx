@@ -93,8 +93,23 @@ export const DashboardShell = <T extends string>({
           </div>
 
           <div className="hidden border-b-2 border-line-strong bg-surface/95 px-8 py-5 shadow-[0_6px_0_rgb(var(--color-border-strong))] backdrop-blur-sm dark:shadow-[0_6px_0_rgb(var(--color-accent))] lg:block">
-            <h2 className="text-2xl font-black text-main">{title}</h2>
-            {subtitle && <p className="mt-1 text-sm font-bold text-muted">{subtitle}</p>}
+            <div className="flex items-center justify-between gap-6">
+              <div className="min-w-0">
+                <h2 className="text-2xl font-black text-main">{title}</h2>
+                {subtitle && <p className="mt-1 text-sm font-bold text-muted">{subtitle}</p>}
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
+                {themeToggle}
+                {settingsSection && (
+                  <PrimaryButton
+                    label={activeSection === settingsSection.id ? 'Back to Dashboard' : '⚙ Settings'}
+                    size="small"
+                    onClick={() => onSectionChange(activeSection === settingsSection.id ? mainSections[0].id : settingsSection.id)}
+                  />
+                )}
+                <PrimaryButton label="Logout" size="small" onClick={onExit} />
+              </div>
+            </div>
           </div>
 
           <div className="p-4 sm:p-6 lg:p-8">

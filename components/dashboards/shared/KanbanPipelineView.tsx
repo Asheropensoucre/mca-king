@@ -323,6 +323,7 @@ export const KanbanPipelineView: React.FC<KanbanPipelineViewProps> = ({ merchant
   const [activeId, setActiveId] = useState<string | null>(null);
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [expandedStepStatus, setExpandedStepStatus] = useState<ApplicationStatus | null>(null);
+  const [mobileStatus, setMobileStatus] = useState<ApplicationStatus>(APPLICATION_STATUS_CONFIG[0].label);
   const [localOrder, setLocalOrder] = useState<Record<ApplicationStatus, string[]>>({} as Record<ApplicationStatus, string[]>);
 
   const normalizedMerchants = useMemo(() => merchants.map(merchant => ({
@@ -352,6 +353,7 @@ export const KanbanPipelineView: React.FC<KanbanPipelineViewProps> = ({ merchant
   const expandedStepIndex = expandedStepStatus ? boardData.findIndex(column => column.status === expandedStepStatus) : -1;
   const expandedStepColumn = expandedStepIndex >= 0 ? boardData[expandedStepIndex] : null;
   const activeMerchant = activeId ? normalizedMerchants.find(merchant => merchant.id === activeId) : null;
+  const mobileColumn = boardData.find(column => column.status === mobileStatus) ?? boardData[0];
 
   const openExpandedCard = (merchant: FormData) => setExpandedCardId(merchant.id);
   const closeExpandedCard = () => setExpandedCardId(null);
@@ -478,10 +480,10 @@ export const KanbanPipelineView: React.FC<KanbanPipelineViewProps> = ({ merchant
   };
 
   return (
-    <div className="flex h-[calc(100vh-2rem)] min-h-[720px] flex-col lg:h-[calc(100vh-4rem)]">
-      <div className="mb-5 flex flex-col gap-4 rounded-2xl border border-line bg-surface px-6 py-5 shadow-sm   xl:flex-row xl:items-end xl:justify-between">
+    <div className="flex min-h-[70vh] flex-col lg:h-[calc(100vh-4rem)] lg:min-h-[720px]">
+      <div className="mb-5 flex flex-col gap-4 rounded-2xl border border-line bg-surface px-4 py-4 shadow-sm sm:px-6 sm:py-5 xl:flex-row xl:items-end xl:justify-between">
         <div>
-          <h2 className="text-3xl font-black text-main">Kamba Pipeline</h2>
+          <h2 className="text-2xl font-black text-main sm:text-3xl">Kamba Pipeline</h2>
           <p className="mt-1 max-w-3xl text-sm text-muted">Drag deals through the 12-step funding flow. Click any card to open a fullscreen Kamba card view and switch between deals.</p>
         </div>
         <div className="flex flex-wrap gap-3 text-sm">
@@ -490,29 +492,57 @@ export const KanbanPipelineView: React.FC<KanbanPipelineViewProps> = ({ merchant
         </div>
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-line bg-surface-strong/60 p-4 shadow-inner  ">
-          <div className="box-border flex h-full w-full flex-row gap-5 overflow-x-auto overflow-y-hidden scroll-smooth pb-4">
-            {boardData.map((column, idx) => (
-              <DroppableColumn key={column.status} column={column} idx={idx} lenders={lenders} onOpenCard={openExpandedCard} onOpenStep={openExpandedStep} />
-            ))}
+      {mobileColumn && (
+        <div className="lg:hidden">
+          <div className="mb-4 rounded-2xl border border-line bg-surface p-4 shadow-sm">
+            <label className="text-xs font-black uppercase tracking-wider text-secondary">
+              Pipeline Stage
+              <select value={mobileStatus} onChange={event => setMobileStatus(event.target.value as ApplicationStatus)} className="mt-2 w-full rounded-lg border-2 border-line bg-surface px-3 py-3 text-sm font-black text-main outline-none focus:border-accent">
+                {boardData.map((column, index) => <option key={column.status} value={column.status}>Step {index + 1}: {column.status} ({column.cards.length})</option>)}
+              </select>
+            </label>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="rounded-full bg-accent px-3 py-1 text-xs font-black text-on-accent">{mobileColumn.cards.length} deal{mobileColumn.cards.length === 1 ? '' : 's'}</span>
+              <button type="button" onClick={() => openExpandedStep(mobileColumn.status)} className="rounded-full bg-secondary px-3 py-1 text-xs font-black text-on-secondary">Open full step</button>
+            </div>
+          </div>
+          <div className="space-y-4">
+            {mobileColumn.cards.length > 0 ? mobileColumn.cards.map((merchant, cardIdx) => (
+              <button key={merchant.id} type="button" onClick={() => openExpandedCard(merchant)} className="block w-full rounded-xl text-left focus:outline-none focus:ring-2 focus:ring-secondary" aria-label={`Open deal ${cardIdx + 1}: ${getBusinessName(merchant)}`}>
+                <PipelineCardContent merchant={merchant} lenders={lenders} compact cardNumber={cardIdx + 1} />
+              </button>
+            )) : (
+              <div className="rounded-xl border border-line bg-surface-muted p-6 text-center text-sm font-bold text-muted">No deals are currently in this Kamba step.</div>
+            )}
           </div>
         </div>
+      )}
 
-        <DragOverlay dropAnimation={{
-          sideEffects: defaultDropAnimationSideEffects({
-            styles: { active: { opacity: '0.4' } },
-          }),
-        }}>
-          {activeMerchant ? <div className="w-[306px]"><PipelineCardContent merchant={activeMerchant} lenders={lenders} compact /></div> : null}
-        </DragOverlay>
-      </DndContext>
+      <div className="hidden min-h-0 flex-1 lg:block">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-line bg-surface-strong/60 p-4 shadow-inner  ">
+            <div className="box-border flex h-full w-full flex-row gap-5 overflow-x-auto overflow-y-hidden scroll-smooth pb-4">
+              {boardData.map((column, idx) => (
+                <DroppableColumn key={column.status} column={column} idx={idx} lenders={lenders} onOpenCard={openExpandedCard} onOpenStep={openExpandedStep} />
+              ))}
+            </div>
+          </div>
+
+          <DragOverlay dropAnimation={{
+            sideEffects: defaultDropAnimationSideEffects({
+              styles: { active: { opacity: '0.4' } },
+            }),
+          }}>
+            {activeMerchant ? <div className="w-[306px]"><PipelineCardContent merchant={activeMerchant} lenders={lenders} compact /></div> : null}
+          </DragOverlay>
+        </DndContext>
+      </div>
 
       {expandedStepColumn && (
         <ExpandedPipelineStep

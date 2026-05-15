@@ -201,7 +201,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
                         <h1 className="text-3xl font-black text-main ">{showSettings ? 'Settings' : 'My Application Dashboard'}</h1>
                         <p className="text-muted">Welcome, {currentUser.full_name ?? currentUser.name ?? submission.owners[0]?.name ?? 'Valued Client'}</p>
                     </div>
-                    <div className="flex items-center gap-3 self-start sm:self-auto">
+                    <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
                         {themeToggle}
                         <PrimaryButton label={showSettings ? 'Back to Dashboard' : '⚙ Settings'} size="small" onClick={() => setShowSettings(prev => !prev)} />
                         <PrimaryButton label="Logout" size="small" onClick={onExit} />

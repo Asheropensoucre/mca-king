@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import type { Renewal, RenewalStatus, SalesRepresentative } from '../../../types';
-import { Card } from '../../ui/Card';
 import { Input } from '../../ui/Input';
 import { Select } from '../../ui/Select';
 import { Textarea } from '../../ui/Textarea';
 import { PrimaryButton } from '../../../src/components/ui/PrimaryButton';
+import { ResponsiveModal } from './mobile/ResponsiveModal';
 
 const STATUS_OPTIONS: RenewalStatus[] = ['not_ready', 'eligible', 'contacted', 'application_started', 'submitted', 'renewed', 'declined', 'not_interested'];
 
@@ -58,8 +58,7 @@ export const RenewalModal: React.FC<RenewalModalProps> = ({ renewal, merchantId,
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <ResponsiveModal className="max-w-2xl" ariaLabel="Renewal">
         <form onSubmit={submit}>
           <div className="border-b p-6 ">
             <h3 className="text-lg font-black text-main ">{renewal ? 'Update Renewal' : 'Create Renewal'}</h3>
@@ -78,12 +77,11 @@ export const RenewalModal: React.FC<RenewalModalProps> = ({ renewal, merchantId,
             <div className="md:col-span-2"><Textarea label="Internal Notes" value={form.notes} onChange={event => setForm({ ...form, notes: event.target.value })} rows={3} /></div>
             {error && <p className="md:col-span-2 text-sm font-semibold text-danger dark:text-danger">{error}</p>}
           </div>
-          <div className="flex justify-end gap-2 border-t p-4 ">
+          <div className="flex flex-col gap-2 border-t p-4 sm:flex-row sm:justify-end ">
             <PrimaryButton label="Cancel" size="small" variant="danger" onClick={onClose} />
             <PrimaryButton type="submit" label={saving ? 'Saving...' : 'Save Renewal'} size="small" disabled={saving} />
           </div>
         </form>
-      </Card>
-    </div>
+    </ResponsiveModal>
   );
 };

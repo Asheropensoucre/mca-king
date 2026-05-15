@@ -130,6 +130,17 @@ html.dark {
 
 html {
   min-height: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+@layer utilities {
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .bottom-safe {
+    bottom: max(1.5rem, env(safe-area-inset-bottom));
+  }
 }
 
 body {

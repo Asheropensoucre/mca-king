@@ -10,6 +10,7 @@ import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
 import { api } from '../../src/lib/api-client';
 import { Chatbot } from '../Chatbot';
 import { UserSettingsPage } from './shared/UserSettingsPage';
+import { ResponsiveDataList } from './shared/mobile/ResponsiveDataList';
 
 interface LenderDashboardProps { 
     currentUser: AuthUser;
@@ -89,7 +90,16 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
              <>
              <div className="p-4 sm:p-6 lg:p-8">
                 <div className="max-w-4xl mx-auto">
-                    <PrimaryButton label="← Back to My Deals" size="small" onClick={() => setSelectedDeal(null)} />
+                    <div className="mb-5 rounded-xl border-2 border-line-strong/80 bg-surface/95 p-4 shadow-[6px_6px_0_var(--ct-primary)] dark:border-accent/80 dark:shadow-[6px_6px_0_var(--ct-secondary-fixed-dim)]">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <PrimaryButton label="← Back to My Deals" size="small" onClick={() => setSelectedDeal(null)} />
+                            <div className="flex flex-wrap items-center gap-2">
+                                {themeToggle}
+                                <PrimaryButton label="⚙ Settings" size="small" onClick={() => setShowSettings(true)} />
+                                <PrimaryButton label="Logout" size="small" onClick={onExit} />
+                            </div>
+                        </div>
+                    </div>
                     <div className="flex justify-between items-center mb-4 gap-3 flex-wrap">
                         <h2 className="text-2xl font-black text-main ">{sanitizedSelectedDeal.businessInfo.legalName}</h2>
                         <div className="flex gap-2 flex-wrap">
@@ -162,7 +172,7 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
                         <h1 className="text-3xl font-black text-main ">{showSettings ? 'Settings' : 'Lender Dashboard'}</h1>
                         <p className="text-muted">Welcome, {currentUser.full_name ?? currentUser.name ?? profile.lenderName}</p>
                     </div>
-                    <div className="flex items-center gap-3 self-start sm:self-auto">
+                    <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
                         {themeToggle}
                         <PrimaryButton label={showSettings ? 'Back to Dashboard' : '⚙ Settings'} size="small" onClick={() => setShowSettings(prev => !prev)} />
                         <PrimaryButton label="Logout" size="small" onClick={onExit} />
@@ -173,25 +183,49 @@ export const LenderDashboard: React.FC<LenderDashboardProps> = ({ currentUser, p
                     <Card>
                         <div className="p-6">
                             <h2 className="text-xl font-black text-main  mb-4">Assigned Merchants</h2>
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                                    <thead className="bg-primary"><tr className="text-left text-xs font-black uppercase tracking-wider text-accent"><th>Business Name</th><th>Requested Amt</th><th>Revenue</th><th>Industry</th><th>Status</th><th></th></tr></thead>
-                                    <tbody className="bg-surface divide-y divide-slate-200  dark:divide-slate-700">
-                                        {assignedMerchants.length > 0 ? assignedMerchants.map((deal) => (
-                                            <tr key={deal.id}>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-main">{deal.businessInfo.legalName}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">${Number(deal.requestedAmount).toLocaleString()}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">${Number(deal.businessInfo.monthlyRevenue).toLocaleString()}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{deal.businessInfo.industryType}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{deal.status}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><PrimaryButton label="View Details" size="small" onClick={() => setSelectedDeal(deal)} /></td>
-                                            </tr>
-                                        )) : (
-                                            <tr><td colSpan={6} className="px-6 py-12 text-center text-sm text-muted">No merchants have been assigned to you yet.</td></tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                            <ResponsiveDataList<FormData>
+                                rows={assignedMerchants}
+                                getKey={(deal) => deal.id}
+                                empty={<p className="px-4 py-8 text-center text-sm text-muted">No merchants have been assigned to you yet.</p>}
+                                mobileCard={(deal) => (
+                                    <Card className="p-4">
+                                        <div className="space-y-3">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="min-w-0">
+                                                    <p className="break-words text-base font-black text-main">{deal.businessInfo.legalName}</p>
+                                                    <p className="text-sm font-semibold text-muted">{deal.businessInfo.industryType || 'No industry listed'}</p>
+                                                </div>
+                                                <span className="shrink-0 rounded-full bg-surface-muted px-2 py-1 text-[10px] font-black uppercase text-main">{deal.status}</span>
+                                            </div>
+                                            <dl className="grid grid-cols-2 gap-3 text-sm">
+                                                <div><dt className="text-xs font-black uppercase text-secondary">Requested</dt><dd className="font-bold text-main">${Number(deal.requestedAmount).toLocaleString()}</dd></div>
+                                                <div><dt className="text-xs font-black uppercase text-secondary">Revenue</dt><dd className="font-bold text-main">${Number(deal.businessInfo.monthlyRevenue).toLocaleString()}</dd></div>
+                                            </dl>
+                                            <PrimaryButton label="View Details" size="small" fullWidth onClick={() => setSelectedDeal(deal)} />
+                                        </div>
+                                    </Card>
+                                )}
+                            >
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                                        <thead className="bg-primary"><tr className="text-left text-xs font-black uppercase tracking-wider text-accent"><th>Business Name</th><th>Requested Amt</th><th>Revenue</th><th>Industry</th><th>Status</th><th></th></tr></thead>
+                                        <tbody className="bg-surface divide-y divide-slate-200  dark:divide-slate-700">
+                                            {assignedMerchants.length > 0 ? assignedMerchants.map((deal) => (
+                                                <tr key={deal.id}>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-main">{deal.businessInfo.legalName}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">${Number(deal.requestedAmount).toLocaleString()}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">${Number(deal.businessInfo.monthlyRevenue).toLocaleString()}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{deal.businessInfo.industryType}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{deal.status}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><PrimaryButton label="View Details" size="small" onClick={() => setSelectedDeal(deal)} /></td>
+                                                </tr>
+                                            )) : (
+                                                <tr><td colSpan={6} className="px-6 py-12 text-center text-sm text-muted">No merchants have been assigned to you yet.</td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </ResponsiveDataList>
                         </div>
                     </Card>
                 </div>}

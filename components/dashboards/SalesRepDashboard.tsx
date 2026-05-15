@@ -14,6 +14,7 @@ import { TaskPanel } from './shared/TaskPanel';
 import { UserSettingsPage } from './shared/UserSettingsPage';
 import { FilterBar } from './shared/FilterBar';
 import { SearchBar, type SearchResultSelection } from './shared/SearchBar';
+import { ResponsiveDataList } from './shared/mobile/ResponsiveDataList';
 import { api } from '../../src/lib/api-client';
 
 interface SalesRepDashboardProps { 
@@ -123,40 +124,67 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
                     {activeSection === 'deals' && (
                         <div>
                             <FilterBar entityType="merchants" filters={dealFilters} onFilterChange={(next) => { setDealFilters(next); setDealPage(1); }} onReset={() => { setDealFilters({}); setDealPage(1); }} currentUserRole={currentUser.role} />
-                            <Card>
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                                    <thead className="bg-primary">
-                                        <tr className="text-left text-xs font-black uppercase tracking-wider text-accent">
-                                            <th>Business Name</th>
-                                            <th>Primary Contact</th>
-                                            <th>Contact Info</th>
-                                            <th>Status</th>
-                                            <th className="relative"><span className="sr-only">View</span></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-surface divide-y divide-slate-200  dark:divide-slate-700">
-                                        {dealRows.length > 0 ? dealRows.map((deal) => {
-                                            const primaryOwner = deal.owners[0];
-                                            return (
-                                                <tr key={deal.id}>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-main">{deal.businessInfo.legalName}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{primaryOwner?.name || 'N/A'}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
-                                                        {primaryOwner?.cellPhone && <a href={`tel:${primaryOwner.cellPhone}`} className="text-secondary hover:text-secondary/80 block">Call</a>}
-                                                        {primaryOwner?.email && <a href={`mailto:${primaryOwner.email}`} className="text-secondary hover:text-secondary/80 block mt-1">Email</a>}
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{deal.status}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><PrimaryButton label="View Details" size="small" onClick={() => setSelectedDeal(deal)} /></td>
-                                                </tr>
-                                            );
-                                        }) : (
-                                            <tr><td colSpan={5} className="px-6 py-12 text-center text-sm text-muted">You have not been assigned any deals yet.</td></tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </Card>
+                            <ResponsiveDataList<FormData>
+                                rows={dealRows}
+                                getKey={(deal) => deal.id}
+                                empty={<Card className="p-8 text-center text-sm text-muted">You have not been assigned any deals yet.</Card>}
+                                mobileCard={(deal) => {
+                                    const primaryOwner = deal.owners[0];
+                                    return (
+                                        <Card className="p-4">
+                                            <div className="space-y-3">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="min-w-0">
+                                                        <p className="break-words text-base font-black text-main">{deal.businessInfo.legalName}</p>
+                                                        <p className="text-sm font-semibold text-muted">{primaryOwner?.name || 'No primary contact'}</p>
+                                                    </div>
+                                                    <span className="shrink-0 rounded-full bg-surface-muted px-2 py-1 text-[10px] font-black uppercase text-main">{deal.status}</span>
+                                                </div>
+                                                <div className="flex flex-wrap gap-3 text-sm font-semibold">
+                                                    {primaryOwner?.cellPhone && <a href={`tel:${primaryOwner.cellPhone}`} className="text-secondary hover:text-secondary/80">Call</a>}
+                                                    {primaryOwner?.email && <a href={`mailto:${primaryOwner.email}`} className="break-all text-secondary hover:text-secondary/80">Email</a>}
+                                                </div>
+                                                <PrimaryButton label="View Details" size="small" fullWidth onClick={() => setSelectedDeal(deal)} />
+                                            </div>
+                                        </Card>
+                                    );
+                                }}
+                            >
+                                <Card>
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                                        <thead className="bg-primary">
+                                            <tr className="text-left text-xs font-black uppercase tracking-wider text-accent">
+                                                <th>Business Name</th>
+                                                <th>Primary Contact</th>
+                                                <th>Contact Info</th>
+                                                <th>Status</th>
+                                                <th className="relative"><span className="sr-only">View</span></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-surface divide-y divide-slate-200  dark:divide-slate-700">
+                                            {dealRows.length > 0 ? dealRows.map((deal) => {
+                                                const primaryOwner = deal.owners[0];
+                                                return (
+                                                    <tr key={deal.id}>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-main">{deal.businessInfo.legalName}</td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{primaryOwner?.name || 'N/A'}</td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                                                            {primaryOwner?.cellPhone && <a href={`tel:${primaryOwner.cellPhone}`} className="text-secondary hover:text-secondary/80 block">Call</a>}
+                                                            {primaryOwner?.email && <a href={`mailto:${primaryOwner.email}`} className="text-secondary hover:text-secondary/80 block mt-1">Email</a>}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{deal.status}</td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><PrimaryButton label="View Details" size="small" onClick={() => setSelectedDeal(deal)} /></td>
+                                                    </tr>
+                                                );
+                                            }) : (
+                                                <tr><td colSpan={5} className="px-6 py-12 text-center text-sm text-muted">You have not been assigned any deals yet.</td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </Card>
+                            </ResponsiveDataList>
                         {renderPagination()}
                         </div>
                     )}

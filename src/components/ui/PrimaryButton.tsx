@@ -18,9 +18,9 @@ const variantClasses: Record<NonNullable<PrimaryButtonProps['variant']>, string>
 }
 
 const sizeClasses: Record<NonNullable<PrimaryButtonProps['size']>, string> = {
-  small: 'px-3 py-2 text-sm',
-  normal: 'px-5 py-3 text-base',
-  large: 'px-7 py-4 text-xl',
+  small: 'min-h-10 px-3 py-2 text-sm',
+  normal: 'min-h-11 px-5 py-3 text-base',
+  large: 'min-h-12 px-7 py-4 text-xl',
 }
 
 export function PrimaryButton({ label, onClick, disabled, variant = 'default', type = 'button', size = 'normal', className = '', fullWidth = false }: PrimaryButtonProps) {

@@ -19,6 +19,7 @@ import { ReportsView } from './ReportsView';
 import { CommunicationsCenter } from './CommunicationsCenter';
 import { FilterBar } from './shared/FilterBar';
 import { SearchBar, type SearchResultSelection } from './shared/SearchBar';
+import { ResponsiveDataList } from './shared/mobile/ResponsiveDataList';
 import { api } from '../../src/lib/api-client';
 
 interface AdminDashboardProps { 
@@ -156,7 +157,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
     const renderMerchants = () => (
         <div className="space-y-4">
             <FilterBar entityType="merchants" filters={merchantFilters} onFilterChange={(next) => { setMerchantFilters(next); setMerchantPage(1); }} onReset={() => { setMerchantFilters({}); setMerchantPage(1); }} salesReps={salesReps} isAdmin currentUserRole={currentUser.role} />
-            <div className="grid grid-cols-12 gap-4 px-4 text-xs font-black uppercase tracking-wider text-accent">
+            <div className="hidden grid-cols-12 gap-4 px-4 text-xs font-black uppercase tracking-wider text-accent md:grid">
                 <div className="col-span-12 md:col-span-3">Business Name</div>
                 <div className="col-span-12 md:col-span-2">Sales Rep</div>
                 <div className="col-span-12 md:col-span-2">Monthly Revenue</div>
@@ -201,25 +202,49 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
     const renderLenders = () => (
         <div className="space-y-4">
             <FilterBar entityType="lenders" filters={lenderFilters} onFilterChange={(next) => { setLenderFilters(next); setLenderPage(1); }} onReset={() => { setLenderFilters({}); setLenderPage(1); }} currentUserRole={currentUser.role} />
-            <Card>
-                <div className="overflow-x-auto p-4">
-                    <table className="min-w-full border-separate border-spacing-y-3">
-                        <thead><tr><th className={headerClass}>Lender</th><th className={headerClass}>Contact</th><th className={headerClass}>Min Revenue</th><th className="relative"><span className="sr-only">View</span></th></tr></thead>
-                        <tbody>
-                            {lenderRows.length > 0 ? lenderRows.map((sub) => (
-                                <tr key={sub.id} className="rounded-xl bg-surface-muted /40">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-main ">{sub.lenderName}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{sub.email}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{sub.minRevenue}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><PrimaryButton label="View Details" size="small" onClick={() => handleSelectItem(sub)} /></td>
-                                </tr>
-                            )) : (
-                                <tr><td colSpan={4} className="px-6 py-12 text-center text-sm text-muted">No lender submissions yet.</td></tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </Card>
+            <ResponsiveDataList<LenderInfo>
+                rows={lenderRows}
+                getKey={(sub) => sub.id}
+                empty={<Card className="p-8 text-center text-sm text-muted">No lender submissions yet.</Card>}
+                mobileCard={(sub) => (
+                    <Card className="p-4">
+                        <div className="space-y-3">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <p className="break-words text-base font-black text-main">{sub.lenderName}</p>
+                                    <p className="break-all text-sm font-semibold text-muted">{sub.email || 'No contact email'}</p>
+                                </div>
+                                <span className="shrink-0 rounded-full bg-accent px-2 py-1 text-[10px] font-black uppercase text-on-accent">Lender</span>
+                            </div>
+                            <dl className="grid grid-cols-2 gap-3 text-sm">
+                                <div><dt className="text-xs font-black uppercase text-secondary">Min Revenue</dt><dd className="font-bold text-main">{sub.minRevenue || 'N/A'}</dd></div>
+                                <div><dt className="text-xs font-black uppercase text-secondary">Max Funding</dt><dd className="font-bold text-main">{sub.maxFundingAmount || 'N/A'}</dd></div>
+                            </dl>
+                            <PrimaryButton label="View Details" size="small" fullWidth onClick={() => handleSelectItem(sub)} />
+                        </div>
+                    </Card>
+                )}
+            >
+                <Card>
+                    <div className="overflow-x-auto p-4">
+                        <table className="min-w-full border-separate border-spacing-y-3">
+                            <thead><tr><th className={headerClass}>Lender</th><th className={headerClass}>Contact</th><th className={headerClass}>Min Revenue</th><th className="relative"><span className="sr-only">View</span></th></tr></thead>
+                            <tbody>
+                                {lenderRows.length > 0 ? lenderRows.map((sub) => (
+                                    <tr key={sub.id} className="rounded-xl bg-surface-muted /40">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-main ">{sub.lenderName}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{sub.email}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{sub.minRevenue}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><PrimaryButton label="View Details" size="small" onClick={() => handleSelectItem(sub)} /></td>
+                                    </tr>
+                                )) : (
+                                    <tr><td colSpan={4} className="px-6 py-12 text-center text-sm text-muted">No lender submissions yet.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </Card>
+            </ResponsiveDataList>
             {renderPagination(lenderPage, lenderTotal, setLenderPage)}
         </div>
     );

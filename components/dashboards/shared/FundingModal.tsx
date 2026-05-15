@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { AuthUser, FormData, Funding, LenderInfo, Offer } from '../../../types';
-import { Card } from '../../ui/Card';
 import { Input } from '../../ui/Input';
 import { Select } from '../../ui/Select';
 import { Textarea } from '../../ui/Textarea';
 import { PrimaryButton } from '../../../src/components/ui/PrimaryButton';
 import { api } from '../../../src/lib/api-client';
+import { ResponsiveModal } from './mobile/ResponsiveModal';
 
 interface FundingModalProps {
   merchant: FormData;
@@ -117,8 +117,7 @@ export const FundingModal: React.FC<FundingModalProps> = ({ merchant, lenders, c
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <Card className="max-h-[92vh] w-full max-w-3xl overflow-y-auto">
+    <ResponsiveModal className="max-w-3xl" ariaLabel="Mark Deal Funded">
         <form onSubmit={handleSubmit}>
           <div className="p-6">
             <h3 className="text-xl font-black text-main ">Mark Deal Funded</h3>
@@ -178,12 +177,11 @@ export const FundingModal: React.FC<FundingModalProps> = ({ merchant, lenders, c
               <Textarea label="Funding Notes" value={notes} onChange={event => setNotes(event.target.value)} rows={3} />
             </div>
           </div>
-          <div className="flex justify-end gap-3 border-t bg-surface-muted p-4 -muted/50">
+          <div className="flex flex-col gap-2 border-t bg-surface-muted p-4 sm:flex-row sm:justify-end -muted/50">
             <PrimaryButton label="Cancel" size="small" variant="danger" onClick={onClose} disabled={submitting} />
             <PrimaryButton label={submitting ? 'Saving...' : 'Mark Funded'} type="submit" variant="funded" disabled={submitting} />
           </div>
         </form>
-      </Card>
-    </div>
+    </ResponsiveModal>
   );
 };

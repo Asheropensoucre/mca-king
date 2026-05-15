@@ -80,7 +80,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({ onDocumentsChang
                         <input id="file-upload" name="file-upload" type="file" className="sr-only" multiple onChange={handleFileChange} accept={accept} disabled={uploading} />
                     </label>
                 )}
-                <p className="text-xs text-muted">e.g., Bank Statements, Photo ID. PNG, JPG, PDF up to 10MB.</p>
+                <p className="text-xs text-muted">e.g., Bank Statements, Photo ID. PNG, JPG, PDF, CSV, XLS, XLSX, DOC, DOCX, TXT up to 100 MB.</p>
                 {message && <p className={`text-xs mt-1 ${message.toLowerCase().includes('failed') || message.toLowerCase().includes('error') ? 'text-danger' : 'text-secondary'}`}>{message}</p>}
             </div>
             {files.length > 0 && (
