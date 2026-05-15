@@ -1,4 +1,5 @@
 import type { Activity, ActivityType, EntityType } from '../../../types'
+import { canAccessActivityEntity } from '../../lib/permissions'
 import { requireAuth } from '../../lib/requireAuth'
 import { assertRole, badRequest, forbidden, json } from '../../lib/route-utils'
 import { supabaseAdmin } from '../../lib/supabase-server'
@@ -48,6 +49,7 @@ export async function GET(req: Request): Promise<Response> {
   const entityId = url.searchParams.get('entity_id')
   if (!isEntityType(entityType)) return badRequest('entity_type is required')
   if (!entityId) return badRequest('entity_id is required')
+  if (!(await canAccessActivityEntity(user, entityType, entityId))) return forbidden()
 
   const { data, error } = await supabaseAdmin
     .from('activities')
@@ -70,6 +72,7 @@ export async function POST(req: Request): Promise<Response> {
   const body = await req.json() as ActivityBody
   if (!isEntityType(body.entity_type)) return badRequest('entity_type is required')
   if (!body.entity_id) return badRequest('entity_id is required')
+  if (!(await canAccessActivityEntity(user, body.entity_type, body.entity_id))) return forbidden()
   if (!isManualActivityType(body.activity_type)) return badRequest('activity_type must be note or call')
   if (!body.body?.trim()) return badRequest('body is required')
 

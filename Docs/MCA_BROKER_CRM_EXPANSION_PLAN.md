@@ -1272,7 +1272,7 @@ Document uploads now enforce:
 ```txt
 Allowed MIME types
 File extension checks
-25 MB max file size
+100 MB max file size
 Server-generated storage paths
 Private bucket usage through server-side Supabase service role
 Short signed URL expiration: 15 minutes

@@ -597,7 +597,7 @@ application/vnd.ms-excel
 Suggested max size:
 
 ```txt
-25 MB per file
+100 MB per file
 ```
 
 If current product needs larger bank statements, use 50 MB, but document the choice.

@@ -8,7 +8,7 @@ import { badRequest, forbidden, json } from '../../lib/route-utils'
 import { supabaseAdmin } from '../../lib/supabase-server'
 
 const DOC_TYPES: DocType[] = ['bank_statement', 'contract', 'stipulation', 'id', 'other']
-const MAX_FILE_SIZE = 25 * 1024 * 1024
+const MAX_FILE_SIZE = 100 * 1024 * 1024
 const ALLOWED_MIME_TYPES = new Map<string, string[]>([
   ['application/pdf', ['pdf']],
   ['image/png', ['png']],
@@ -27,7 +27,7 @@ function extensionOf(name: string): string {
 }
 
 function validateFile(file: File): Response | null {
-  if (file.size > MAX_FILE_SIZE) return badRequest('File is too large. Maximum size is 25 MB.')
+  if (file.size > MAX_FILE_SIZE) return badRequest('File is too large. Maximum size is 100 MB.')
   const allowedExtensions = ALLOWED_MIME_TYPES.get(file.type)
   if (!allowedExtensions) return badRequest('Unsupported file type. Upload PDF, PNG, JPG, CSV, XLS, or XLSX files only.')
   if (!allowedExtensions.includes(extensionOf(file.name))) return badRequest('File extension does not match the uploaded file type.')

@@ -21,6 +21,18 @@ async function currentLenderId(userId: string): Promise<string | null | Response
   return data?.id ?? null
 }
 
+async function lenderHasMerchantAccess(merchantId: string, lenderId: string): Promise<boolean> {
+  const match = await getLenderMatch(merchantId, lenderId)
+  if (match) return true
+  const { data } = await supabaseAdmin
+    .from('merchant_file_submissions')
+    .select('id')
+    .eq('merchant_id', merchantId)
+    .eq('lender_id', lenderId)
+    .maybeSingle<{ id: string }>()
+  return Boolean(data)
+}
+
 async function canAccessMerchant(userId: string, role: string, merchantId: string): Promise<boolean | Response> {
   if (role === 'admin') return true
   const { data: merchant, error } = await supabaseAdmin.from('merchants').select('id,user_id,assigned_rep_id,status,payload').eq('id', merchantId).maybeSingle<MerchantAccessRow>()
@@ -32,8 +44,7 @@ async function canAccessMerchant(userId: string, role: string, merchantId: strin
     const lenderId = await currentLenderId(userId)
     if (lenderId instanceof Response) return lenderId
     if (!lenderId) return false
-    const match = await getLenderMatch(merchantId, lenderId)
-    return Boolean(match)
+    return lenderHasMerchantAccess(merchantId, lenderId)
   }
   return false
 }
@@ -75,8 +86,7 @@ export async function POST(req: Request): Promise<Response> {
     const lenderId = await currentLenderId(user.id)
     if (lenderId instanceof Response) return lenderId
     if (!lenderId || lenderId !== body.lender_id) return forbidden()
-    const match = await getLenderMatch(body.merchant_id, lenderId)
-    if (!match) return forbidden('This merchant file has not been submitted or matched to your lender profile')
+    if (!(await lenderHasMerchantAccess(body.merchant_id, lenderId))) return forbidden('This merchant file has not been submitted or matched to your lender profile')
   }
 
   const { data: merchantRow, error: merchantError } = await supabaseAdmin.from('merchants').select('*').eq('id', body.merchant_id).single<MerchantRow>()

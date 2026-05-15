@@ -1,6 +1,7 @@
 import type { EntityType, Task, TaskPriority } from '../../../types'
 import { recordActivity } from '../../lib/activity'
 import { getPagination, paginatedJson, hasListParams } from '../../lib/list-query'
+import { canAccessActivityEntity } from '../../lib/permissions'
 import { requireAuth } from '../../lib/requireAuth'
 import { assertRole, badRequest, forbidden, json } from '../../lib/route-utils'
 import { supabaseAdmin } from '../../lib/supabase-server'
@@ -153,13 +154,14 @@ export async function POST(req: Request): Promise<Response> {
   const body = await req.json() as TaskBody
   if (!isTaskEntityType(body.entity_type)) return badRequest('entity_type is required')
   if (!body.entity_id) return badRequest('entity_id is required')
+  if (!(await canAccessActivityEntity(user, body.entity_type, body.entity_id))) return forbidden()
   if (!body.title?.trim()) return badRequest('title is required')
   if (body.priority && !isPriority(body.priority)) return badRequest('priority is invalid')
 
   const { data, error } = await supabaseAdmin
     .from('tasks')
     .insert({
-      assigned_to: body.assigned_to ?? user.id,
+      assigned_to: user.role === 'admin' ? (body.assigned_to ?? user.id) : user.id,
       created_by: user.id,
       entity_type: body.entity_type,
       entity_id: body.entity_id,

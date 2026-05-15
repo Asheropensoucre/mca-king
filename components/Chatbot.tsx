@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import type { AuthUser } from '../types';
 import { PrimaryButton } from '../src/components/ui/PrimaryButton';
 import { MCAKingLoader } from '../src/components/ui/MCAKingLoader';
+import { csrfHeaders } from '../src/lib/client-security';
 
 interface ChatbotProps {
     currentUser: AuthUser;
@@ -53,7 +54,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ currentUser, currentPage, cont
         try {
             const response = await fetch('/api/ai/chat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
                 body: JSON.stringify({
                     message: trimmed,
                     currentPage,

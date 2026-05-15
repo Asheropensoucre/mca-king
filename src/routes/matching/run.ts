@@ -1,6 +1,7 @@
 import { runAutoMatch } from '../../lib/matching'
+import { canUpdateMerchant } from '../../lib/permissions'
 import { requireAuth } from '../../lib/requireAuth'
-import { assertRole, badRequest, json } from '../../lib/route-utils'
+import { assertRole, badRequest, forbidden, json } from '../../lib/route-utils'
 
 type RunBody = {
   merchant_id?: string
@@ -13,6 +14,7 @@ export async function POST(req: Request): Promise<Response> {
 
   const body = await req.json() as RunBody
   if (!body.merchant_id) return badRequest('merchant_id is required')
+  if (!(await canUpdateMerchant(user, body.merchant_id))) return forbidden()
 
   try {
     const matches = await runAutoMatch(body.merchant_id, user.id)

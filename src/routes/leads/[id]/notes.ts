@@ -1,4 +1,5 @@
 import { recordActivity } from '../../../lib/activity'
+import { canAccessLead } from '../../../lib/permissions'
 import { requireAuth } from '../../../lib/requireAuth'
 import { assertRole, badRequest, getId, json, type RouteContext } from '../../../lib/route-utils'
 import { supabaseAdmin } from '../../../lib/supabase-server'
@@ -11,6 +12,7 @@ export async function POST(req: Request, context?: RouteContext): Promise<Respon
   if (roleError) return roleError
   const id = getId(context)
   if (!id) return badRequest()
+  if (!(await canAccessLead(user, id))) return new Response('Forbidden', { status: 403 })
 
   const body = await req.json() as NoteBody
   if (!body.body?.trim()) return badRequest('Note body is required')

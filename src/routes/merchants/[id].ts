@@ -6,6 +6,7 @@ import { triggerMerchantStatusEmail } from '../../lib/email-triggers'
 import { sendNewMerchantAlert } from '../../lib/send-email'
 import { requireAuth } from '../../lib/requireAuth'
 import { runAutoMatch } from '../../lib/matching'
+import { canAccessMerchant } from '../../lib/permissions'
 import { assertRole, badRequest, forbidden, getId, json, notFound, type RouteContext } from '../../lib/route-utils'
 import { supabaseAdmin } from '../../lib/supabase-server'
 
@@ -24,18 +25,6 @@ async function getCurrentLenderId(userId: string): Promise<string | null | Respo
 
   if (error) return badRequest(error.message)
   return data?.id ?? null
-}
-
-async function lenderCanReadMerchant(lenderId: string, merchantId: string): Promise<boolean | Response> {
-  const { data, error } = await supabaseAdmin
-    .from('lender_matches')
-    .select('id')
-    .eq('lender_id', lenderId)
-    .eq('merchant_id', merchantId)
-    .maybeSingle<{ id: string }>()
-
-  if (error) return badRequest(error.message)
-  return Boolean(data)
 }
 
 function sanitizeMerchantForLender(merchant: FormData, lenderId: string): FormData {
@@ -119,9 +108,7 @@ export async function GET(req: Request, context?: RouteContext): Promise<Respons
     if (lenderId instanceof Response) return lenderId
     if (!lenderId) return forbidden()
 
-    const canReadLenderMerchant = await lenderCanReadMerchant(lenderId, id)
-    if (canReadLenderMerchant instanceof Response) return canReadLenderMerchant
-    if (!canReadLenderMerchant) return forbidden()
+    if (!(await canAccessMerchant(user, id))) return forbidden()
 
     return json(sanitizeMerchantForLender(rowToMerchant(row), lenderId))
   }
@@ -152,6 +139,8 @@ export async function PATCH(req: Request, context?: RouteContext): Promise<Respo
   const hasAssignedRepId = Object.prototype.hasOwnProperty.call(patch, 'assigned_rep_id')
   const hasSalesRepId = Object.prototype.hasOwnProperty.call(patch, 'salesRepId')
   const nextAssignedRepId = hasAssignedRepId ? patch.assigned_rep_id ?? null : hasSalesRepId ? patch.salesRepId ?? null : existing.assigned_rep_id
+  if (user.role !== 'admin' && (hasAssignedRepId || hasSalesRepId)) return forbidden('Only admins can change sales rep assignment')
+  if (user.role !== 'admin' && (Object.prototype.hasOwnProperty.call(patch, 'offers') || Object.prototype.hasOwnProperty.call(patch, 'matchedLenderIds') || Object.prototype.hasOwnProperty.call(patch, 'documents'))) return forbidden('This field cannot be updated from this route')
   const assignmentChanged = (hasAssignedRepId || hasSalesRepId) && nextAssignedRepId !== existing.assigned_rep_id
 
   const currentPayload = rowToMerchant(existing)

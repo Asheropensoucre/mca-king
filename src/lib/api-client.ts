@@ -1,14 +1,16 @@
 import type { Activity, ActivityType, EntityType, LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch, Task, Funding, BrokerRevenue, SalesRepCommission, MerchantFileSubmission, SavedView, SearchResults, PaginatedResponse, SavedViewEntityType, UserProfile, UserRole, Renewal, PayoffRequest, OverviewReport, PipelineReport, FundingReport, LeadReport, LenderReport, RevenueReport, CommissionReport, RenewalReport, TaskReport, LenderDashboardAnalytics, AuditLog, CommunicationPreference, MessageTemplate, Campaign, CommunicationEvent, RecipientPreview, CommunicationEntityType } from '../../types'
+import { csrfHeaders } from './client-security'
 
 function headers(extra?: HeadersInit): HeadersInit {
   return {
     'Content-Type': 'application/json',
+    ...csrfHeaders(),
     ...extra,
   }
 }
 
 async function uploadRequest<T>(url: string, body: globalThis.FormData): Promise<T> {
-  const res = await fetch(url, { method: 'POST', body })
+  const res = await fetch(url, { method: 'POST', headers: csrfHeaders(), body })
   if (!res.ok) throw new Error(await res.text())
   return await res.json() as T
 }

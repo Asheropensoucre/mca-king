@@ -15,6 +15,7 @@ import { PrintView } from './components/PrintView';
 import { Chatbot } from './components/Chatbot';
 import { DEFAULT_APPLICATION_STATUS } from './components/dashboards/shared/applicationStatus';
 import { api } from './src/lib/api-client';
+import { csrfHeaders } from './src/lib/client-security';
 import { LoginPage } from './src/components/auth/LoginPage';
 import { RegisterPage } from './src/components/auth/RegisterPage';
 
@@ -105,7 +106,7 @@ const App: React.FC = () => {
   }, []);
 
   const handleLogout = useCallback(async () => {
-    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
+    await fetch('/api/auth/logout', { method: 'POST', headers: csrfHeaders() }).catch(() => undefined);
     setCurrentUser(null);
     setSetupView('dashboard');
     setAuthMode('login');

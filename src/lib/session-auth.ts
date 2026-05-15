@@ -33,10 +33,11 @@ type AccountRow = {
   users: UserRow | null
 }
 
-type SessionRow = {
+export type SessionRow = {
   id: string
   token: string
   expiresAt: string
+  csrf_token?: string | null
   users: UserRow | null
 }
 
@@ -149,7 +150,7 @@ export async function createUserWithCredential(params: {
   return toAuthUser(createdUser)
 }
 
-export async function createSession(userId: string): Promise<string> {
+export async function createSession(userId: string, csrfToken?: string): Promise<string> {
   const tokenBytes = new Uint8Array(32)
   crypto.getRandomValues(tokenBytes)
   const token = Array.from(tokenBytes, byte => byte.toString(16).padStart(2, '0')).join('')
@@ -162,6 +163,7 @@ export async function createSession(userId: string): Promise<string> {
       id: crypto.randomUUID(),
       token,
       userId,
+      csrf_token: csrfToken ?? null,
       expiresAt,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
@@ -176,25 +178,38 @@ export async function deleteSession(token: string): Promise<void> {
   if (error) throw new Error(error.message)
 }
 
-export async function getUserFromSessionToken(token: string | null): Promise<AuthUser | null> {
+export async function getSessionRecordByToken(token: string | null): Promise<SessionRow | null> {
   if (!token) return null
 
   const { data, error } = await supabaseAdmin
     .from('session')
-    .select('id,token,expiresAt, users:userId(id,email,role,full_name,name,is_disabled,disabled_at,closed_at,last_login_at,created_at)')
+    .select('id,token,expiresAt,csrf_token, users:userId(id,email,role,full_name,name,is_disabled,disabled_at,closed_at,last_login_at,created_at)')
     .eq('token', token)
     .maybeSingle<SessionRow>()
 
   if (error) throw new Error(error.message)
+  return data ?? null
+}
+
+export async function setSessionCsrfToken(token: string, csrfToken: string): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('session')
+    .update({ csrf_token: csrfToken, updatedAt: new Date().toISOString() })
+    .eq('token', token)
+  if (error) throw new Error(error.message)
+}
+
+export async function getUserFromSessionToken(token: string | null): Promise<AuthUser | null> {
+  const data = await getSessionRecordByToken(token)
   if (!data?.users) return null
 
   if (new Date(data.expiresAt).getTime() <= Date.now()) {
-    await deleteSession(token)
+    if (token) await deleteSession(token)
     return null
   }
 
   if (data.users.is_disabled || data.users.closed_at) {
-    await deleteSession(token)
+    if (token) await deleteSession(token)
     return null
   }
 

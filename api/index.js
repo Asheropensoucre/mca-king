@@ -25062,7 +25062,7 @@ var require_bignumber = __commonJS((exports, module) => {
             x2 = [carry].concat(x2);
           return x2;
         }
-        function compare2(a, b, aL, bL) {
+        function compare3(a, b, aL, bL) {
           var i2, cmp;
           if (aL != bL) {
             cmp = aL > bL ? 1 : -1;
@@ -25131,7 +25131,7 @@ var require_bignumber = __commonJS((exports, module) => {
               yc0++;
             do {
               n = 0;
-              cmp = compare2(yc, rem, yL, remL);
+              cmp = compare3(yc, rem, yL, remL);
               if (cmp < 0) {
                 rem0 = rem[0];
                 if (yL != remL)
@@ -25143,7 +25143,7 @@ var require_bignumber = __commonJS((exports, module) => {
                   prod = multiply(yc, n, base);
                   prodL = prod.length;
                   remL = rem.length;
-                  while (compare2(prod, rem, prodL, remL) == 1) {
+                  while (compare3(prod, rem, prodL, remL) == 1) {
                     n--;
                     subtract(prod, yL < prodL ? yz : yc, prodL, base);
                     prodL = prod.length;
@@ -25161,7 +25161,7 @@ var require_bignumber = __commonJS((exports, module) => {
                 subtract(rem, prod, remL, base);
                 remL = rem.length;
                 if (cmp == -1) {
-                  while (compare2(yc, rem, yL, remL) < 1) {
+                  while (compare3(yc, rem, yL, remL) < 1) {
                     n++;
                     subtract(rem, yL < remL ? yz : yc, remL, base);
                     remL = rem.length;
@@ -25240,7 +25240,7 @@ var require_bignumber = __commonJS((exports, module) => {
         var k, y, i2 = 1, x2 = new BigNumber2(args[0]);
         for (;i2 < args.length; i2++) {
           y = new BigNumber2(args[i2]);
-          if (!y.s || (k = compare(x2, y)) === n || k === 0 && x2.s === n) {
+          if (!y.s || (k = compare2(x2, y)) === n || k === 0 && x2.s === n) {
             x2 = y;
           }
         }
@@ -25394,7 +25394,7 @@ var require_bignumber = __commonJS((exports, module) => {
         return x2;
       };
       P.comparedTo = function(y, b) {
-        return compare(this, new BigNumber2(y, b));
+        return compare2(this, new BigNumber2(y, b));
       };
       P.decimalPlaces = P.dp = function(dp, rm) {
         var c, n, v, x2 = this;
@@ -25512,25 +25512,25 @@ var require_bignumber = __commonJS((exports, module) => {
         return round(n, n.e + 1, rm);
       };
       P.isEqualTo = P.eq = function(y, b) {
-        return compare(this, new BigNumber2(y, b)) === 0;
+        return compare2(this, new BigNumber2(y, b)) === 0;
       };
       P.isFinite = function() {
         return !!this.c;
       };
       P.isGreaterThan = P.gt = function(y, b) {
-        return compare(this, new BigNumber2(y, b)) > 0;
+        return compare2(this, new BigNumber2(y, b)) > 0;
       };
       P.isGreaterThanOrEqualTo = P.gte = function(y, b) {
-        return (b = compare(this, new BigNumber2(y, b))) === 1 || b === 0;
+        return (b = compare2(this, new BigNumber2(y, b))) === 1 || b === 0;
       };
       P.isInteger = function() {
         return !!this.c && bitFloor(this.e / LOG_BASE) > this.c.length - 2;
       };
       P.isLessThan = P.lt = function(y, b) {
-        return compare(this, new BigNumber2(y, b)) < 0;
+        return compare2(this, new BigNumber2(y, b)) < 0;
       };
       P.isLessThanOrEqualTo = P.lte = function(y, b) {
-        return (b = compare(this, new BigNumber2(y, b))) === -1 || b === 0;
+        return (b = compare2(this, new BigNumber2(y, b))) === -1 || b === 0;
       };
       P.isNaN = function() {
         return !this.s;
@@ -25983,7 +25983,7 @@ var require_bignumber = __commonJS((exports, module) => {
         ;
       return r2.slice(0, j + 1 || 1);
     }
-    function compare(x2, y) {
+    function compare2(x2, y) {
       var a, b, xc = x2.c, yc = y.c, i2 = x2.s, j = y.s, k = x2.e, l = y.e;
       if (!i2 || !j)
         return null;
@@ -28969,12 +28969,12 @@ var require_jwa = __commonJS((exports, module) => {
     };
   }
   var bufferEqual;
-  var timingSafeEqual = "timingSafeEqual" in crypto2 ? function timingSafeEqual2(a, b) {
+  var timingSafeEqual2 = "timingSafeEqual" in crypto2 ? function timingSafeEqual3(a, b) {
     if (a.byteLength !== b.byteLength) {
       return false;
     }
     return crypto2.timingSafeEqual(a, b);
-  } : function timingSafeEqual2(a, b) {
+  } : function timingSafeEqual3(a, b) {
     if (!bufferEqual) {
       bufferEqual = require_buffer_equal_constant_time();
     }
@@ -28983,7 +28983,7 @@ var require_jwa = __commonJS((exports, module) => {
   function createHmacVerifier(bits) {
     return function verify(thing, signature, secret) {
       var computedSig = createHmacSigner(bits)(thing, secret);
-      return timingSafeEqual(Buffer4.from(signature), Buffer4.from(computedSig));
+      return timingSafeEqual2(Buffer4.from(signature), Buffer4.from(computedSig));
     };
   }
   function createKeySigner(bits) {
@@ -43702,7 +43702,7 @@ async function createUserWithCredential(params) {
   }
   return toAuthUser(createdUser);
 }
-async function createSession(userId) {
+async function createSession(userId, csrfToken) {
   const tokenBytes = new Uint8Array(32);
   crypto.getRandomValues(tokenBytes);
   const token = Array.from(tokenBytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -43712,6 +43712,7 @@ async function createSession(userId) {
     id: crypto.randomUUID(),
     token,
     userId,
+    csrf_token: csrfToken ?? null,
     expiresAt,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString()
@@ -43725,20 +43726,31 @@ async function deleteSession(token) {
   if (error)
     throw new Error(error.message);
 }
-async function getUserFromSessionToken(token) {
+async function getSessionRecordByToken(token) {
   if (!token)
     return null;
-  const { data, error } = await supabaseAdmin.from("session").select("id,token,expiresAt, users:userId(id,email,role,full_name,name,is_disabled,disabled_at,closed_at,last_login_at,created_at)").eq("token", token).maybeSingle();
+  const { data, error } = await supabaseAdmin.from("session").select("id,token,expiresAt,csrf_token, users:userId(id,email,role,full_name,name,is_disabled,disabled_at,closed_at,last_login_at,created_at)").eq("token", token).maybeSingle();
   if (error)
     throw new Error(error.message);
+  return data ?? null;
+}
+async function setSessionCsrfToken(token, csrfToken) {
+  const { error } = await supabaseAdmin.from("session").update({ csrf_token: csrfToken, updatedAt: new Date().toISOString() }).eq("token", token);
+  if (error)
+    throw new Error(error.message);
+}
+async function getUserFromSessionToken(token) {
+  const data = await getSessionRecordByToken(token);
   if (!data?.users)
     return null;
   if (new Date(data.expiresAt).getTime() <= Date.now()) {
-    await deleteSession(token);
+    if (token)
+      await deleteSession(token);
     return null;
   }
   if (data.users.is_disabled || data.users.closed_at) {
-    await deleteSession(token);
+    if (token)
+      await deleteSession(token);
     return null;
   }
   return toAuthUser(data.users);
@@ -43772,8 +43784,13 @@ function notFound(message = "Not found") {
 function assertRole(user, roles) {
   return roles.includes(user.role) ? null : forbidden();
 }
+var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+function isUuid(value) {
+  return typeof value === "string" && UUID_RE.test(value);
+}
 function getId(context) {
-  return context?.params?.id ?? null;
+  const id = context?.params?.id ?? null;
+  return isUuid(id) ? id : null;
 }
 async function readJson(req) {
   try {
@@ -43836,10 +43853,15 @@ async function GET(req) {
     if (!lender)
       return shouldPaginate ? paginatedJson([], 0, pagination.page, pagination.perPage) : json([]);
     currentLenderId = lender.id;
-    const { data: matches, error: matchError } = await supabaseAdmin.from("lender_matches").select("merchant_id").eq("lender_id", lender.id).returns();
+    const [{ data: matches, error: matchError }, { data: submissions, error: submissionError }] = await Promise.all([
+      supabaseAdmin.from("lender_matches").select("merchant_id").eq("lender_id", lender.id).returns(),
+      supabaseAdmin.from("merchant_file_submissions").select("merchant_id").eq("lender_id", lender.id).returns()
+    ]);
     if (matchError)
       return badRequest(matchError.message);
-    const merchantIds = (matches ?? []).map((match) => match.merchant_id);
+    if (submissionError)
+      return badRequest(submissionError.message);
+    const merchantIds = Array.from(new Set([...(matches ?? []).map((match) => match.merchant_id), ...(submissions ?? []).map((submission) => submission.merchant_id)]));
     if (merchantIds.length === 0)
       return shouldPaginate ? paginatedJson([], 0, pagination.page, pagination.perPage) : json([]);
     query = query.in("id", merchantIds);
@@ -43879,7 +43901,15 @@ async function POST(req) {
     return roleError;
   const merchant = await req.json();
   const id = merchant.id || crypto.randomUUID();
-  const newMerchant = { ...merchant, id };
+  const newMerchant = {
+    ...merchant,
+    id,
+    status: user.role === "merchant" ? "application & 3 months bank statements in" : merchant.status,
+    offers: user.role === "merchant" ? [] : merchant.offers ?? [],
+    matchedLenderIds: user.role === "merchant" ? [] : merchant.matchedLenderIds ?? [],
+    documents: user.role === "merchant" ? [] : merchant.documents ?? [],
+    salesRepId: user.role === "merchant" ? undefined : merchant.salesRepId
+  };
   const insert = merchantToInsert(newMerchant, user.role === "merchant" ? user.id : undefined);
   const { data, error } = await supabaseAdmin.from("merchants").insert(insert).select("*").single();
   if (error)
@@ -43974,6 +44004,175 @@ async function runAutoMatch(merchantId, triggeredBy) {
   return joined ?? [];
 }
 
+// src/lib/merchant-file-submissions.ts
+var SUBMISSION_STATUSES = [
+  "submitted",
+  "viewed",
+  "no_response",
+  "declined",
+  "offer_received",
+  "stips_requested",
+  "withdrawn"
+];
+function isSubmissionStatus(value) {
+  return typeof value === "string" && SUBMISSION_STATUSES.includes(value);
+}
+function toMerchantFileSubmission(row) {
+  return {
+    id: row.id,
+    merchant_id: row.merchant_id,
+    lender_id: row.lender_id,
+    match_id: row.match_id,
+    submitted_by: row.submitted_by,
+    submitted_at: row.submitted_at,
+    status: row.status,
+    response_at: row.response_at,
+    decline_reason: row.decline_reason,
+    package_version: row.package_version,
+    notes: row.notes,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    merchant_name: row.merchant?.business_name,
+    lender_name: row.lender?.company_name,
+    lender_contact_name: row.lender?.contact_name,
+    lender_contact_email: row.lender?.contact_email
+  };
+}
+async function getLenderIdForUser(userId) {
+  const { data, error } = await supabaseAdmin.from("lenders").select("id").eq("user_id", userId).maybeSingle();
+  if (error)
+    throw error;
+  return data?.id ?? null;
+}
+async function getLenderMatch(merchantId, lenderId) {
+  const { data, error } = await supabaseAdmin.from("lender_matches").select("id").eq("merchant_id", merchantId).eq("lender_id", lenderId).maybeSingle();
+  if (error)
+    throw error;
+  return data ?? null;
+}
+async function upsertMerchantFileSubmission(params) {
+  const packageVersion = params.package_version ?? 1;
+  const { data, error } = await supabaseAdmin.from("merchant_file_submissions").upsert({
+    merchant_id: params.merchant_id,
+    lender_id: params.lender_id,
+    match_id: params.match_id ?? null,
+    submitted_by: params.submitted_by ?? null,
+    submitted_at: params.submitted_at ?? new Date().toISOString(),
+    status: params.status ?? "submitted",
+    response_at: params.response_at ?? null,
+    decline_reason: params.decline_reason ?? null,
+    package_version: packageVersion,
+    notes: params.notes ?? null,
+    updated_at: new Date().toISOString()
+  }, { onConflict: "merchant_id,lender_id,package_version" }).select("*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name,contact_name,contact_email)").single();
+  if (error)
+    throw error;
+  return data;
+}
+async function markMerchantFileSubmissionResponse(params) {
+  const now = new Date().toISOString();
+  const { data: existing, error: existingError } = await supabaseAdmin.from("merchant_file_submissions").select("id").eq("merchant_id", params.merchant_id).eq("lender_id", params.lender_id).eq("package_version", 1).maybeSingle();
+  if (existingError)
+    throw existingError;
+  if (existing) {
+    const { error } = await supabaseAdmin.from("merchant_file_submissions").update({ status: params.status, response_at: now, updated_at: now }).eq("id", existing.id);
+    if (error)
+      throw error;
+    return;
+  }
+  const match = params.match_id !== undefined ? { id: params.match_id } : await getLenderMatch(params.merchant_id, params.lender_id);
+  await upsertMerchantFileSubmission({
+    merchant_id: params.merchant_id,
+    lender_id: params.lender_id,
+    match_id: match?.id ?? null,
+    status: params.status,
+    response_at: now,
+    submitted_at: now
+  });
+}
+
+// src/lib/permissions.ts
+async function canAccessMerchant(user, merchantId) {
+  if (user.role === "admin")
+    return true;
+  const { data, error } = await supabaseAdmin.from("merchants").select("id,user_id,assigned_rep_id").eq("id", merchantId).maybeSingle();
+  if (error || !data)
+    return false;
+  if (user.role === "sales_rep")
+    return data.assigned_rep_id === user.id;
+  if (user.role === "merchant")
+    return data.user_id === user.id;
+  if (user.role === "lender") {
+    const lenderId = await getLenderIdForUser(user.id);
+    if (!lenderId)
+      return false;
+    const { data: match } = await supabaseAdmin.from("lender_matches").select("id").eq("merchant_id", merchantId).eq("lender_id", lenderId).maybeSingle();
+    if (match)
+      return true;
+    const { data: submission } = await supabaseAdmin.from("merchant_file_submissions").select("id").eq("merchant_id", merchantId).eq("lender_id", lenderId).maybeSingle();
+    return Boolean(submission);
+  }
+  return false;
+}
+async function canUpdateMerchant(user, merchantId) {
+  if (user.role === "admin")
+    return true;
+  if (user.role !== "sales_rep")
+    return false;
+  return canAccessMerchant(user, merchantId);
+}
+async function canAccessLead(user, leadId) {
+  if (user.role === "admin")
+    return true;
+  if (user.role !== "sales_rep")
+    return false;
+  const { data } = await supabaseAdmin.from("leads").select("id").eq("id", leadId).or(`assigned_rep_id.eq.${user.id},created_by.eq.${user.id}`).maybeSingle();
+  return Boolean(data);
+}
+async function canAccessDocument(user, documentId) {
+  const { data } = await supabaseAdmin.from("documents").select("id,merchant_id").eq("id", documentId).maybeSingle();
+  if (!data?.merchant_id)
+    return false;
+  return canAccessMerchant(user, data.merchant_id);
+}
+async function canAccessOffer(user, offerId) {
+  const { data } = await supabaseAdmin.from("offers").select("id,merchant_id,lender_id").eq("id", offerId).maybeSingle();
+  if (!data)
+    return false;
+  if (user.role === "lender") {
+    const lenderId = await getLenderIdForUser(user.id);
+    return Boolean(lenderId && data.lender_id === lenderId);
+  }
+  return data.merchant_id ? canAccessMerchant(user, data.merchant_id) : false;
+}
+async function canAccessLenderProfile(user, lenderId) {
+  if (user.role === "admin")
+    return true;
+  if (user.role !== "lender")
+    return false;
+  const currentLenderId = await getLenderIdForUser(user.id);
+  return currentLenderId === lenderId;
+}
+async function canAccessActivityEntity(user, entityType, entityId) {
+  if (entityType === "merchant" || entityType === "funding")
+    return canAccessMerchant(user, entityId);
+  if (entityType === "lead")
+    return canAccessLead(user, entityId);
+  if (entityType === "document")
+    return canAccessDocument(user, entityId);
+  if (entityType === "offer")
+    return canAccessOffer(user, entityId);
+  if (entityType === "lender")
+    return canAccessLenderProfile(user, entityId) || user.role === "admin";
+  if (entityType === "user")
+    return user.role === "admin" || user.id === entityId;
+  if (entityType === "stipulation") {
+    const { data } = await supabaseAdmin.from("stipulations").select("merchant_id").eq("id", entityId).maybeSingle();
+    return data?.merchant_id ? canAccessMerchant(user, data.merchant_id) : false;
+  }
+  return user.role === "admin";
+}
+
 // src/routes/merchants/[id].ts
 async function fetchMerchant(id) {
   const { data, error } = await supabaseAdmin.from("merchants").select("*").eq("id", id).single();
@@ -43986,12 +44185,6 @@ async function getCurrentLenderId(userId) {
   if (error)
     return badRequest(error.message);
   return data?.id ?? null;
-}
-async function lenderCanReadMerchant(lenderId, merchantId) {
-  const { data, error } = await supabaseAdmin.from("lender_matches").select("id").eq("lender_id", lenderId).eq("merchant_id", merchantId).maybeSingle();
-  if (error)
-    return badRequest(error.message);
-  return Boolean(data);
 }
 function sanitizeMerchantForLender2(merchant, lenderId) {
   return {
@@ -44064,10 +44257,7 @@ async function GET2(req, context) {
       return lenderId;
     if (!lenderId)
       return forbidden();
-    const canReadLenderMerchant = await lenderCanReadMerchant(lenderId, id);
-    if (canReadLenderMerchant instanceof Response)
-      return canReadLenderMerchant;
-    if (!canReadLenderMerchant)
+    if (!await canAccessMerchant(user, id))
       return forbidden();
     return json(sanitizeMerchantForLender2(rowToMerchant(row), lenderId));
   }
@@ -44094,6 +44284,10 @@ async function PATCH(req, context) {
   const hasAssignedRepId = Object.prototype.hasOwnProperty.call(patch, "assigned_rep_id");
   const hasSalesRepId = Object.prototype.hasOwnProperty.call(patch, "salesRepId");
   const nextAssignedRepId = hasAssignedRepId ? patch.assigned_rep_id ?? null : hasSalesRepId ? patch.salesRepId ?? null : existing.assigned_rep_id;
+  if (user.role !== "admin" && (hasAssignedRepId || hasSalesRepId))
+    return forbidden("Only admins can change sales rep assignment");
+  if (user.role !== "admin" && (Object.prototype.hasOwnProperty.call(patch, "offers") || Object.prototype.hasOwnProperty.call(patch, "matchedLenderIds") || Object.prototype.hasOwnProperty.call(patch, "documents")))
+    return forbidden("This field cannot be updated from this route");
   const assignmentChanged = (hasAssignedRepId || hasSalesRepId) && nextAssignedRepId !== existing.assigned_rep_id;
   const currentPayload = rowToMerchant(existing);
   const merged = { ...currentPayload, ...patch, id };
@@ -44258,93 +44452,6 @@ async function DELETE2(req, context) {
   return new Response(null, { status: 204 });
 }
 
-// src/lib/merchant-file-submissions.ts
-var SUBMISSION_STATUSES = [
-  "submitted",
-  "viewed",
-  "no_response",
-  "declined",
-  "offer_received",
-  "stips_requested",
-  "withdrawn"
-];
-function isSubmissionStatus(value) {
-  return typeof value === "string" && SUBMISSION_STATUSES.includes(value);
-}
-function toMerchantFileSubmission(row) {
-  return {
-    id: row.id,
-    merchant_id: row.merchant_id,
-    lender_id: row.lender_id,
-    match_id: row.match_id,
-    submitted_by: row.submitted_by,
-    submitted_at: row.submitted_at,
-    status: row.status,
-    response_at: row.response_at,
-    decline_reason: row.decline_reason,
-    package_version: row.package_version,
-    notes: row.notes,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-    merchant_name: row.merchant?.business_name,
-    lender_name: row.lender?.company_name,
-    lender_contact_name: row.lender?.contact_name,
-    lender_contact_email: row.lender?.contact_email
-  };
-}
-async function getLenderIdForUser(userId) {
-  const { data, error } = await supabaseAdmin.from("lenders").select("id").eq("user_id", userId).maybeSingle();
-  if (error)
-    throw error;
-  return data?.id ?? null;
-}
-async function getLenderMatch(merchantId, lenderId) {
-  const { data, error } = await supabaseAdmin.from("lender_matches").select("id").eq("merchant_id", merchantId).eq("lender_id", lenderId).maybeSingle();
-  if (error)
-    throw error;
-  return data ?? null;
-}
-async function upsertMerchantFileSubmission(params) {
-  const packageVersion = params.package_version ?? 1;
-  const { data, error } = await supabaseAdmin.from("merchant_file_submissions").upsert({
-    merchant_id: params.merchant_id,
-    lender_id: params.lender_id,
-    match_id: params.match_id ?? null,
-    submitted_by: params.submitted_by ?? null,
-    submitted_at: params.submitted_at ?? new Date().toISOString(),
-    status: params.status ?? "submitted",
-    response_at: params.response_at ?? null,
-    decline_reason: params.decline_reason ?? null,
-    package_version: packageVersion,
-    notes: params.notes ?? null,
-    updated_at: new Date().toISOString()
-  }, { onConflict: "merchant_id,lender_id,package_version" }).select("*, merchant:merchants(business_name,assigned_rep_id), lender:lenders(company_name,contact_name,contact_email)").single();
-  if (error)
-    throw error;
-  return data;
-}
-async function markMerchantFileSubmissionResponse(params) {
-  const now = new Date().toISOString();
-  const { data: existing, error: existingError } = await supabaseAdmin.from("merchant_file_submissions").select("id").eq("merchant_id", params.merchant_id).eq("lender_id", params.lender_id).eq("package_version", 1).maybeSingle();
-  if (existingError)
-    throw existingError;
-  if (existing) {
-    const { error } = await supabaseAdmin.from("merchant_file_submissions").update({ status: params.status, response_at: now, updated_at: now }).eq("id", existing.id);
-    if (error)
-      throw error;
-    return;
-  }
-  const match = params.match_id !== undefined ? { id: params.match_id } : await getLenderMatch(params.merchant_id, params.lender_id);
-  await upsertMerchantFileSubmission({
-    merchant_id: params.merchant_id,
-    lender_id: params.lender_id,
-    match_id: match?.id ?? null,
-    status: params.status,
-    response_at: now,
-    submitted_at: now
-  });
-}
-
 // src/routes/offers/index.ts
 var OFFER_STATUS = "one or more lender's sent offer";
 function rowToOffer(row) {
@@ -44364,7 +44471,12 @@ async function lenderIsMatchedToMerchant(lenderId, merchantId) {
   const { data, error } = await supabaseAdmin.from("lender_matches").select("id").eq("lender_id", lenderId).eq("merchant_id", merchantId).maybeSingle();
   if (error)
     return badRequest(error.message);
-  return Boolean(data);
+  if (data)
+    return true;
+  const { data: submission, error: submissionError } = await supabaseAdmin.from("merchant_file_submissions").select("id").eq("lender_id", lenderId).eq("merchant_id", merchantId).maybeSingle();
+  if (submissionError)
+    return badRequest(submissionError.message);
+  return Boolean(submission);
 }
 async function updateMerchantOffers(merchantId, newOffer, changedBy) {
   const { data: merchantRow, error } = await supabaseAdmin.from("merchants").select("*").eq("id", merchantId).single();
@@ -44749,6 +44861,8 @@ async function POST5(req, context) {
   const id = getId(context);
   if (!id)
     return badRequest();
+  if (!await canAccessLead(user, id))
+    return new Response("Forbidden", { status: 403 });
   const body = await req.json();
   if (!body.body?.trim())
     return badRequest("Note body is required");
@@ -44915,33 +45029,96 @@ async function writeAuditLog(params) {
 }
 
 // src/lib/rate-limit.ts
-var buckets = new Map;
-async function checkRateLimit(options) {
+var fallbackBuckets = new Map;
+var useDurableRateLimits = process.env.RATE_LIMIT_STORE !== "memory";
+function fallbackCheck(key, limit, windowMs) {
   const now = Date.now();
-  const existing = buckets.get(options.key) ?? [];
-  const recent = existing.filter((timestamp) => now - timestamp < options.windowMs);
-  if (recent.length >= options.limit) {
+  const existing = fallbackBuckets.get(key) ?? [];
+  const recent = existing.filter((timestamp) => now - timestamp < windowMs);
+  if (recent.length >= limit) {
+    fallbackBuckets.set(key, recent);
+    return false;
+  }
+  recent.push(now);
+  fallbackBuckets.set(key, recent);
+  return true;
+}
+async function checkRateLimit(options) {
+  const now = new Date;
+  const since = new Date(now.getTime() - options.windowMs).toISOString();
+  let allowed = true;
+  if (useDurableRateLimits) {
+    try {
+      const { count, error: countError } = await supabaseAdmin.from("security_rate_limits").select("id", { count: "exact", head: true }).eq("rate_key", options.key).gte("created_at", since);
+      if (countError)
+        throw new Error(countError.message);
+      allowed = (count ?? 0) < options.limit;
+      if (allowed) {
+        const { error: insertError } = await supabaseAdmin.from("security_rate_limits").insert({
+          rate_key: options.key,
+          action: options.action ?? null,
+          ip_address: options.req ? getRequestIp(options.req) : null,
+          user_id: options.userId ?? null
+        });
+        if (insertError)
+          throw new Error(insertError.message);
+      }
+    } catch (error) {
+      console.error("[security] durable rate limit unavailable, falling back to memory", error);
+      allowed = fallbackCheck(options.key, options.limit, options.windowMs);
+    }
+  } else {
+    allowed = fallbackCheck(options.key, options.limit, options.windowMs);
+  }
+  if (!allowed) {
     await writeAuditLog({
       req: options.req,
       user_id: options.userId ?? null,
       action: "security.rate_limited",
       entity_type: "security",
-      metadata: { key: options.key, limit: options.limit, window_ms: options.windowMs, action: options.action }
+      metadata: { key: options.key, limit: options.limit, window_ms: options.windowMs, action: options.action, store: useDurableRateLimits ? "supabase" : "memory" }
     });
     return new Response("Rate limit exceeded. Please try again later.", { status: 429 });
   }
-  recent.push(now);
-  buckets.set(options.key, recent);
   return null;
 }
 function rateLimitKey(req, scope, identifier) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown-ip";
+  const ip = getRequestIp(req) || "unknown-ip";
   return `${scope}:${identifier || "anonymous"}:${ip}`;
+}
+async function getLoginDelayMs(key) {
+  const { data } = await supabaseAdmin.from("security_login_failures").select("failure_count,locked_until").eq("failure_key", key).maybeSingle();
+  if (!data)
+    return 0;
+  if (data.locked_until && new Date(data.locked_until).getTime() > Date.now()) {
+    return Math.max(0, new Date(data.locked_until).getTime() - Date.now());
+  }
+  if (data.failure_count < 3)
+    return 0;
+  return Math.min(30000, 1000 * Math.pow(2, Math.min(5, data.failure_count - 3)));
+}
+async function recordFailedLogin(key, email, req) {
+  const { data } = await supabaseAdmin.from("security_login_failures").select("failure_count").eq("failure_key", key).maybeSingle();
+  const nextCount = (data?.failure_count ?? 0) + 1;
+  const lockedUntil = nextCount >= 8 ? new Date(Date.now() + 15 * 60 * 1000).toISOString() : null;
+  const now = new Date().toISOString();
+  await supabaseAdmin.from("security_login_failures").upsert({
+    failure_key: key,
+    email,
+    ip_address: getRequestIp(req),
+    failure_count: nextCount,
+    locked_until: lockedUntil,
+    last_failed_at: now,
+    updated_at: now
+  }, { onConflict: "failure_key" });
+}
+async function clearFailedLogin(key) {
+  await supabaseAdmin.from("security_login_failures").delete().eq("failure_key", key);
 }
 
 // src/routes/documents/upload.ts
 var DOC_TYPES = ["bank_statement", "contract", "stipulation", "id", "other"];
-var MAX_FILE_SIZE = 25 * 1024 * 1024;
+var MAX_FILE_SIZE = 100 * 1024 * 1024;
 var ALLOWED_MIME_TYPES = new Map([
   ["application/pdf", ["pdf"]],
   ["image/png", ["png"]],
@@ -44956,7 +45133,7 @@ function extensionOf(name) {
 }
 function validateFile(file) {
   if (file.size > MAX_FILE_SIZE)
-    return badRequest("File is too large. Maximum size is 25 MB.");
+    return badRequest("File is too large. Maximum size is 100 MB.");
   const allowedExtensions = ALLOWED_MIME_TYPES.get(file.type);
   if (!allowedExtensions)
     return badRequest("Unsupported file type. Upload PDF, PNG, JPG, CSV, XLS, or XLSX files only.");
@@ -45062,38 +45239,6 @@ async function POST7(req) {
   return json(data, { status: 201 });
 }
 
-// src/lib/permissions.ts
-async function canAccessMerchant(user, merchantId) {
-  if (user.role === "admin")
-    return true;
-  const { data, error } = await supabaseAdmin.from("merchants").select("id,user_id,assigned_rep_id").eq("id", merchantId).maybeSingle();
-  if (error || !data)
-    return false;
-  if (user.role === "sales_rep")
-    return data.assigned_rep_id === user.id;
-  if (user.role === "merchant")
-    return data.user_id === user.id;
-  if (user.role === "lender") {
-    const lenderId = await getLenderIdForUser(user.id);
-    if (!lenderId)
-      return false;
-    const { data: match } = await supabaseAdmin.from("lender_matches").select("id").eq("merchant_id", merchantId).eq("lender_id", lenderId).maybeSingle();
-    if (match)
-      return true;
-    const { data: submission } = await supabaseAdmin.from("merchant_file_submissions").select("id").eq("merchant_id", merchantId).eq("lender_id", lenderId).maybeSingle();
-    return Boolean(submission);
-  }
-  return false;
-}
-async function canAccessLead(user, leadId) {
-  if (user.role === "admin")
-    return true;
-  if (user.role !== "sales_rep")
-    return false;
-  const { data } = await supabaseAdmin.from("leads").select("id").eq("id", leadId).or(`assigned_rep_id.eq.${user.id},created_by.eq.${user.id}`).maybeSingle();
-  return Boolean(data);
-}
-
 // src/routes/documents/index.ts
 async function GET8(req) {
   const user = await requireAuth(req);
@@ -45157,6 +45302,13 @@ async function currentLenderId(userId) {
     return badRequest(error.message);
   return data?.id ?? null;
 }
+async function lenderHasMerchantAccess(merchantId, lenderId) {
+  const match = await getLenderMatch(merchantId, lenderId);
+  if (match)
+    return true;
+  const { data } = await supabaseAdmin.from("merchant_file_submissions").select("id").eq("merchant_id", merchantId).eq("lender_id", lenderId).maybeSingle();
+  return Boolean(data);
+}
 async function canAccessMerchant2(userId, role, merchantId) {
   if (role === "admin")
     return true;
@@ -45175,8 +45327,7 @@ async function canAccessMerchant2(userId, role, merchantId) {
       return lenderId;
     if (!lenderId)
       return false;
-    const match = await getLenderMatch(merchantId, lenderId);
-    return Boolean(match);
+    return lenderHasMerchantAccess(merchantId, lenderId);
   }
   return false;
 }
@@ -45217,8 +45368,7 @@ async function POST8(req) {
       return lenderId;
     if (!lenderId || lenderId !== body.lender_id)
       return forbidden();
-    const match = await getLenderMatch(body.merchant_id, lenderId);
-    if (!match)
+    if (!await lenderHasMerchantAccess(body.merchant_id, lenderId))
       return forbidden("This merchant file has not been submitted or matched to your lender profile");
   }
   const { data: merchantRow, error: merchantError } = await supabaseAdmin.from("merchants").select("*").eq("id", body.merchant_id).single();
@@ -45334,25 +45484,103 @@ async function POST9(req) {
   }
 }
 
+// src/lib/csrf.ts
+import { createHmac, timingSafeEqual } from "crypto";
+var CSRF_COOKIE_NAME = "mca_csrf";
+var CSRF_HEADER_NAME = "x-csrf-token";
+var isProduction2 = true;
+function cookieAttrs(maxAge = 60 * 60 * 24 * 7) {
+  return [
+    "Path=/",
+    `Max-Age=${maxAge}`,
+    "SameSite=Lax",
+    ...isProduction2 ? ["Secure"] : []
+  ].join("; ");
+}
+function serializeCsrfCookie(token) {
+  return `${CSRF_COOKIE_NAME}=${encodeURIComponent(token)}; ${cookieAttrs()}`;
+}
+function serializeExpiredCsrfCookie() {
+  return `${CSRF_COOKIE_NAME}=; ${cookieAttrs(0)}`;
+}
+function newCsrfToken() {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+function compare(a, b) {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return ab.length === bb.length && timingSafeEqual(ab, bb);
+}
+function requestCookie(req, name) {
+  const header = req.headers.get("cookie");
+  if (!header)
+    return null;
+  for (const part of header.split(";")) {
+    const [rawName, ...rawValue] = part.trim().split("=");
+    if (rawName === name)
+      return decodeURIComponent(rawValue.join("="));
+  }
+  return null;
+}
+function isCsrfExempt(method, pathname) {
+  if (method === "GET" || method === "HEAD" || method === "OPTIONS")
+    return true;
+  if (pathname === "/api/auth/login" || pathname === "/api/auth/register")
+    return true;
+  if (pathname === "/api/webhooks/resend")
+    return true;
+  if (pathname === "/api/communications/unsubscribe")
+    return true;
+  return false;
+}
+async function verifyCsrf(req, pathname) {
+  if (isCsrfExempt(req.method, pathname))
+    return null;
+  const sessionToken = getSessionToken(req);
+  if (!sessionToken)
+    return new Response("Unauthorized", { status: 401 });
+  const session = await getSessionRecordByToken(sessionToken);
+  if (!session?.csrf_token)
+    return new Response("Missing CSRF session token", { status: 403 });
+  const headerToken = req.headers.get(CSRF_HEADER_NAME);
+  const cookieToken = requestCookie(req, CSRF_COOKIE_NAME);
+  if (!headerToken || !cookieToken)
+    return new Response("Missing CSRF token", { status: 403 });
+  if (!compare(headerToken, cookieToken) || !compare(headerToken, session.csrf_token)) {
+    return new Response("Invalid CSRF token", { status: 403 });
+  }
+  return null;
+}
+
 // src/routes/auth/login.ts
 async function POST10(req) {
   try {
     const { email, password } = await req.json();
     const normalizedEmail = email?.toLowerCase().trim() ?? "";
-    const limited = await checkRateLimit({ key: rateLimitKey(req, "auth.login", normalizedEmail), limit: 10, windowMs: 10 * 60 * 1000, req, action: "auth.login" });
+    const loginKey = rateLimitKey(req, "auth.login", normalizedEmail);
+    const limited = await checkRateLimit({ key: loginKey, limit: 10, windowMs: 10 * 60 * 1000, req, action: "auth.login" });
     if (limited)
       return limited;
+    const delayMs = await getLoginDelayMs(loginKey);
+    if (delayMs > 0) {
+      await writeAuditLog({ req, action: "auth.login.failure", metadata: { email: normalizedEmail, reason: "temporary_lockout", delay_ms: delayMs } });
+      return new Response("Too many failed login attempts. Please try again later.", { status: 429 });
+    }
     if (!email || !password) {
       await writeAuditLog({ req, action: "auth.login.failure", metadata: { email: normalizedEmail, reason: "missing_fields" } });
       return new Response("Email and password are required", { status: 400 });
     }
     const account = await findCredentialAccount(normalizedEmail);
     if (!account?.password || !account.users) {
+      await recordFailedLogin(loginKey, normalizedEmail, req);
       await writeAuditLog({ req, action: "auth.login.failure", metadata: { email: normalizedEmail, reason: "invalid_credentials" } });
       return new Response("Invalid credentials", { status: 401 });
     }
     const valid = await verifyPassword(account.password, password);
     if (!valid) {
+      await recordFailedLogin(loginKey, normalizedEmail, req);
       await writeAuditLog({ req, user_id: account.users.id, action: "auth.login.failure", entity_type: "user", entity_id: account.users.id, metadata: { email: normalizedEmail, reason: "invalid_credentials" } });
       return new Response("Invalid credentials", { status: 401 });
     }
@@ -45365,9 +45593,14 @@ async function POST10(req) {
       return new Response("This account has been closed.", { status: 403 });
     }
     await supabaseAdmin.from("users").update({ last_login_at: new Date().toISOString(), updatedAt: new Date().toISOString() }).eq("id", account.users.id);
-    const token = await createSession(account.users.id);
+    const csrfToken = newCsrfToken();
+    const token = await createSession(account.users.id, csrfToken);
+    await clearFailedLogin(loginKey);
     await writeAuditLog({ req, user_id: account.users.id, action: "auth.login.success", entity_type: "user", entity_id: account.users.id, metadata: { role: account.users.role } });
-    return Response.json({ user: toAuthUser(account.users) }, { headers: { "set-cookie": serializeSessionCookie(token) } });
+    const headers = new Headers;
+    headers.append("set-cookie", serializeSessionCookie(token));
+    headers.append("set-cookie", serializeCsrfCookie(csrfToken));
+    return Response.json({ user: toAuthUser(account.users), csrf_token: csrfToken }, { headers });
   } catch (error) {
     console.error("Invalid credentials", error);
     return new Response("Invalid credentials", { status: 401 });
@@ -45382,7 +45615,10 @@ async function POST11(req) {
     if (token)
       await deleteSession(token);
     await writeAuditLog({ req, user_id: user?.id ?? null, action: "auth.logout", entity_type: user ? "user" : null, entity_id: user?.id ?? null });
-    return new Response("Logged out", { status: 200, headers: { "set-cookie": serializeExpiredSessionCookie() } });
+    const headers = new Headers;
+    headers.append("set-cookie", serializeExpiredSessionCookie());
+    headers.append("set-cookie", serializeExpiredCsrfCookie());
+    return new Response("Logged out", { status: 200, headers });
   } catch {
     return new Response("Logout failed", { status: 400 });
   }
@@ -45390,9 +45626,16 @@ async function POST11(req) {
 
 // src/routes/auth/me.ts
 async function GET10(req) {
-  const user = await getUserFromSessionToken(getSessionToken(req));
+  const token = getSessionToken(req);
+  const user = await getUserFromSessionToken(token);
   if (!user)
     return new Response("Unauthorized", { status: 401 });
+  const session = await getSessionRecordByToken(token);
+  if (!session?.csrf_token && token) {
+    const csrfToken = newCsrfToken();
+    await setSessionCsrfToken(token, csrfToken);
+    return Response.json({ ...user, csrf_token: csrfToken }, { headers: { "set-cookie": serializeCsrfCookie(csrfToken) } });
+  }
   return Response.json(user);
 }
 
@@ -45454,6 +45697,8 @@ async function POST12(req) {
   const body = await req.json();
   if (!body.merchant_id)
     return badRequest("merchant_id is required");
+  if (!await canUpdateMerchant(user, body.merchant_id))
+    return forbidden();
   try {
     const matches = await runAutoMatch(body.merchant_id, user.id);
     return json({ matched: matches.length, matches });
@@ -45477,6 +45722,8 @@ async function POST13(req) {
   const body = await req.json();
   if (!body.merchant_id || !body.lender_id)
     return badRequest("merchant_id and lender_id are required");
+  if (!await canUpdateMerchant(user, body.merchant_id))
+    return forbidden();
   try {
     const existing = await fetchMatch(body.merchant_id, body.lender_id);
     if (existing)
@@ -45587,6 +45834,8 @@ async function GET13(req) {
     return badRequest("entity_type is required");
   if (!entityId)
     return badRequest("entity_id is required");
+  if (!await canAccessActivityEntity(user, entityType, entityId))
+    return forbidden();
   const { data, error } = await supabaseAdmin.from("activities").select("*, users:user_id(full_name,name,email)").eq("entity_type", entityType).eq("entity_id", entityId).order("created_at", { ascending: false }).limit(100).returns();
   if (error)
     return badRequest(error.message);
@@ -45602,6 +45851,8 @@ async function POST15(req) {
     return badRequest("entity_type is required");
   if (!body.entity_id)
     return badRequest("entity_id is required");
+  if (!await canAccessActivityEntity(user, body.entity_type, body.entity_id))
+    return forbidden();
   if (!isManualActivityType(body.activity_type))
     return badRequest("activity_type must be note or call");
   if (!body.body?.trim())
@@ -45737,12 +45988,14 @@ async function POST16(req) {
     return badRequest("entity_type is required");
   if (!body.entity_id)
     return badRequest("entity_id is required");
+  if (!await canAccessActivityEntity(user, body.entity_type, body.entity_id))
+    return forbidden();
   if (!body.title?.trim())
     return badRequest("title is required");
   if (body.priority && !isPriority(body.priority))
     return badRequest("priority is invalid");
   const { data, error } = await supabaseAdmin.from("tasks").insert({
-    assigned_to: body.assigned_to ?? user.id,
+    assigned_to: user.role === "admin" ? body.assigned_to ?? user.id : user.id,
     created_by: user.id,
     entity_type: body.entity_type,
     entity_id: body.entity_id,
@@ -65802,7 +66055,7 @@ async function sendDisabledSms() {
 }
 
 // src/lib/communications/unsubscribe.ts
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHmac as createHmac2, timingSafeEqual as timingSafeEqual2 } from "crypto";
 var TOKEN_VERSION = "v1";
 function secret() {
   return process.env.BETTER_AUTH_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "dev-communications-secret";
@@ -65814,7 +66067,7 @@ function unbase64url(value) {
   return Buffer.from(value, "base64url").toString("utf8");
 }
 function sign(payload) {
-  return createHmac("sha256", secret()).update(payload).digest("base64url");
+  return createHmac2("sha256", secret()).update(payload).digest("base64url");
 }
 function createUnsubscribeToken(payload, ttlDays = 365) {
   const withExpiry = {
@@ -65834,7 +66087,7 @@ function verifyUnsubscribeToken(token) {
   const expected = sign(signedPart);
   const expectedBuffer = Buffer.from(expected);
   const actualBuffer = Buffer.from(parts[2]);
-  if (expectedBuffer.length !== actualBuffer.length || !timingSafeEqual(expectedBuffer, actualBuffer))
+  if (expectedBuffer.length !== actualBuffer.length || !timingSafeEqual2(expectedBuffer, actualBuffer))
     return null;
   try {
     const parsed = JSON.parse(unbase64url(parts[1]));
@@ -66358,6 +66611,44 @@ async function POST37(req) {
   return response;
 }
 
+// src/lib/webhook-security.ts
+import { createHmac as createHmac3, timingSafeEqual as timingSafeEqual3 } from "crypto";
+function safeEqual(a, b) {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return ab.length === bb.length && timingSafeEqual3(ab, bb);
+}
+function svixSecretBytes(secret2) {
+  const normalized = secret2.startsWith("whsec_") ? secret2.slice("whsec_".length) : secret2;
+  try {
+    return Buffer.from(normalized, "base64");
+  } catch {
+    return Buffer.from(secret2, "utf8");
+  }
+}
+function verifyResendWebhookSignature(req, rawBody) {
+  const secret2 = process.env.RESEND_WEBHOOK_SECRET;
+  if (!secret2)
+    return true;
+  const svixId = req.headers.get("svix-id");
+  const svixTimestamp = req.headers.get("svix-timestamp");
+  const svixSignature = req.headers.get("svix-signature");
+  if (svixId && svixTimestamp && svixSignature) {
+    const signedContent = `${svixId}.${svixTimestamp}.${rawBody}`;
+    const expected = createHmac3("sha256", svixSecretBytes(secret2)).update(signedContent).digest("base64");
+    return svixSignature.split(" ").some((part) => {
+      const signature = part.includes(",") ? part.split(",").pop() ?? "" : part.replace(/^v\d+,/, "");
+      return safeEqual(signature, expected);
+    });
+  }
+  const genericSignature = req.headers.get("x-resend-signature") || req.headers.get("x-webhook-signature");
+  if (!genericSignature)
+    return false;
+  const expectedHex = createHmac3("sha256", secret2).update(rawBody).digest("hex");
+  const expectedBase64 = createHmac3("sha256", secret2).update(rawBody).digest("base64");
+  return safeEqual(genericSignature, expectedHex) || safeEqual(genericSignature, expectedBase64);
+}
+
 // src/routes/webhooks/resend.ts
 function eventType(body) {
   return String(body.type || body.event || body.event_type || "");
@@ -66384,7 +66675,15 @@ function messageIdFrom(data) {
   return null;
 }
 async function POST38(req) {
-  const body = await req.json().catch(() => null);
+  const rawBody = await req.text();
+  if (!verifyResendWebhookSignature(req, rawBody))
+    return new Response("Invalid webhook signature", { status: 401 });
+  let body = null;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    body = null;
+  }
   if (!body)
     return badRequest("Invalid webhook payload");
   const type = eventType(body);
@@ -66436,6 +66735,30 @@ async function POST38(req) {
     });
   }
   return json({ received: true });
+}
+
+// src/lib/security-headers.ts
+function allowedOrigins() {
+  const configured = process.env.APP_ALLOWED_ORIGINS?.split(",").map((origin) => origin.trim().replace(/\/$/, "")).filter(Boolean) ?? [];
+  const authUrl = process.env.BETTER_AUTH_URL?.trim().replace(/\/$/, "");
+  return Array.from(new Set([...authUrl ? [authUrl] : [], ...configured]));
+}
+function verifyRequestOrigin(req, pathname) {
+  if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS")
+    return null;
+  if (pathname === "/api/webhooks/resend")
+    return null;
+  if (pathname === "/api/communications/unsubscribe")
+    return null;
+  const origin = req.headers.get("origin")?.replace(/\/$/, "");
+  if (!origin)
+    return null;
+  const allowed = allowedOrigins();
+  if (allowed.length === 0)
+    return null;
+  if (!allowed.includes(origin))
+    return new Response("Forbidden origin", { status: 403 });
+  return null;
 }
 
 // src/server/api.ts
@@ -66850,6 +67173,17 @@ async function handleApiRequest(req) {
   if (!match)
     return new Response("Not found", { status: 404 });
   try {
+    const originError = verifyRequestOrigin(req, url.pathname);
+    if (originError)
+      return originError;
+    const csrfError = await verifyCsrf(req, url.pathname);
+    if (csrfError)
+      return csrfError;
+    if (["POST", "PATCH", "DELETE"].includes(req.method) && !["/api/auth/login", "/api/auth/register", "/api/webhooks/resend", "/api/communications/unsubscribe"].includes(url.pathname)) {
+      const mutationLimit = await checkRateLimit({ key: rateLimitKey(req, `mutation.${url.pathname}`), limit: 120, windowMs: 60 * 1000, req, action: `mutation.${url.pathname}` });
+      if (mutationLimit)
+        return mutationLimit;
+    }
     return await match.handler(req, { params: match.params });
   } catch (error) {
     if (error instanceof Response)

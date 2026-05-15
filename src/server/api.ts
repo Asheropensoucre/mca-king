@@ -71,6 +71,9 @@ import { POST as previewCommunicationCampaignRecipients } from '../routes/commun
 import { POST as sendCommunicationCampaign } from '../routes/communications/campaigns/send'
 import { GET as getCommunicationUnsubscribe, POST as postCommunicationUnsubscribe } from '../routes/communications/unsubscribe'
 import { POST as postResendWebhook } from '../routes/webhooks/resend'
+import { verifyCsrf } from '../lib/csrf'
+import { checkRateLimit, rateLimitKey } from '../lib/rate-limit'
+import { verifyRequestOrigin } from '../lib/security-headers'
 import type { RouteContext } from '../lib/route-utils'
 
 type Handler = (req: Request, context?: RouteContext) => Promise<Response> | Response
@@ -458,6 +461,14 @@ export async function handleApiRequest(req: Request): Promise<Response> {
   if (!match) return new Response('Not found', { status: 404 })
 
   try {
+    const originError = verifyRequestOrigin(req, url.pathname)
+    if (originError) return originError
+    const csrfError = await verifyCsrf(req, url.pathname)
+    if (csrfError) return csrfError
+    if (['POST', 'PATCH', 'DELETE'].includes(req.method) && !['/api/auth/login', '/api/auth/register', '/api/webhooks/resend', '/api/communications/unsubscribe'].includes(url.pathname)) {
+      const mutationLimit = await checkRateLimit({ key: rateLimitKey(req, `mutation.${url.pathname}`), limit: 120, windowMs: 60 * 1000, req, action: `mutation.${url.pathname}` })
+      if (mutationLimit) return mutationLimit
+    }
     return await match.handler(req, { params: match.params })
   } catch (error) {
     if (error instanceof Response) return error

@@ -2,6 +2,7 @@ import { appendCommunicationEvent } from '../../lib/communications/communication
 import { addSuppression, markEmailUnsubscribed, normalizeEmail } from '../../lib/communications/suppression'
 import { badRequest, json } from '../../lib/route-utils'
 import { supabaseAdmin } from '../../lib/supabase-server'
+import { verifyResendWebhookSignature } from '../../lib/webhook-security'
 
 function eventType(body: Record<string, unknown>): string {
   return String(body.type || body.event || body.event_type || '')
@@ -29,7 +30,10 @@ function messageIdFrom(data: Record<string, unknown>): string | null {
 }
 
 export async function POST(req: Request): Promise<Response> {
-  const body = await req.json().catch(() => null) as Record<string, unknown> | null
+  const rawBody = await req.text()
+  if (!verifyResendWebhookSignature(req, rawBody)) return new Response('Invalid webhook signature', { status: 401 })
+  let body: Record<string, unknown> | null = null
+  try { body = JSON.parse(rawBody) as Record<string, unknown> } catch { body = null }
   if (!body) return badRequest('Invalid webhook payload')
   const type = eventType(body)
   const data = eventData(body)

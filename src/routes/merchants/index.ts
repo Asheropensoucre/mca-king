@@ -46,14 +46,14 @@ export async function GET(req: Request): Promise<Response> {
     if (!lender) return shouldPaginate ? paginatedJson([], 0, pagination.page, pagination.perPage) : json([])
     currentLenderId = lender.id
 
-    const { data: matches, error: matchError } = await supabaseAdmin
-      .from('lender_matches')
-      .select('merchant_id')
-      .eq('lender_id', lender.id)
-      .returns<{ merchant_id: string }[]>()
+    const [{ data: matches, error: matchError }, { data: submissions, error: submissionError }] = await Promise.all([
+      supabaseAdmin.from('lender_matches').select('merchant_id').eq('lender_id', lender.id).returns<{ merchant_id: string }[]>(),
+      supabaseAdmin.from('merchant_file_submissions').select('merchant_id').eq('lender_id', lender.id).returns<{ merchant_id: string }[]>(),
+    ])
 
     if (matchError) return badRequest(matchError.message)
-    const merchantIds = (matches ?? []).map(match => match.merchant_id)
+    if (submissionError) return badRequest(submissionError.message)
+    const merchantIds = Array.from(new Set([...(matches ?? []).map(match => match.merchant_id), ...(submissions ?? []).map(submission => submission.merchant_id)]))
     if (merchantIds.length === 0) return shouldPaginate ? paginatedJson([], 0, pagination.page, pagination.perPage) : json([])
     query = query.in('id', merchantIds)
   }
@@ -93,7 +93,15 @@ export async function POST(req: Request): Promise<Response> {
 
   const merchant = await req.json() as FormData
   const id = merchant.id || crypto.randomUUID()
-  const newMerchant = { ...merchant, id }
+  const newMerchant: FormData = {
+    ...merchant,
+    id,
+    status: user.role === 'merchant' ? 'application & 3 months bank statements in' : merchant.status,
+    offers: user.role === 'merchant' ? [] : (merchant.offers ?? []),
+    matchedLenderIds: user.role === 'merchant' ? [] : (merchant.matchedLenderIds ?? []),
+    documents: user.role === 'merchant' ? [] : (merchant.documents ?? []),
+    salesRepId: user.role === 'merchant' ? undefined : merchant.salesRepId,
+  }
   const insert = merchantToInsert(newMerchant, user.role === 'merchant' ? user.id : undefined)
 
   const { data, error } = await supabaseAdmin

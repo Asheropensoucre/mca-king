@@ -89,6 +89,20 @@ export async function canAccessLenderProfile(user: RouteUser, lenderId: string):
   return currentLenderId === lenderId
 }
 
+export async function canAccessActivityEntity(user: RouteUser, entityType: string, entityId: string): Promise<boolean> {
+  if (entityType === 'merchant' || entityType === 'funding') return canAccessMerchant(user, entityId)
+  if (entityType === 'lead') return canAccessLead(user, entityId)
+  if (entityType === 'document') return canAccessDocument(user, entityId)
+  if (entityType === 'offer') return canAccessOffer(user, entityId)
+  if (entityType === 'lender') return canAccessLenderProfile(user, entityId) || user.role === 'admin'
+  if (entityType === 'user') return user.role === 'admin' || user.id === entityId
+  if (entityType === 'stipulation') {
+    const { data } = await supabaseAdmin.from('stipulations').select('merchant_id').eq('id', entityId).maybeSingle<{ merchant_id: string | null }>()
+    return data?.merchant_id ? canAccessMerchant(user, data.merchant_id) : false
+  }
+  return user.role === 'admin'
+}
+
 export async function assertCanAccessMerchant(user: RouteUser, merchantId: string): Promise<Response | null> {
   const allowed = await canAccessMerchant(user, merchantId)
   return allowed ? null : forbidden()

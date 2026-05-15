@@ -36,7 +36,17 @@ async function lenderIsMatchedToMerchant(lenderId: string, merchantId: string): 
     .maybeSingle<{ id: string }>()
 
   if (error) return badRequest(error.message)
-  return Boolean(data)
+  if (data) return true
+
+  const { data: submission, error: submissionError } = await supabaseAdmin
+    .from('merchant_file_submissions')
+    .select('id')
+    .eq('lender_id', lenderId)
+    .eq('merchant_id', merchantId)
+    .maybeSingle<{ id: string }>()
+
+  if (submissionError) return badRequest(submissionError.message)
+  return Boolean(submission)
 }
 
 async function updateMerchantOffers(merchantId: string, newOffer: Offer, changedBy: string): Promise<Response | null> {

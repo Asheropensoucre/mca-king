@@ -3,6 +3,7 @@ import type { ReportDrilldownRow } from '../../../../types';
 import { PrimaryButton } from '../../../../src/components/ui/PrimaryButton';
 import { downloadCsv } from '../../../../src/lib/csv';
 import { formatMetricValue } from './ReportMetricCard';
+import { csrfHeaders } from '../../../../src/lib/client-security';
 
 interface ReportTableProps {
   title?: string;
@@ -30,7 +31,7 @@ export const ReportTable: React.FC<ReportTableProps> = ({ title, rows, exportNam
         <PrimaryButton label="Export CSV" size="small" disabled={safeRows.length === 0} onClick={() => {
           void fetch('/api/audit/report-export', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
             body: JSON.stringify({ report_type: exportName.replace(/\.csv$/i, ''), row_count: safeRows.length }),
           }).catch(() => undefined);
           downloadCsv(exportName, safeRows.map(flatten));

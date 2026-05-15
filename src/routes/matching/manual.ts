@@ -1,6 +1,7 @@
 import type { LenderMatch } from '../../../types'
+import { canUpdateMerchant } from '../../lib/permissions'
 import { requireAuth } from '../../lib/requireAuth'
-import { assertRole, badRequest, json } from '../../lib/route-utils'
+import { assertRole, badRequest, forbidden, json } from '../../lib/route-utils'
 import { supabaseAdmin } from '../../lib/supabase-server'
 
 type ManualBody = {
@@ -27,6 +28,7 @@ export async function POST(req: Request): Promise<Response> {
 
   const body = await req.json() as ManualBody
   if (!body.merchant_id || !body.lender_id) return badRequest('merchant_id and lender_id are required')
+  if (!(await canUpdateMerchant(user, body.merchant_id))) return forbidden()
 
   try {
     const existing = await fetchMatch(body.merchant_id, body.lender_id)
