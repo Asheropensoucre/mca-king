@@ -46,7 +46,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({ filters, onChange,
   };
 
   return (
-    <div className="rounded-xl border-2 border-theme-maroon/80 bg-white/95 p-4 shadow-[6px_6px_0_var(--ct-primary)] dark:border-theme-yellow/80 dark:bg-dark-card/95 dark:shadow-[6px_6px_0_var(--ct-secondary-fixed-dim)]">
+    <div className="rounded-xl border-2 border-line-strong/80 bg-surface/95 p-4 shadow-[6px_6px_0_var(--ct-primary)] dark:border-accent/80 /95 dark:shadow-[6px_6px_0_var(--ct-secondary-fixed-dim)]">
       <div className="mb-3 flex flex-wrap gap-2">
         <PrimaryButton label="This Month" size="small" onClick={() => setPreset('month')} />
         <PrimaryButton label="Last Month" size="small" onClick={() => setPreset('last_month')} />

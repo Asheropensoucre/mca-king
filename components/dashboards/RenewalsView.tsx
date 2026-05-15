@@ -56,8 +56,8 @@ export const RenewalsView: React.FC<RenewalsViewProps> = ({ currentUser, salesRe
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-black text-theme-maroon dark:text-theme-yellow">Renewals</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Broker-shop queue for funded merchants who may be ready for renewal funding.</p>
+        <h2 className="text-2xl font-black text-main ">Renewals</h2>
+        <p className="mt-1 text-sm text-muted">Broker-shop queue for funded merchants who may be ready for renewal funding.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
@@ -74,19 +74,19 @@ export const RenewalsView: React.FC<RenewalsViewProps> = ({ currentUser, salesRe
             {STATUSES.map(item => <option key={item || 'all'} value={item}>{item ? item.replaceAll('_', ' ') : 'All'}</option>)}
           </Select>
           {currentUser.role === 'admin' && <Select label="Assigned Rep" value={assignedRepId} onChange={event => setAssignedRepId(event.target.value)}><option value="">All reps</option>{salesReps.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}</Select>}
-          <label className="flex items-center gap-2 pb-3 text-sm font-bold text-slate-700 dark:text-slate-300"><input type="checkbox" checked={eligibleOnly} onChange={event => setEligibleOnly(event.target.checked)} /> Eligible only</label>
+          <label className="flex items-center gap-2 pb-3 text-sm font-bold text-main"><input type="checkbox" checked={eligibleOnly} onChange={event => setEligibleOnly(event.target.checked)} /> Eligible only</label>
           <PrimaryButton label="Refresh" size="small" onClick={() => void load()} />
         </div>
       </Card>
 
       <Card>
         <div className="overflow-x-auto p-4">
-          {loading ? <MCAKingLoader label="Loading renewals..." size="small" /> : error ? <p className="text-sm text-red-600">{error}</p> : (
+          {loading ? <MCAKingLoader label="Loading renewals..." size="small" /> : error ? <p className="text-sm text-danger">{error}</p> : (
             <table className="min-w-full border-separate border-spacing-y-2">
-              <thead><tr className="text-left text-xs font-black uppercase tracking-wider text-theme-yellow"><th>Merchant</th><th>Status</th><th>Eligibility</th><th>Funded</th><th>Lender</th><th>Payoff</th><th>Next Follow-up</th><th></th></tr></thead>
+              <thead><tr className="text-left text-xs font-black uppercase tracking-wider text-accent"><th>Merchant</th><th>Status</th><th>Eligibility</th><th>Funded</th><th>Lender</th><th>Payoff</th><th>Next Follow-up</th><th></th></tr></thead>
               <tbody>
-                {renewals.map(renewal => <tr key={renewal.id} className="bg-slate-50 dark:bg-slate-900/50"><td className="px-3 py-3 text-sm font-black text-theme-maroon dark:text-theme-yellow">{renewal.merchant_name ?? 'N/A'}</td><td className="px-3 py-3 text-sm">{renewal.status.replaceAll('_', ' ')}</td><td className="px-3 py-3 text-sm">{date(renewal.eligibility_date)}</td><td className="px-3 py-3 text-sm">{money(renewal.funded_amount)}</td><td className="px-3 py-3 text-sm">{renewal.lender_name ?? 'N/A'}</td><td className="px-3 py-3 text-sm">{money(renewal.payoff_amount)}</td><td className="px-3 py-3 text-sm">{date(renewal.next_follow_up_at)}</td><td className="px-3 py-3 text-right"><PrimaryButton label="Update" size="small" onClick={() => setEditing(renewal)} /></td></tr>)}
-                {renewals.length === 0 && <tr><td colSpan={8} className="px-3 py-8 text-center text-sm text-slate-500">No renewal records found.</td></tr>}
+                {renewals.map(renewal => <tr key={renewal.id} className="bg-surface-muted/50"><td className="px-3 py-3 text-sm font-black text-main ">{renewal.merchant_name ?? 'N/A'}</td><td className="px-3 py-3 text-sm">{renewal.status.replaceAll('_', ' ')}</td><td className="px-3 py-3 text-sm">{date(renewal.eligibility_date)}</td><td className="px-3 py-3 text-sm">{money(renewal.funded_amount)}</td><td className="px-3 py-3 text-sm">{renewal.lender_name ?? 'N/A'}</td><td className="px-3 py-3 text-sm">{money(renewal.payoff_amount)}</td><td className="px-3 py-3 text-sm">{date(renewal.next_follow_up_at)}</td><td className="px-3 py-3 text-right"><PrimaryButton label="Update" size="small" onClick={() => setEditing(renewal)} /></td></tr>)}
+                {renewals.length === 0 && <tr><td colSpan={8} className="px-3 py-8 text-center text-sm text-muted">No renewal records found.</td></tr>}
               </tbody>
             </table>
           )}
@@ -97,4 +97,4 @@ export const RenewalsView: React.FC<RenewalsViewProps> = ({ currentUser, salesRe
   );
 };
 
-const Metric: React.FC<{ label: string; value: number }> = ({ label, value }) => <Card className="p-4"><p className="text-xs font-black uppercase text-theme-teal">{label}</p><p className="mt-2 text-2xl font-black text-theme-maroon dark:text-theme-yellow">{value}</p></Card>;
+const Metric: React.FC<{ label: string; value: number }> = ({ label, value }) => <Card className="p-4"><p className="text-xs font-black uppercase text-secondary">{label}</p><p className="mt-2 text-2xl font-black text-main ">{value}</p></Card>;

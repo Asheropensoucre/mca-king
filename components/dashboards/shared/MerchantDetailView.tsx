@@ -35,8 +35,8 @@ const formatDateTime = (value: string | null): string | null => {
 
 const matchBadgeClasses = (matchType: LenderMatch['match_type']) => (
     matchType === 'manual'
-        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
-        : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'
+        ? 'bg-primary/15 text-primary dark:bg-primary/25 dark:text-primary'
+        : 'bg-surface-muted text-main  '
 );
 
 interface MatchedLendersPanelProps {
@@ -134,8 +134,8 @@ const MatchedLendersPanel: React.FC<MatchedLendersPanelProps> = ({ merchantId, l
             <div className="p-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Matched Lenders</h3>
-                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Server-side lender matches for this merchant.</p>
+                        <h3 className="text-lg font-black text-main ">Matched Lenders</h3>
+                        <p className="mt-1 text-sm text-muted">Server-side lender matches for this merchant.</p>
                     </div>
                     {canManageMatches && (
                         <div className="flex flex-wrap gap-2">
@@ -145,12 +145,12 @@ const MatchedLendersPanel: React.FC<MatchedLendersPanelProps> = ({ merchantId, l
                     )}
                 </div>
 
-                {message && <p className="mt-4 rounded-md bg-theme-teal/10 px-3 py-2 text-sm text-slate-700 dark:text-slate-200">{message}</p>}
-                {error && <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</p>}
+                {message && <p className="mt-4 rounded-md bg-secondary/10 px-3 py-2 text-sm text-main">{message}</p>}
+                {error && <p className="mt-4 rounded-md bg-danger/10 px-3 py-2 text-sm text-danger dark:bg-danger/20 dark:text-danger">{error}</p>}
 
                 {canManageMatches && (
                     <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                        <select value={selectedLenderId} onChange={event => setSelectedLenderId(event.target.value)} className="block min-w-0 flex-1 rounded-md border-0 py-2 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-theme-yellow dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600">
+                        <select value={selectedLenderId} onChange={event => setSelectedLenderId(event.target.value)} className="block min-w-0 flex-1 rounded-md border-0 py-2 px-3 text-main ring-1 ring-inset ring-line focus:ring-2 focus:ring-accent   ring-line">
                             <option value="">Select lender to manually add</option>
                             {unmatchedLenders.map(lender => <option key={lender.id} value={lender.id}>{lender.lenderName}</option>)}
                         </select>
@@ -162,21 +162,21 @@ const MatchedLendersPanel: React.FC<MatchedLendersPanelProps> = ({ merchantId, l
                     {loading ? (
                         <MCAKingLoader label="Loading matched lenders..." size="small" />
                     ) : matches.length > 0 ? matches.map(match => (
-                        <div key={match.id} className="flex flex-col gap-3 rounded-lg border border-slate-200 p-4 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between">
+                        <div key={match.id} className="flex flex-col gap-3 rounded-lg border border-line p-4  sm:flex-row sm:items-center sm:justify-between">
                             <div>
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <p className="font-black text-theme-maroon dark:text-theme-yellow">{match.lender?.company_name ?? 'Unknown Lender'}</p>
+                                    <p className="font-black text-main ">{match.lender?.company_name ?? 'Unknown Lender'}</p>
                                     <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${matchBadgeClasses(match.match_type)}`}>{match.match_type}</span>
                                 </div>
-                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Contact: {match.lender?.contact_name ?? 'N/A'} · {match.lender?.contact_email ?? 'No email'}</p>
-                                {match.notified_at && <p className="mt-1 text-xs text-theme-teal">Notified {formatDateTime(match.notified_at)}</p>}
+                                <p className="mt-1 text-sm text-muted">Contact: {match.lender?.contact_name ?? 'N/A'} · {match.lender?.contact_email ?? 'No email'}</p>
+                                {match.notified_at && <p className="mt-1 text-xs text-secondary">Notified {formatDateTime(match.notified_at)}</p>}
                             </div>
                             {canRemoveMatches && (
-                                <button onClick={() => void handleRemove(match.lender_id)} className="self-start rounded-full px-3 py-1 text-lg leading-none text-red-600 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/40" aria-label="Remove matched lender">×</button>
+                                <button onClick={() => void handleRemove(match.lender_id)} className="self-start rounded-full px-3 py-1 text-lg leading-none text-danger hover:bg-danger/10 dark:text-danger dark:hover:bg-danger/20" aria-label="Remove matched lender">×</button>
                             )}
                         </div>
                     )) : (
-                        <p className="text-sm text-slate-500 dark:text-slate-400">No matched lenders yet.</p>
+                        <p className="text-sm text-muted">No matched lenders yet.</p>
                     )}
                 </div>
             </div>
@@ -201,8 +201,8 @@ export const MerchantDetailView: React.FC<MerchantDetailViewProps> = ({ item, le
 
     return (
     <div className="space-y-6">
-        <Card><div className="p-6"><h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Business Information</h3><p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">{sensitiveNotice}</p><dl className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"><SummaryItem label="Legal Name" value={item.businessInfo.legalName} /><SummaryItem label="DBA Name" value={item.businessInfo.dbaName} /><SummaryItem label="Phone" value={item.businessInfo.phone} /><SummaryItem label="Tax ID" value={maskedTaxId} /><SummaryItem label="Address" value={item.businessInfo.address} /><SummaryItem label="Start Date" value={item.businessInfo.startDate} /><SummaryItem label="Requested Amount" value={`$${Number(item.requestedAmount).toLocaleString()}`} /><SummaryItem label="Avg. Monthly Revenue" value={`$${Number(item.businessInfo.monthlyRevenue).toLocaleString()}`} /><SummaryItem label="Recent NSFs" value={item.businessInfo.recentNSFs} /><SummaryItem label="Industry" value={item.businessInfo.industryType} /></dl></div></Card>
-        {item.owners.map((owner, index) => (<Card key={owner.id}><div className="p-6"><h4 className="text-md font-semibold text-slate-700 dark:text-slate-300">Owner #{index + 1}</h4><dl className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"><SummaryItem label="Name" value={owner.name} /><SummaryItem label="Title" value={owner.title} /><SummaryItem label="Email" value={owner.email} /><SummaryItem label="Cell Phone" value={owner.cellPhone} /><SummaryItem label="Home Address" value={owner.homeAddress} /><SummaryItem label="DOB" value={maskDob(owner.dateOfBirth)} /><SummaryItem label="SSN" value={maskLast4(owner.ssn)} /><SummaryItem label="Credit Score" value={owner.creditScore} /><SummaryItem label="Ownership" value={`${owner.ownership}%`} /></dl></div></Card>))}
+        <Card><div className="p-6"><h3 className="text-lg font-black text-main ">Business Information</h3><p className="mt-1 text-xs font-semibold text-muted">{sensitiveNotice}</p><dl className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"><SummaryItem label="Legal Name" value={item.businessInfo.legalName} /><SummaryItem label="DBA Name" value={item.businessInfo.dbaName} /><SummaryItem label="Phone" value={item.businessInfo.phone} /><SummaryItem label="Tax ID" value={maskedTaxId} /><SummaryItem label="Address" value={item.businessInfo.address} /><SummaryItem label="Start Date" value={item.businessInfo.startDate} /><SummaryItem label="Requested Amount" value={`$${Number(item.requestedAmount).toLocaleString()}`} /><SummaryItem label="Avg. Monthly Revenue" value={`$${Number(item.businessInfo.monthlyRevenue).toLocaleString()}`} /><SummaryItem label="Recent NSFs" value={item.businessInfo.recentNSFs} /><SummaryItem label="Industry" value={item.businessInfo.industryType} /></dl></div></Card>
+        {item.owners.map((owner, index) => (<Card key={owner.id}><div className="p-6"><h4 className="text-md font-semibold text-main">Owner #{index + 1}</h4><dl className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"><SummaryItem label="Name" value={owner.name} /><SummaryItem label="Title" value={owner.title} /><SummaryItem label="Email" value={owner.email} /><SummaryItem label="Cell Phone" value={owner.cellPhone} /><SummaryItem label="Home Address" value={owner.homeAddress} /><SummaryItem label="DOB" value={maskDob(owner.dateOfBirth)} /><SummaryItem label="SSN" value={maskLast4(owner.ssn)} /><SummaryItem label="Credit Score" value={owner.creditScore} /><SummaryItem label="Ownership" value={`${owner.ownership}%`} /></dl></div></Card>))}
         
         <DocumentsPanel merchantId={item.id} canDelete={canDeleteDocuments} />
 
@@ -234,12 +234,12 @@ export const MerchantDetailView: React.FC<MerchantDetailViewProps> = ({ item, le
             </>
         )}
         
-        <Card><div className="p-6"><h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">{currentUser.role === 'lender' ? 'Your Offer' : 'Offers'}</h3>
+        <Card><div className="p-6"><h3 className="text-lg font-black text-main ">{currentUser.role === 'lender' ? 'Your Offer' : 'Offers'}</h3>
             {item.offers && item.offers.length > 0 ? (
                 <ul className="space-y-2 mt-2">
-                    {item.offers.map(o => <li key={o.id || o.lenderId} className="text-sm text-slate-700 dark:text-slate-300">{o.lenderName}: ${Number(o.amount).toLocaleString()} for {o.term} days ({o.status})</li>)}
+                    {item.offers.map(o => <li key={o.id || o.lenderId} className="text-sm text-main">{o.lenderName}: ${Number(o.amount).toLocaleString()} for {o.term} days ({o.status})</li>)}
                 </ul>
-            ) : <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{currentUser.role === 'lender' ? 'You have not sent an offer for this file yet.' : 'No offers yet.'}</p>}
+            ) : <p className="text-sm text-muted mt-2">{currentUser.role === 'lender' ? 'You have not sent an offer for this file yet.' : 'No offers yet.'}</p>}
         </div></Card>
 
         {showEmailModal && (

@@ -22,9 +22,9 @@ interface ReportMetricCardProps {
 export const ReportMetricCard: React.FC<ReportMetricCardProps> = ({ label, value, helper }) => (
   <Card>
     <div className="p-4">
-      <p className="text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
-      <p className="mt-2 text-2xl font-black text-theme-maroon dark:text-theme-yellow">{value}</p>
-      {helper && <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">{helper}</p>}
+      <p className="text-xs font-black uppercase tracking-wide text-muted">{label}</p>
+      <p className="mt-2 text-2xl font-black text-main ">{value}</p>
+      {helper && <p className="mt-1 text-xs font-semibold text-muted">{helper}</p>}
     </div>
   </Card>
 );

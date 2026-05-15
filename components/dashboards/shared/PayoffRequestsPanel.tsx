@@ -68,39 +68,39 @@ export const PayoffRequestsPanel: React.FC<PayoffRequestsPanelProps> = ({ mercha
       <div className="p-6">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Payoff Requests</h3>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Request payoff letters from current lenders/funders and track the official documents received.</p>
+            <h3 className="text-lg font-black text-main ">Payoff Requests</h3>
+            <p className="mt-1 text-sm text-muted">Request payoff letters from current lenders/funders and track the official documents received.</p>
           </div>
           {showCreate && (currentUser.role === 'admin' || currentUser.role === 'sales_rep') && <PrimaryButton label="Request Payoff" size="small" onClick={() => setCreating(true)} />}
         </div>
-        {loading ? <div className="mt-4"><MCAKingLoader label="Loading payoff requests..." size="small" /></div> : error ? <p className="mt-4 text-sm text-red-600">{error}</p> : requests.length > 0 ? (
+        {loading ? <div className="mt-4"><MCAKingLoader label="Loading payoff requests..." size="small" /></div> : error ? <p className="mt-4 text-sm text-danger">{error}</p> : requests.length > 0 ? (
           <div className="mt-4 space-y-3">
             {requests.map(request => (
-              <div key={request.id} className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
+              <div key={request.id} className="rounded-lg border border-line p-4 ">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="font-black text-theme-maroon dark:text-theme-yellow">{request.status}</p>
-                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Requested from: {request.requested_from_name ?? 'N/A'} · Requested {date(request.requested_at)}</p>
+                    <p className="font-black text-main ">{request.status}</p>
+                    <p className="mt-1 text-sm text-muted">Requested from: {request.requested_from_name ?? 'N/A'} · Requested {date(request.requested_at)}</p>
                   </div>
                   {canOpenEditor(request) && <PrimaryButton label="Update" size="small" onClick={() => setEditing(request)} />}
                 </div>
                 <dl className="mt-3 grid grid-cols-2 gap-3 text-xs md:grid-cols-4">
-                  <div><dt className="font-bold text-slate-500">Payoff</dt><dd>{money(request.payoff_amount)}</dd></div>
-                  <div><dt className="font-bold text-slate-500">Received</dt><dd>{date(request.received_at)}</dd></div>
-                  <div><dt className="font-bold text-slate-500">Expires</dt><dd>{date(request.expires_at)}</dd></div>
-                  <div><dt className="font-bold text-slate-500">Document</dt><dd>{request.document_name ?? request.file_document_id ?? 'N/A'}</dd></div>
+                  <div><dt className="font-bold text-muted">Payoff</dt><dd>{money(request.payoff_amount)}</dd></div>
+                  <div><dt className="font-bold text-muted">Received</dt><dd>{date(request.received_at)}</dd></div>
+                  <div><dt className="font-bold text-muted">Expires</dt><dd>{date(request.expires_at)}</dd></div>
+                  <div><dt className="font-bold text-muted">Document</dt><dd>{request.document_name ?? request.file_document_id ?? 'N/A'}</dd></div>
                 </dl>
                 {canUploadPayoff(request) && !request.file_document_id && (
-                  <div className="mt-4 rounded-lg border border-dashed border-theme-teal/50 p-3">
-                    <p className="mb-2 text-xs font-bold text-slate-500 dark:text-slate-400">Upload the official payoff letter received from the funding lender/funder.</p>
+                  <div className="mt-4 rounded-lg border border-dashed border-secondary/50 p-3">
+                    <p className="mb-2 text-xs font-bold text-muted">Upload the official payoff letter received from the funding lender/funder.</p>
                     <DocumentUpload onDocumentsChange={() => undefined} merchantId={merchantId} docType="other" payoffRequestId={request.id} onUploaded={() => void load()} />
                   </div>
                 )}
-                {request.notes && currentUser.role !== 'lender' && currentUser.role !== 'merchant' && <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">{request.notes}</p>}
+                {request.notes && currentUser.role !== 'lender' && currentUser.role !== 'merchant' && <p className="mt-3 text-sm text-muted">{request.notes}</p>}
               </div>
             ))}
           </div>
-        ) : <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">No payoff requests yet.</p>}
+        ) : <p className="mt-4 text-sm text-muted">No payoff requests yet.</p>}
       </div>
       {(editing || creating) && <PayoffRequestModal request={editing} merchantId={merchantId} renewals={renewals} lenders={lenders} onClose={() => { setEditing(null); setCreating(false); }} onSave={save} />}
     </Card>

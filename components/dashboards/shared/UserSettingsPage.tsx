@@ -77,16 +77,16 @@ export const UserSettingsPage: React.FC<UserSettingsPageProps> = ({ currentUser,
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <h2 className="text-2xl font-black text-theme-maroon dark:text-theme-yellow">User Settings</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Manage your password. Email and role changes are admin-only.</p>
+        <h2 className="text-2xl font-black text-main ">User Settings</h2>
+        <p className="mt-1 text-sm text-muted">Manage your password. Email and role changes are admin-only.</p>
       </div>
 
-      {error && <div className="rounded-md bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</div>}
-      {message && <div className="rounded-md bg-emerald-50 p-3 text-sm font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">{message}</div>}
+      {error && <div className="rounded-md bg-danger/10 p-3 text-sm font-semibold text-danger dark:bg-danger/20 dark:text-danger">{error}</div>}
+      {message && <div className="rounded-md bg-success/10 p-3 text-sm font-semibold text-success dark:bg-success/20 dark:text-success">{message}</div>}
 
       <Card>
         <div className="p-6">
-          <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">My Account</h3>
+          <h3 className="text-lg font-black text-main ">My Account</h3>
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
             <ReadOnlyField label="Email Address" value={displayProfile.email} />
             <ReadOnlyField label="Role" value={displayProfile.role.replace('_', ' ')} />
@@ -94,7 +94,7 @@ export const UserSettingsPage: React.FC<UserSettingsPageProps> = ({ currentUser,
             <ReadOnlyField label="Member Since" value={formatDate(displayProfile.created_at)} />
             <ReadOnlyField label="Last Login" value={formatDate(displayProfile.last_login_at)} />
           </div>
-          <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+          <p className="mt-4 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm font-semibold text-warning dark:border-warning/40 dark:bg-warning/20 dark:text-warning">
             Email, role, and account-status changes must be handled by an admin.
           </p>
         </div>
@@ -102,7 +102,7 @@ export const UserSettingsPage: React.FC<UserSettingsPageProps> = ({ currentUser,
 
       <Card>
         <form onSubmit={changePassword} className="p-6">
-          <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Change Password</h3>
+          <h3 className="text-lg font-black text-main ">Change Password</h3>
           <div className="mt-4 grid grid-cols-1 gap-4">
             <Input label="Current Password" name="current_password" type="password" value={currentPassword} onChange={event => setCurrentPassword(event.target.value)} required />
             <Input label="New Password" name="new_password" type="password" value={newPassword} onChange={event => setNewPassword(event.target.value)} required minLength={8} />
@@ -119,7 +119,7 @@ export const UserSettingsPage: React.FC<UserSettingsPageProps> = ({ currentUser,
 
 const ReadOnlyField: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <label className="block">
-    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</span>
-    <input value={value} readOnly className="mt-1 block w-full cursor-not-allowed rounded-md border-0 px-3 py-2 text-gray-700 ring-1 ring-inset ring-gray-300 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-600" />
+    <span className="text-sm font-medium text-main">{label}</span>
+    <input value={value} readOnly className="mt-1 block w-full cursor-not-allowed rounded-md border-0 px-3 py-2 text-main ring-1 ring-inset ring-line -muted  ring-line" />
   </label>
 );

@@ -24,8 +24,6 @@ export const APPLICATION_STATUS_CONFIG: ApplicationStatusConfig[] = [
 ];
 
 export const APPLICATION_STATUSES = APPLICATION_STATUS_CONFIG.map(status => status.label);
-
-
 export const DEFAULT_APPLICATION_STATUS: ApplicationStatus = APPLICATION_STATUS_CONFIG[0].label;
 
 export const isApplicationStatus = (value: unknown): value is ApplicationStatus => (
@@ -45,27 +43,27 @@ export const getStatusThemeClasses = (theme: StatusTheme) => {
   switch (theme) {
     case 'error':
       return {
-        border: 'border-t-4 border-t-theme-red',
-        title: 'text-theme-red',
-        badge: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200',
+        border: 'border-t-4 border-t-danger',
+        title: 'text-danger',
+        badge: 'bg-danger text-on-danger',
       };
     case 'warning':
       return {
-        border: 'border-t-4 border-t-amber-500',
-        title: 'text-amber-600 dark:text-amber-400',
-        badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200',
+        border: 'border-t-4 border-t-warning',
+        title: 'text-warning ',
+        badge: 'bg-warning text-on-warning',
       };
     case 'success':
       return {
-        border: 'border-t-4 border-t-emerald-500',
-        title: 'text-emerald-600 dark:text-emerald-400',
-        badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200',
+        border: 'border-t-4 border-t-success',
+        title: 'text-success ',
+        badge: 'bg-success text-on-success',
       };
     default:
       return {
-        border: '',
-        title: 'text-slate-600 dark:text-slate-300',
-        badge: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
+        border: 'border-t-4 border-t-line-strong',
+        title: 'text-main',
+        badge: 'bg-surface-muted text-main border border-line',
       };
   }
 };

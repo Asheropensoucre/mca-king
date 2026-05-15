@@ -58,16 +58,16 @@ export const DocumentsPanel: React.FC<DocumentsPanelProps> = ({ merchantId, canD
     <Card>
       <div className="p-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
-          <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">{title}</h3>
+          <h3 className="text-lg font-black text-main ">{title}</h3>
           {canUpload && (
             <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-              <select value={docType} onChange={e => setDocType(e.target.value as DocType)} className="rounded-md border-0 py-1.5 pl-3 pr-8 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600">
+              <select value={docType} onChange={e => setDocType(e.target.value as DocType)} className="rounded-md border-0 py-1.5 pl-3 pr-8 text-sm text-main ring-1 ring-inset ring-line   ring-line">
                 {DOC_TYPES.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}
               </select>
               {loading ? (
                 <MCAKingLoader label="Uploading..." size="small" />
               ) : (
-                <label className="cursor-pointer px-3 py-1.5 rounded-md text-sm font-medium text-theme-black bg-theme-yellow hover:bg-theme-yellow/90 text-center">
+                <label className="cursor-pointer px-3 py-1.5 rounded-md text-sm font-medium text-on-accent bg-accent hover:bg-accent/90 text-center">
                   Upload
                   <input type="file" className="sr-only" onChange={handleUpload} disabled={loading} />
                 </label>
@@ -75,27 +75,27 @@ export const DocumentsPanel: React.FC<DocumentsPanelProps> = ({ merchantId, canD
             </div>
           )}
         </div>
-        {message && <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{message}</p>}
+        {message && <p className="text-xs text-muted mb-3">{message}</p>}
         {documents.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-              <thead className="bg-slate-950/90"><tr><th className="px-4 py-2 text-left text-xs font-black text-theme-yellow uppercase">File</th><th className="px-4 py-2 text-left text-xs font-black text-theme-yellow uppercase">Type</th><th className="px-4 py-2 text-left text-xs font-black text-theme-yellow uppercase">Uploaded</th><th className="px-4 py-2 text-right text-xs font-black text-theme-yellow uppercase">Actions</th></tr></thead>
+              <thead className="bg-primary"><tr><th className="px-4 py-2 text-left text-xs font-black text-accent uppercase">File</th><th className="px-4 py-2 text-left text-xs font-black text-accent uppercase">Type</th><th className="px-4 py-2 text-left text-xs font-black text-accent uppercase">Uploaded</th><th className="px-4 py-2 text-right text-xs font-black text-accent uppercase">Actions</th></tr></thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {documents.map(doc => (
                   <tr key={doc.id}>
-                    <td className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300">{doc.file_name}</td>
-                    <td className="px-4 py-2 text-sm text-slate-500 dark:text-slate-400">{doc.doc_type.replace('_', ' ')}</td>
-                    <td className="px-4 py-2 text-sm text-slate-500 dark:text-slate-400">{new Date(doc.uploaded_at).toLocaleString()}</td>
+                    <td className="px-4 py-2 text-sm text-main">{doc.file_name}</td>
+                    <td className="px-4 py-2 text-sm text-muted">{doc.doc_type.replace('_', ' ')}</td>
+                    <td className="px-4 py-2 text-sm text-muted">{new Date(doc.uploaded_at).toLocaleString()}</td>
                     <td className="px-4 py-2 text-right text-sm space-x-3">
-                      {doc.signed_url && <a href={doc.signed_url} target="_blank" rel="noreferrer" className="text-theme-teal hover:text-theme-teal/80">View</a>}
-                      {canDelete && <button onClick={() => void handleDelete(doc.id)} className="text-theme-red hover:text-theme-red/80">Delete</button>}
+                      {doc.signed_url && <a href={doc.signed_url} target="_blank" rel="noreferrer" className="text-secondary hover:text-secondary/80">View</a>}
+                      {canDelete && <button onClick={() => void handleDelete(doc.id)} className="text-danger hover:text-danger/80">Delete</button>}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        ) : <p className="text-sm text-slate-500 dark:text-slate-400">No documents uploaded yet.</p>}
+        ) : <p className="text-sm text-muted">No documents uploaded yet.</p>}
       </div>
     </Card>
   );

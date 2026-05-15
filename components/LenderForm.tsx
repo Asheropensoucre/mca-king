@@ -25,7 +25,7 @@ export const LenderForm: React.FC<LenderFormProps> = ({ data, updateData, onSubm
                  <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-6">
                     <div className="flex items-center space-x-4">
                         <img src="/logo.png" alt="MCA King Logo" className="h-12 w-auto" />
-                        <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Lender Criteria Submission</h1>
+                        <h1 className="text-3xl font-bold text-main">Lender Criteria Submission</h1>
                     </div>
                     <div className="flex items-center gap-3 self-start sm:self-auto">
                         {headerAction}
@@ -56,13 +56,13 @@ export const LenderForm: React.FC<LenderFormProps> = ({ data, updateData, onSubm
                                 <Textarea name="industryRestrictions" label="Industry Restrictions" value={data.industryRestrictions} onChange={handleChange} className="md:col-span-3" rows={5}/>
                                 <Textarea name="notes" label="Notes" value={data.notes} onChange={handleChange} className="md:col-span-3" rows={3}/>
 
-                                <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 md:col-span-3 mt-4">Contact Info</h3>
+                                <h3 className="text-lg font-semibold text-main  md:col-span-3 mt-4">Contact Info</h3>
                                 <Input name="isoRep" label="ISO Rep Name" value={data.isoRep} onChange={handleChange} />
                                 <Input name="cell" label="Cell Phone" type="tel" value={data.cell} onChange={handleChange} />
                                 <Input name="email" label="Email" type="email" value={data.email} onChange={handleChange} />
                             </div>
                         </div>
-                         <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex justify-end">
+                         <div className="p-6 bg-surface-muted -muted/50 border-t border-line flex justify-end">
                             <PrimaryButton type="submit" label="Submit Lender Info" onClick={() => undefined} />
                         </div>
                     </Card>

@@ -23,13 +23,13 @@ const STATUSES: { value: MerchantFileSubmissionStatus; label: string }[] = [
 ];
 
 const statusClasses: Record<MerchantFileSubmissionStatus, string> = {
-  submitted: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200',
-  viewed: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
-  no_response: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200',
-  declined: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200',
-  offer_received: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
-  stips_requested: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200',
-  withdrawn: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+  submitted: 'bg-primary/15 text-primary dark:bg-primary/25 dark:text-primary',
+  viewed: 'bg-surface-muted text-main  ',
+  no_response: 'bg-warning/15 text-warning dark:bg-warning/25 dark:text-warning',
+  declined: 'bg-danger/15 text-danger dark:bg-danger/25 dark:text-danger',
+  offer_received: 'bg-success/15 text-success dark:bg-success/25 dark:text-success',
+  stips_requested: 'bg-primary/15 text-primary dark:bg-primary/25 dark:text-primary',
+  withdrawn: 'bg-surface-muted text-main  ',
 };
 
 const formatDate = (value: string | null): string => value ? new Date(value).toLocaleString() : 'N/A';
@@ -92,12 +92,12 @@ export const MerchantFileSubmissionsPanel: React.FC<MerchantFileSubmissionsPanel
     <Card>
       <div className="p-6">
         <div>
-          <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Merchant-File Submissions</h3>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Broker-to-lender/funder package submissions and response outcomes.</p>
+          <h3 className="text-lg font-black text-main ">Merchant-File Submissions</h3>
+          <p className="mt-1 text-sm text-muted">Broker-to-lender/funder package submissions and response outcomes.</p>
         </div>
 
-        {message && <p className="mt-4 rounded-md bg-theme-teal/10 px-3 py-2 text-sm text-theme-teal">{message}</p>}
-        {error && <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</p>}
+        {message && <p className="mt-4 rounded-md bg-secondary/10 px-3 py-2 text-sm text-secondary">{message}</p>}
+        {error && <p className="mt-4 rounded-md bg-danger/10 px-3 py-2 text-sm text-danger dark:bg-danger/20 dark:text-danger">{error}</p>}
 
         {loading ? (
           <div className="mt-4"><MCAKingLoader label="Loading merchant-file submissions..." size="small" /></div>
@@ -106,15 +106,15 @@ export const MerchantFileSubmissionsPanel: React.FC<MerchantFileSubmissionsPanel
             {submissions.map(submission => {
               const draft = drafts[submission.id] ?? { status: submission.status, decline_reason: submission.decline_reason ?? '', notes: submission.notes ?? '' };
               return (
-                <div key={submission.id} className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
+                <div key={submission.id} className="rounded-lg border border-line p-4 ">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-black text-theme-maroon dark:text-theme-yellow">{submission.lender_name ?? 'Unknown Lender/Funder'}</p>
+                        <p className="font-black text-main ">{submission.lender_name ?? 'Unknown Lender/Funder'}</p>
                         <span className={`rounded-full px-2.5 py-1 text-xs font-black ${statusClasses[submission.status]}`}>{submission.status.replace('_', ' ')}</span>
                       </div>
-                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Contact: {submission.lender_contact_name ?? 'N/A'} · {submission.lender_contact_email ?? 'No email'}</p>
-                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Submitted {formatDate(submission.submitted_at)} · Response {formatDate(submission.response_at)} · Package v{submission.package_version}</p>
+                      <p className="mt-1 text-sm text-muted">Contact: {submission.lender_contact_name ?? 'N/A'} · {submission.lender_contact_email ?? 'No email'}</p>
+                      <p className="mt-1 text-xs text-muted">Submitted {formatDate(submission.submitted_at)} · Response {formatDate(submission.response_at)} · Package v{submission.package_version}</p>
                     </div>
                   </div>
 
@@ -138,7 +138,7 @@ export const MerchantFileSubmissionsPanel: React.FC<MerchantFileSubmissionsPanel
             })}
           </div>
         ) : (
-          <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">No merchant-file submissions yet. Use Notify Lenders from the matched lenders panel to create submission tracking records.</p>
+          <p className="mt-4 text-sm text-muted">No merchant-file submissions yet. Use Notify Lenders from the matched lenders panel to create submission tracking records.</p>
         )}
       </div>
     </Card>

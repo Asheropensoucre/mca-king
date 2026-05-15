@@ -1,40 +1,16 @@
 import type { CSSProperties, FocusEvent } from 'react'
-import { corporateTech as COLORS } from './corporateTechTheme'
 
-export function getAuthCardStyle(isDark: boolean): CSSProperties {
-  return {
-    backgroundColor: isDark ? COLORS.primary : COLORS.surfaceContainerLowest,
-    border: `2px solid ${isDark ? COLORS.inversePrimary : COLORS.primary}`,
-    borderRadius: '14px',
-    boxShadow: isDark ? `8px 8px 0 ${COLORS.secondaryFixedDim}` : `8px 8px 0 ${COLORS.primary}`,
-  }
+export function getAuthCardStyle(_isDark: boolean): CSSProperties {
+  return {}
 }
 
-export function getAuthInputStyle(isDark: boolean): CSSProperties {
-  return {
-    width: '100%',
-    height: '44px',
-    borderRadius: '8px',
-    border: `2px solid ${isDark ? COLORS.inversePrimary : COLORS.primary}`,
-    backgroundColor: isDark ? COLORS.primaryContainer : COLORS.surfaceContainerLowest,
-    boxShadow: isDark ? `4px 4px 0 ${COLORS.secondaryFixedDim}` : `4px 4px 0 ${COLORS.primary}`,
-    color: isDark ? COLORS.inverseOnSurface : COLORS.onSurface,
-    fontSize: '15px',
-    fontWeight: 600,
-    padding: '8px 12px',
-    outline: 'none',
-    transition: 'border-color 0.2s, box-shadow 0.2s, transform 0.2s',
-  }
+export function getAuthInputStyle(_isDark: boolean): CSSProperties {
+  return {}
 }
 
-export function focusAuthInput(event: FocusEvent<HTMLInputElement>, isDark: boolean): void {
-  event.currentTarget.style.borderColor = isDark ? COLORS.secondaryFixed : COLORS.secondary
-  event.currentTarget.style.boxShadow = isDark ? `4px 4px 0 ${COLORS.inversePrimary}` : `4px 4px 0 ${COLORS.secondary}`
-  event.currentTarget.style.transform = 'translate(-1px, -1px)'
-}
+export function focusAuthInput(_event: FocusEvent<HTMLInputElement>, _isDark: boolean): void {}
 
-export function blurAuthInput(event: FocusEvent<HTMLInputElement>, isDark: boolean): void {
-  event.currentTarget.style.borderColor = isDark ? COLORS.inversePrimary : COLORS.primary
-  event.currentTarget.style.boxShadow = isDark ? `4px 4px 0 ${COLORS.secondaryFixedDim}` : `4px 4px 0 ${COLORS.primary}`
-  event.currentTarget.style.transform = 'translate(0, 0)'
-}
+export function blurAuthInput(_event: FocusEvent<HTMLInputElement>, _isDark: boolean): void {}
+
+export const authCardClassName = 'rounded-xl border-2 border-line bg-surface p-8 text-main shadow-[8px_8px_0_rgb(var(--color-border-strong))] dark:shadow-[8px_8px_0_rgb(var(--color-accent))]'
+export const authInputClassName = 'h-11 w-full rounded-lg border-2 border-line bg-surface px-3 py-2 text-base font-semibold text-main outline-none transition focus:border-line-strong focus:ring-2 focus:ring-accent/60'

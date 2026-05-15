@@ -36,8 +36,8 @@ interface AdminDashboardProps {
 
 type AdminSection = 'leads' | 'merchants' | 'lenders' | 'pipeline' | 'tasks' | 'finance' | 'renewals' | 'reports' | 'communications' | 'settings';
 
-const themedSelectClass = 'w-full rounded-lg border-2 border-theme-yellow bg-slate-950 px-3 py-2 text-sm font-bold text-theme-teal shadow-[4px_4px_0_var(--ct-tertiary-container)] outline-none transition focus:border-theme-teal focus:shadow-[4px_4px_0_var(--ct-secondary-fixed-dim)]';
-const headerClass = 'text-left text-xs font-black uppercase tracking-wider text-theme-yellow';
+const themedSelectClass = 'w-full rounded-lg border-2 border-accent bg-primary px-3 py-2 text-sm font-bold text-secondary shadow-[4px_4px_0_var(--ct-tertiary-container)] outline-none transition focus:border-secondary focus:shadow-[4px_4px_0_var(--ct-secondary-fixed-dim)]';
+const headerClass = 'text-left text-xs font-black uppercase tracking-wider text-accent';
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, merchants, lenders, onExit, themeToggle, onUpdateMerchant, onUpdateLenderInfo, salesReps, onSalesRepCreated, onPrint }) => {
     const [activeSection, setActiveSection] = useState<AdminSection>('leads');
@@ -145,7 +145,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
     const renderPagination = (page: number, total: number, onPage: (page: number) => void) => {
         const totalPages = Math.max(1, Math.ceil(total / 25));
         return (
-            <div className="mt-4 flex items-center justify-center gap-3 text-sm font-black text-theme-maroon dark:text-theme-yellow">
+            <div className="mt-4 flex items-center justify-center gap-3 text-sm font-black text-main ">
                 <PrimaryButton label="Previous" size="small" disabled={page <= 1} onClick={() => onPage(Math.max(1, page - 1))} />
                 <span>Page {page} of {totalPages}</span>
                 <PrimaryButton label="Next" size="small" disabled={page >= totalPages} onClick={() => onPage(Math.min(totalPages, page + 1))} />
@@ -156,7 +156,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
     const renderMerchants = () => (
         <div className="space-y-4">
             <FilterBar entityType="merchants" filters={merchantFilters} onFilterChange={(next) => { setMerchantFilters(next); setMerchantPage(1); }} onReset={() => { setMerchantFilters({}); setMerchantPage(1); }} salesReps={salesReps} isAdmin currentUserRole={currentUser.role} />
-            <div className="grid grid-cols-12 gap-4 px-4 text-xs font-black uppercase tracking-wider text-theme-yellow">
+            <div className="grid grid-cols-12 gap-4 px-4 text-xs font-black uppercase tracking-wider text-accent">
                 <div className="col-span-12 md:col-span-3">Business Name</div>
                 <div className="col-span-12 md:col-span-2">Sales Rep</div>
                 <div className="col-span-12 md:col-span-2">Monthly Revenue</div>
@@ -164,9 +164,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                 <div className="col-span-12 md:col-span-2 text-right">Action</div>
             </div>
             {merchantRows.length > 0 ? merchantRows.map((sub) => (
-                <div key={sub.id} className="grid grid-cols-12 items-center gap-4 rounded-xl border-2 border-theme-maroon/80 bg-white/95 p-4 shadow-[6px_6px_0_var(--ct-primary)] dark:border-theme-yellow/80 dark:bg-dark-card/95 dark:shadow-[6px_6px_0_var(--ct-secondary-fixed-dim)]">
+                <div key={sub.id} className="grid grid-cols-12 items-center gap-4 rounded-xl border-2 border-line-strong/80 bg-surface/95 p-4 shadow-[6px_6px_0_var(--ct-primary)] dark:border-accent/80 /95 dark:shadow-[6px_6px_0_var(--ct-secondary-fixed-dim)]">
                     <div className="col-span-12 md:col-span-3">
-                        <p className="text-sm font-black text-theme-maroon dark:text-theme-yellow">{sub.businessInfo.legalName}</p>
+                        <p className="text-sm font-black text-main ">{sub.businessInfo.legalName}</p>
                     </div>
                     <div className="col-span-12 md:col-span-2">
                         <select
@@ -182,7 +182,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                         </select>
                     </div>
                     <div className="col-span-12 md:col-span-2">
-                        <p className="text-sm font-bold text-slate-700 dark:text-slate-200">${Number(sub.businessInfo.monthlyRevenue).toLocaleString()}</p>
+                        <p className="text-sm font-bold text-main">${Number(sub.businessInfo.monthlyRevenue).toLocaleString()}</p>
                     </div>
                     <div className="col-span-12 md:col-span-3">
                         <select value={sub.status} onChange={(e) => onUpdateMerchant({ ...sub, status: e.target.value as ApplicationStatus })} className={themedSelectClass}>
@@ -192,7 +192,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                     <div className="col-span-12 text-right md:col-span-2"><PrimaryButton label="View Details" size="small" onClick={() => handleSelectItem(sub)} /></div>
                 </div>
             )) : (
-                <Card className="p-8 text-center text-sm font-semibold text-slate-500 dark:text-slate-300">No merchant submissions yet.</Card>
+                <Card className="p-8 text-center text-sm font-semibold text-muted ">No merchant submissions yet.</Card>
             )}
             {renderPagination(merchantPage, merchantTotal, setMerchantPage)}
         </div>
@@ -207,14 +207,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
                         <thead><tr><th className={headerClass}>Lender</th><th className={headerClass}>Contact</th><th className={headerClass}>Min Revenue</th><th className="relative"><span className="sr-only">View</span></th></tr></thead>
                         <tbody>
                             {lenderRows.length > 0 ? lenderRows.map((sub) => (
-                                <tr key={sub.id} className="rounded-xl bg-slate-950/5 dark:bg-slate-950/40">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-theme-maroon dark:text-theme-yellow">{sub.lenderName}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{sub.email}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">{sub.minRevenue}</td>
+                                <tr key={sub.id} className="rounded-xl bg-surface-muted /40">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-main ">{sub.lenderName}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{sub.email}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{sub.minRevenue}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><PrimaryButton label="View Details" size="small" onClick={() => handleSelectItem(sub)} /></td>
                                 </tr>
                             )) : (
-                                <tr><td colSpan={4} className="px-6 py-12 text-center text-sm text-slate-500 dark:text-slate-400">No lender submissions yet.</td></tr>
+                                <tr><td colSpan={4} className="px-6 py-12 text-center text-sm text-muted">No lender submissions yet.</td></tr>
                             )}
                         </tbody>
                     </table>
@@ -249,10 +249,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, mer
         >
             {selectedItem ? renderSelectedItem() : (
                 <div className={activeSection === 'pipeline' ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}>
-                    <div className="mb-5 rounded-xl border-2 border-theme-maroon/80 bg-white/95 p-4 shadow-[6px_6px_0_var(--ct-primary)] dark:border-theme-yellow/80 dark:bg-dark-card/95 dark:shadow-[6px_6px_0_var(--ct-secondary-fixed-dim)] flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="mb-5 rounded-xl border-2 border-line-strong/80 bg-surface/95 p-4 shadow-[6px_6px_0_var(--ct-primary)] dark:border-accent/80 /95 dark:shadow-[6px_6px_0_var(--ct-secondary-fixed-dim)] flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                         <div>
-                            <p className="text-sm font-bold text-theme-maroon dark:text-theme-teal">Signed in as {currentUser.full_name ?? currentUser.name ?? currentUser.email}</p>
-                            {listError && <p className="mt-1 text-xs font-bold text-red-600 dark:text-red-300">{listError}</p>}
+                            <p className="text-sm font-bold text-main ">Signed in as {currentUser.full_name ?? currentUser.name ?? currentUser.email}</p>
+                            {listError && <p className="mt-1 text-xs font-bold text-danger dark:text-danger">{listError}</p>}
                         </div>
                         <SearchBar onSelectResult={handleSearchSelect} />
                     </div>

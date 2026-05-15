@@ -47,7 +47,7 @@ const metricCards = (metrics: Record<string, number | string>, keys?: string[]) 
 };
 
 const chartSection = (title: string, rows?: ReportBreakdownRow[], amountMode = false) => (
-  <ReportSection title={title}>{rows && rows.length > 0 ? <SimpleBarChart rows={rows} amountMode={amountMode} /> : <p className="text-sm text-slate-500">No data yet.</p>}</ReportSection>
+  <ReportSection title={title}>{rows && rows.length > 0 ? <SimpleBarChart rows={rows} amountMode={amountMode} /> : <p className="text-sm text-muted">No data yet.</p>}</ReportSection>
 );
 
 const tableRowsFromBreakdown = (rows: ReportBreakdownRow[]): ReportDrilldownRow[] => rows.map(row => ({ id: row.key, label: row.label, amount: row.amount, status: row.percent !== undefined ? `${row.percent}%` : undefined, metadata: { count: row.count } }));
@@ -133,14 +133,14 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentUser, salesReps
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-2xl font-black text-theme-maroon dark:text-theme-yellow">{currentUser.role === 'admin' ? 'Reports' : 'My Reports'}</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Broker-shop analytics from existing CRM data.</p>
+        <h2 className="text-2xl font-black text-main ">{currentUser.role === 'admin' ? 'Reports' : 'My Reports'}</h2>
+        <p className="text-sm text-muted">Broker-shop analytics from existing CRM data.</p>
       </div>
       <ReportFilters filters={filters} onChange={setFilters} salesReps={salesReps} lenders={lenders} currentUserRole={currentUser.role} showLenderFilter={activeTab === 'funding' || activeTab === 'lenders' || activeTab === 'revenue'} />
       <div className="flex flex-wrap gap-2">
         {tabs.map(tab => <span key={tab.id}><PrimaryButton label={tab.label} size="small" variant={activeTab === tab.id ? 'funded' : 'default'} onClick={() => setActiveTab(tab.id)} /></span>)}
       </div>
-      {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</p>}
+      {error && <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger dark:bg-danger/20 dark:text-danger">{error}</p>}
       {loading ? <MCAKingLoader label="Loading report..." centered /> : renderReport()}
     </div>
   );

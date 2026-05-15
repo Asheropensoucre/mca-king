@@ -61,9 +61,9 @@ export const RenewalModal: React.FC<RenewalModalProps> = ({ renewal, merchantId,
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <form onSubmit={submit}>
-          <div className="border-b p-6 dark:border-slate-700">
-            <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">{renewal ? 'Update Renewal' : 'Create Renewal'}</h3>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Track broker-shop renewal follow-up for this funded merchant.</p>
+          <div className="border-b p-6 ">
+            <h3 className="text-lg font-black text-main ">{renewal ? 'Update Renewal' : 'Create Renewal'}</h3>
+            <p className="mt-1 text-sm text-muted">Track broker-shop renewal follow-up for this funded merchant.</p>
           </div>
           <div className="grid grid-cols-1 gap-4 p-6 md:grid-cols-2">
             <Input label="Eligibility Date" type="date" value={form.eligibility_date} onChange={event => setForm({ ...form, eligibility_date: event.target.value })} required />
@@ -76,9 +76,9 @@ export const RenewalModal: React.FC<RenewalModalProps> = ({ renewal, merchantId,
             <Input label="Last Contacted" type="datetime-local" value={form.last_contacted_at} onChange={event => setForm({ ...form, last_contacted_at: event.target.value })} />
             <Input label="Next Follow-up" type="datetime-local" value={form.next_follow_up_at} onChange={event => setForm({ ...form, next_follow_up_at: event.target.value })} />
             <div className="md:col-span-2"><Textarea label="Internal Notes" value={form.notes} onChange={event => setForm({ ...form, notes: event.target.value })} rows={3} /></div>
-            {error && <p className="md:col-span-2 text-sm font-semibold text-red-600 dark:text-red-300">{error}</p>}
+            {error && <p className="md:col-span-2 text-sm font-semibold text-danger dark:text-danger">{error}</p>}
           </div>
-          <div className="flex justify-end gap-2 border-t p-4 dark:border-slate-700">
+          <div className="flex justify-end gap-2 border-t p-4 ">
             <PrimaryButton label="Cancel" size="small" variant="danger" onClick={onClose} />
             <PrimaryButton type="submit" label={saving ? 'Saving...' : 'Save Renewal'} size="small" disabled={saving} />
           </div>

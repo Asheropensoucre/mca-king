@@ -121,13 +121,13 @@ export const FundingModal: React.FC<FundingModalProps> = ({ merchant, lenders, c
       <Card className="max-h-[92vh] w-full max-w-3xl overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <div className="p-6">
-            <h3 className="text-xl font-black text-theme-maroon dark:text-theme-yellow">Mark Deal Funded</h3>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Create a funding record for {merchant.businessInfo.legalName} and move the merchant to FUNDED.</p>
-            {error && <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</p>}
+            <h3 className="text-xl font-black text-main ">Mark Deal Funded</h3>
+            <p className="mt-1 text-sm text-muted">Create a funding record for {merchant.businessInfo.legalName} and move the merchant to FUNDED.</p>
+            {error && <p className="mt-4 rounded-md bg-danger/10 px-3 py-2 text-sm text-danger dark:bg-danger/20 dark:text-danger">{error}</p>}
 
-            <div className="mt-6 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-              <h4 className="font-black text-theme-maroon dark:text-theme-yellow">Funding Record Type</h4>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Track first-time funding, later renewals, and multiple lender/funder positions on the same merchant.</p>
+            <div className="mt-6 rounded-xl border border-line p-4 ">
+              <h4 className="font-black text-main ">Funding Record Type</h4>
+              <p className="mt-1 text-sm text-muted">Track first-time funding, later renewals, and multiple lender/funder positions on the same merchant.</p>
               <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
                 <Select label="Funding Round" value={fundingRoundValue} onChange={event => handleFundingRoundChange(event.target.value)}>
                   <option value="first_funding">First Funding</option>
@@ -161,16 +161,16 @@ export const FundingModal: React.FC<FundingModalProps> = ({ merchant, lenders, c
             </div>
 
             {canCreateFinanceRecords && (
-              <div className="mt-6 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                <h4 className="font-black text-theme-maroon dark:text-theme-yellow">Broker Revenue + Rep Commission</h4>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Optional internal records. This tracks money owed to the brokerage by the lender/funder and internal sales rep payout. No lender-side manager payout is created.</p>
+              <div className="mt-6 rounded-xl border border-line p-4 ">
+                <h4 className="font-black text-main ">Broker Revenue + Rep Commission</h4>
+                <p className="mt-1 text-sm text-muted">Optional internal records. This tracks money owed to the brokerage by the lender/funder and internal sales rep payout. No lender-side manager payout is created.</p>
                 <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                   <Input label="Broker Revenue Amount ($)" type="number" min="0" step="0.01" value={brokerRevenueAmount} onChange={event => setBrokerRevenueAmount(event.target.value)} />
                   <Input label="Broker Revenue Rate" type="number" min="0" step="0.001" value={brokerRevenueRate} onChange={event => setBrokerRevenueRate(event.target.value)} />
                   <Input label="Sales Rep Commission Amount ($)" type="number" min="0" step="0.01" value={salesRepCommissionAmount} onChange={event => setSalesRepCommissionAmount(event.target.value)} disabled={!merchant.salesRepId} />
                   <Input label="Sales Rep Commission Rate" type="number" min="0" step="0.001" value={salesRepCommissionRate} onChange={event => setSalesRepCommissionRate(event.target.value)} disabled={!merchant.salesRepId} />
                 </div>
-                {!merchant.salesRepId && <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Assign a sales rep before creating an internal sales rep commission record.</p>}
+                {!merchant.salesRepId && <p className="mt-3 text-sm text-muted">Assign a sales rep before creating an internal sales rep commission record.</p>}
               </div>
             )}
 
@@ -178,7 +178,7 @@ export const FundingModal: React.FC<FundingModalProps> = ({ merchant, lenders, c
               <Textarea label="Funding Notes" value={notes} onChange={event => setNotes(event.target.value)} rows={3} />
             </div>
           </div>
-          <div className="flex justify-end gap-3 border-t bg-slate-50 p-4 dark:bg-slate-800/50">
+          <div className="flex justify-end gap-3 border-t bg-surface-muted p-4 -muted/50">
             <PrimaryButton label="Cancel" size="small" variant="danger" onClick={onClose} disabled={submitting} />
             <PrimaryButton label={submitting ? 'Saving...' : 'Mark Funded'} type="submit" variant="funded" disabled={submitting} />
           </div>

@@ -33,9 +33,9 @@ export const OwnersForm: React.FC<OwnersFormProps> = ({ data, updateData }) => {
   return (
     <div className="space-y-8">
       {data.map((owner, index) => (
-        <div key={owner.id} className="p-6 relative border border-slate-200 dark:border-slate-700 rounded-lg">
+        <div key={owner.id} className="p-6 relative border border-line rounded-lg">
           <div className="flex justify-between items-start mb-4">
-            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Owner #{index + 1}</h3>
+            <h3 className="text-lg font-semibold text-main ">Owner #{index + 1}</h3>
             {data.length > 1 && (
               <PrimaryButton label="Remove" size="small" variant="danger" onClick={() => removeOwner(index)} />
             )}
@@ -57,8 +57,8 @@ export const OwnersForm: React.FC<OwnersFormProps> = ({ data, updateData }) => {
       <div className="flex justify-between items-center mt-6">
         <PrimaryButton label="+ Add Another Owner" size="small" onClick={addOwner} />
         <div className="text-right">
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Total Ownership: <span className={`font-bold ${totalOwnership === 100 ? 'text-theme-teal' : 'text-theme-red'}`}>{totalOwnership}%</span></p>
-            {totalOwnership !== 100 && <p className="text-xs text-theme-red">Total ownership must equal 100%.</p>}
+            <p className="text-sm font-medium text-main">Total Ownership: <span className={`font-bold ${totalOwnership === 100 ? 'text-secondary' : 'text-danger'}`}>{totalOwnership}%</span></p>
+            {totalOwnership !== 100 && <p className="text-xs text-danger">Total ownership must equal 100%.</p>}
         </div>
       </div>
     </div>

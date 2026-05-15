@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import type { AuthUser } from '../../../types'
 import { DarkModeToggle } from '../ui/DarkModeToggle'
 import { PrimaryButton } from '../ui/PrimaryButton'
-import { blurAuthInput, focusAuthInput, getAuthCardStyle, getAuthInputStyle } from '../ui/authTheme'
+import { authCardClassName, authInputClassName } from '../ui/authTheme'
 
 type AuthMode = 'login' | 'register'
 
@@ -20,8 +20,6 @@ type LoginResponse = {
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onModeChange, theme, setTheme }) => {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const isDark = theme === 'dark'
-  const authInputStyle = getAuthInputStyle(isDark)
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -54,51 +52,35 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onModeChange, the
   }
 
   return (
-    <div className="relative min-h-screen bg-slate-50 p-4 dark:bg-dark-bg">
+    <div className="relative min-h-screen bg-app p-4 text-main">
       <div className="absolute right-6 top-6 z-10">
         <DarkModeToggle isDark={theme === 'dark'} onToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')} />
       </div>
       <div className="flex min-h-[calc(100vh-6rem)] items-center justify-center">
-        <div className="w-full max-w-md p-8" style={getAuthCardStyle(isDark)}>
+        <div className={`w-full max-w-md ${authCardClassName}`}>
           <img src="/logo.png" alt="MCA King Logo" className="mx-auto mb-6 h-20 w-auto" />
-          <h1 className="text-center text-3xl font-bold text-slate-800 dark:text-slate-100">Sign In</h1>
-          <p className="mt-2 text-center text-sm text-slate-500 dark:text-slate-400">Access your MCA King dashboard.</p>
+          <h1 className="text-center text-3xl font-black text-main">Sign In</h1>
+          <p className="mt-2 text-center text-sm font-semibold text-muted">Access your MCA King dashboard.</p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             <label className="block">
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Email</span>
-              <input
-                name="email"
-                type="email"
-                required
-                autoComplete="email"
-                style={authInputStyle}
-                onFocus={event => focusAuthInput(event, isDark)}
-                onBlur={event => blurAuthInput(event, isDark)}
-              />
+              <span className="text-sm font-bold text-main">Email</span>
+              <input name="email" type="email" required autoComplete="email" className={authInputClassName} />
             </label>
 
             <label className="block">
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Password</span>
-              <input
-                name="password"
-                type="password"
-                required
-                autoComplete="current-password"
-                style={authInputStyle}
-                onFocus={event => focusAuthInput(event, isDark)}
-                onBlur={event => blurAuthInput(event, isDark)}
-              />
+              <span className="text-sm font-bold text-main">Password</span>
+              <input name="password" type="password" required autoComplete="current-password" className={authInputClassName} />
             </label>
 
-            {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</p>}
+            {error && <p className="rounded-lg bg-danger px-3 py-2 text-sm font-bold text-on-danger">{error}</p>}
 
             <div className="flex justify-center pt-2">
               <PrimaryButton type="submit" label={submitting ? 'Signing In...' : 'Sign In'} disabled={submitting} onClick={() => undefined} fullWidth />
             </div>
           </form>
 
-          <div className="mt-6 flex flex-col items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
+          <div className="mt-6 flex flex-col items-center gap-3 text-sm font-semibold text-muted">
             <span>Don&apos;t have an account?</span>
             <PrimaryButton label="Register" size="small" onClick={() => onModeChange('register')} />
           </div>

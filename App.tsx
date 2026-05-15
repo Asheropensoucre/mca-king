@@ -192,10 +192,10 @@ const App: React.FC = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-dark-card rounded-lg shadow-lg text-center p-8 max-w-lg">
+            <div className="bg-surface rounded-lg shadow-lg text-center p-8 max-w-lg">
                 <img src="/logo.png" alt="MCA King Logo" className="mx-auto mb-6 h-20 w-auto" />
-                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-4">{isMerchant ? 'Application Submitted!' : 'Lender Info Submitted!'}</h2>
-                <p className="text-slate-600 dark:text-slate-400 mt-2">Thank you. We have received your {isMerchant ? 'application' : 'information'}.</p>
+                <h2 className="text-2xl font-bold text-main mt-4">{isMerchant ? 'Application Submitted!' : 'Lender Info Submitted!'}</h2>
+                <p className="text-muted  mt-2">Thank you. We have received your {isMerchant ? 'application' : 'information'}.</p>
                 <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center mt-6">
                     <PrimaryButton label="View My Dashboard" onClick={() => { setIsSubmitted(false); setSetupView('dashboard'); }} />
                     {isMerchant && <PrimaryButton label="Download Application PDF" onClick={handleDownloadPdf} variant="funded" />}
@@ -212,13 +212,13 @@ const App: React.FC = () => {
         <img src="/logo.png" alt="MCA King Logo" className="mb-8 h-24 w-auto" />
         <div className="w-full max-w-6xl relative">
           <div className="mb-4 flex justify-end">{darkModeToggle}</div>
-          <div className="bg-white dark:bg-dark-card rounded-xl shadow-lg grid md:grid-cols-3">
-            <div className="p-12 border-r border-slate-200 dark:border-theme-maroon/50 hidden md:block"><StepIndicator steps={STEPS.map(s => s.name)} descriptions={STEPS.map(s => s.description)} currentStep={currentStep} /></div>
+          <div className="bg-surface rounded-xl shadow-lg grid md:grid-cols-3">
+            <div className="p-12 border-r border-line -strong/50 hidden md:block"><StepIndicator steps={STEPS.map(s => s.name)} descriptions={STEPS.map(s => s.description)} currentStep={currentStep} /></div>
             <div className="md:col-span-2 p-12">
-              <header className="mb-8"><h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100">{STEPS[currentStep].name}</h1><p className="text-slate-500 dark:text-slate-400 mt-1">{STEPS[currentStep].description}</p></header>
+              <header className="mb-8"><h1 className="text-4xl font-bold text-main">{STEPS[currentStep].name}</h1><p className="text-muted mt-1">{STEPS[currentStep].description}</p></header>
               <form onSubmit={handleMerchantSubmit} noValidate>
                 <div className="mb-8">{renderStepContent()}</div>
-                <div className="mt-8 pt-5 border-t border-slate-200 dark:border-slate-700 flex justify-between">
+                <div className="mt-8 pt-5 border-t border-line flex justify-between">
                   <PrimaryButton label="Back" size="small" variant="danger" onClick={() => setCurrentStep(Math.max(0, currentStep - 1))} disabled={currentStep === 0} />
                   {currentStep < STEPS.length - 1 ? <PrimaryButton label="Next" onClick={() => isStepValid && setCurrentStep(currentStep + 1)} disabled={!isStepValid} /> : <PrimaryButton type="submit" label="Submit Application" disabled={formData.documents.length === 0} variant="funded" />}
                 </div>

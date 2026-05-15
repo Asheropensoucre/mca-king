@@ -62,29 +62,29 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSelectResult }) => {
   return (
     <div ref={containerRef} className="relative w-full max-w-xl">
       <div className="relative">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-theme-teal">⌕</span>
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-secondary">⌕</span>
         <input
           value={term}
           onChange={event => setTerm(event.target.value)}
           onFocus={() => term.trim().length >= 2 && setOpen(true)}
           onKeyDown={event => { if (event.key === 'Escape') setOpen(false); }}
           placeholder="Search merchants, leads, lenders..."
-          className="w-full rounded-xl border-2 border-theme-teal/60 bg-white px-10 py-2 text-sm font-semibold text-slate-900 shadow-[4px_4px_0_var(--ct-primary)] outline-none focus:border-theme-yellow dark:bg-slate-900 dark:text-slate-100 dark:shadow-[4px_4px_0_var(--ct-secondary-fixed-dim)]"
+          className="w-full rounded-xl border-2 border-secondary/60 bg-surface px-10 py-2 text-sm font-semibold text-main shadow-[4px_4px_0_var(--ct-primary)] outline-none focus:border-accent -muted  dark:shadow-[4px_4px_0_var(--ct-secondary-fixed-dim)]"
         />
-        {loading && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-theme-teal">...</span>}
+        {loading && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-secondary">...</span>}
       </div>
 
       {open && (
-        <div className="absolute z-50 mt-2 max-h-96 w-full overflow-y-auto rounded-xl border-2 border-theme-maroon bg-white p-3 shadow-[6px_6px_0_var(--ct-primary)] dark:border-theme-yellow dark:bg-slate-950 dark:shadow-[6px_6px_0_var(--ct-secondary-fixed-dim)]">
-          {error && <p className="p-3 text-sm text-red-600 dark:text-red-300">{error}</p>}
-          {!error && !hasResults && <p className="p-3 text-sm font-semibold text-slate-500 dark:text-slate-400">No results</p>}
+        <div className="absolute z-50 mt-2 max-h-96 w-full overflow-y-auto rounded-xl border-2 border-line-strong bg-surface p-3 shadow-[6px_6px_0_var(--ct-primary)] dark:border-accent  dark:shadow-[6px_6px_0_var(--ct-secondary-fixed-dim)]">
+          {error && <p className="p-3 text-sm text-danger dark:text-danger">{error}</p>}
+          {!error && !hasResults && <p className="p-3 text-sm font-semibold text-muted">No results</p>}
 
           {results.merchants.length > 0 && (
             <SearchSection title="Merchants">
               {results.merchants.map(merchant => (
-                <button key={merchant.id} type="button" onClick={() => select({ type: 'merchant', id: merchant.id })} className="w-full rounded-lg p-2 text-left hover:bg-theme-yellow/20">
-                  <p className="font-black text-theme-maroon dark:text-theme-yellow">{merchant.business_name}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{merchant.status} • {merchant.state || 'No state'}</p>
+                <button key={merchant.id} type="button" onClick={() => select({ type: 'merchant', id: merchant.id })} className="w-full rounded-lg p-2 text-left hover:bg-accent/20">
+                  <p className="font-black text-main ">{merchant.business_name}</p>
+                  <p className="text-xs text-muted">{merchant.status} • {merchant.state || 'No state'}</p>
                 </button>
               ))}
             </SearchSection>
@@ -93,9 +93,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSelectResult }) => {
           {results.leads.length > 0 && (
             <SearchSection title="Leads">
               {results.leads.map(lead => (
-                <button key={lead.id} type="button" onClick={() => select({ type: 'lead', id: lead.id })} className="w-full rounded-lg p-2 text-left hover:bg-theme-yellow/20">
-                  <p className="font-black text-theme-maroon dark:text-theme-yellow">{lead.business_name}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{lead.owner_name || 'No owner'} • {lead.status}</p>
+                <button key={lead.id} type="button" onClick={() => select({ type: 'lead', id: lead.id })} className="w-full rounded-lg p-2 text-left hover:bg-accent/20">
+                  <p className="font-black text-main ">{lead.business_name}</p>
+                  <p className="text-xs text-muted">{lead.owner_name || 'No owner'} • {lead.status}</p>
                 </button>
               ))}
             </SearchSection>
@@ -104,9 +104,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSelectResult }) => {
           {results.lenders.length > 0 && (
             <SearchSection title="Lenders">
               {results.lenders.map(lender => (
-                <button key={lender.id} type="button" onClick={() => select({ type: 'lender', id: lender.id })} className="w-full rounded-lg p-2 text-left hover:bg-theme-yellow/20">
-                  <p className="font-black text-theme-maroon dark:text-theme-yellow">{lender.company_name}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{lender.contact_name || 'No contact'} • {lender.contact_email}</p>
+                <button key={lender.id} type="button" onClick={() => select({ type: 'lender', id: lender.id })} className="w-full rounded-lg p-2 text-left hover:bg-accent/20">
+                  <p className="font-black text-main ">{lender.company_name}</p>
+                  <p className="text-xs text-muted">{lender.contact_name || 'No contact'} • {lender.contact_email}</p>
                 </button>
               ))}
             </SearchSection>
@@ -119,7 +119,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSelectResult }) => {
 
 const SearchSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <div className="mb-3 last:mb-0">
-    <h4 className="mb-1 text-xs font-black uppercase tracking-wider text-theme-teal">{title}</h4>
+    <h4 className="mb-1 text-xs font-black uppercase tracking-wider text-secondary">{title}</h4>
     <div className="space-y-1">{children}</div>
   </div>
 );

@@ -27,7 +27,7 @@ export const ReportTable: React.FC<ReportTableProps> = ({ title, rows, exportNam
   return (
     <div>
       <div className="mb-3 flex items-center justify-between gap-3">
-        {title && <h4 className="text-sm font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">{title}</h4>}
+        {title && <h4 className="text-sm font-black uppercase tracking-wide text-muted">{title}</h4>}
         <PrimaryButton label="Export CSV" size="small" disabled={safeRows.length === 0} onClick={() => {
           void fetch('/api/audit/report-export', {
             method: 'POST',
@@ -37,10 +37,10 @@ export const ReportTable: React.FC<ReportTableProps> = ({ title, rows, exportNam
           downloadCsv(exportName, safeRows.map(flatten));
         }} />
       </div>
-      <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+      <div className="overflow-x-auto rounded-lg border border-line">
         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-          <thead className="bg-slate-950/90">
-            <tr className="text-left text-xs font-black uppercase tracking-wider text-theme-yellow">
+          <thead className="bg-primary">
+            <tr className="text-left text-xs font-black uppercase tracking-wider text-accent">
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Details</th>
               <th className="px-4 py-3">Status</th>
@@ -51,13 +51,13 @@ export const ReportTable: React.FC<ReportTableProps> = ({ title, rows, exportNam
           <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
             {safeRows.length > 0 ? safeRows.map(row => (
               <tr key={row.id}>
-                <td className="px-4 py-3 text-sm font-bold text-slate-900 dark:text-slate-100">{row.label}</td>
-                <td className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">{row.secondary ?? '—'}</td>
-                <td className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">{row.status ?? '—'}</td>
-                <td className="px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200">{row.amount !== undefined && row.amount !== null ? formatMetricValue('amount', Number(row.amount)) : '—'}</td>
-                <td className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">{row.date ? new Date(row.date).toLocaleDateString() : '—'}</td>
+                <td className="px-4 py-3 text-sm font-bold text-main">{row.label}</td>
+                <td className="px-4 py-3 text-sm text-muted">{row.secondary ?? '—'}</td>
+                <td className="px-4 py-3 text-sm text-muted">{row.status ?? '—'}</td>
+                <td className="px-4 py-3 text-sm font-bold text-main">{row.amount !== undefined && row.amount !== null ? formatMetricValue('amount', Number(row.amount)) : '—'}</td>
+                <td className="px-4 py-3 text-sm text-muted">{row.date ? new Date(row.date).toLocaleDateString() : '—'}</td>
               </tr>
-            )) : <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-500">No rows for this report yet.</td></tr>}
+            )) : <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-muted">No rows for this report yet.</td></tr>}
           </tbody>
         </table>
       </div>

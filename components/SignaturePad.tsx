@@ -140,7 +140,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSignatureEnd }) =>
         onTouchStart={startDrawing}
         onTouchMove={draw}
         onTouchEnd={finishDrawing}
-        className="w-full touch-none rounded-lg border-2 border-slate-300 bg-white aspect-[3/1] focus:border-theme-yellow focus:ring-2 focus:ring-theme-yellow/50 focus:outline-none dark:border-slate-600"
+        className="w-full touch-none rounded-lg border-2 border-line bg-surface aspect-[3/1] focus:border-accent focus:ring-2 focus:ring-accent/50 focus:outline-none "
       />
       <div className="mt-2 text-right">
         <PrimaryButton label="Clear Signature" size="small" variant="danger" onClick={clearSignature} />

@@ -15,10 +15,10 @@ interface TaskPanelProps {
 }
 
 const priorityClasses: Record<TaskPriority, string> = {
-  urgent: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200',
-  high: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200',
-  normal: 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-200',
-  low: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
+  urgent: 'bg-danger/15 text-danger dark:bg-danger/25 dark:text-danger',
+  high: 'bg-warning/15 text-warning dark:bg-warning/25 dark:text-warning',
+  normal: 'bg-secondary/15 text-secondary /25 ',
+  low: 'bg-surface-muted text-main  ',
 };
 
 function isOverdue(task: Task): boolean {
@@ -79,16 +79,16 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ entityType, entityId, curr
   };
 
   const renderTask = (task: Task) => (
-    <div key={task.id} className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+    <div key={task.id} className="rounded-xl border border-line bg-surface-muted/80 p-4  -muted">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <p className={`font-black ${task.status === 'completed' ? 'text-slate-500 line-through' : 'text-theme-maroon dark:text-theme-yellow'}`}>{task.title}</p>
+            <p className={`font-black ${task.status === 'completed' ? 'text-muted line-through' : 'text-main '}`}>{task.title}</p>
             <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${priorityClasses[task.priority]}`}>{task.priority}</span>
           </div>
-          {task.description && <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{task.description}</p>}
-          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-            {task.entity_name ? `${task.entity_name} • ` : ''}Assigned to {task.assignee_name || 'Unassigned'} • <span className={isOverdue(task) ? 'font-black text-red-600 dark:text-red-300' : ''}>{dueLabel(task)}</span>
+          {task.description && <p className="mt-1 text-sm text-muted">{task.description}</p>}
+          <p className="mt-2 text-xs text-muted">
+            {task.entity_name ? `${task.entity_name} • ` : ''}Assigned to {task.assignee_name || 'Unassigned'} • <span className={isOverdue(task) ? 'font-black text-danger dark:text-danger' : ''}>{dueLabel(task)}</span>
           </p>
         </div>
         {task.status === 'open' && (
@@ -103,8 +103,8 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ entityType, entityId, curr
       <div className="p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">{title}</h3>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Follow-ups, reminders, and next actions.</p>
+            <h3 className="text-lg font-black text-main ">{title}</h3>
+            <p className="mt-1 text-sm text-muted">Follow-ups, reminders, and next actions.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {overview && <PrimaryButton label={expanded ? 'Show Less' : 'View All'} size="small" onClick={() => setExpanded(prev => !prev)} />}
@@ -114,28 +114,28 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ entityType, entityId, curr
 
         {overview && (
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-black text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">Urgent: {urgentCount}</div>
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-black text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">Overdue: {overdueCount}</div>
-            <div className="rounded-lg border border-teal-200 bg-teal-50 p-3 text-sm font-black text-teal-700 dark:border-teal-900 dark:bg-teal-950/30 dark:text-teal-300">Due Today: {dueTodayCount}</div>
+            <div className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm font-black text-danger dark:border-danger/40 dark:bg-danger/15 dark:text-danger">Urgent: {urgentCount}</div>
+            <div className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm font-black text-warning dark:border-warning/40 dark:bg-warning/15 dark:text-warning">Overdue: {overdueCount}</div>
+            <div className="rounded-lg border border-secondary/30 bg-secondary/10 p-3 text-sm font-black text-secondary dark:border-secondary/40 /15 ">Due Today: {dueTodayCount}</div>
           </div>
         )}
 
-        {error && <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</p>}
+        {error && <p className="mt-4 rounded-md bg-danger/10 px-3 py-2 text-sm text-danger dark:bg-danger/20 dark:text-danger">{error}</p>}
 
         <div className="mt-5 space-y-3">
-          {loading ? <MCAKingLoader label="Loading tasks..." size="small" /> : visibleTasks.length > 0 ? visibleTasks.map(renderTask) : <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">No open tasks.</p>}
+          {loading ? <MCAKingLoader label="Loading tasks..." size="small" /> : visibleTasks.length > 0 ? visibleTasks.map(renderTask) : <p className="rounded-xl border border-dashed border-line p-6 text-center text-sm text-muted  ">No open tasks.</p>}
         </div>
 
         {!overview && completedTasks.length > 0 && (
           <details className="mt-5">
-            <summary className="cursor-pointer text-sm font-black text-slate-500 dark:text-slate-400">Completed ({completedTasks.length})</summary>
+            <summary className="cursor-pointer text-sm font-black text-muted">Completed ({completedTasks.length})</summary>
             <div className="mt-3 space-y-3 opacity-75">{completedTasks.map(renderTask)}</div>
           </details>
         )}
 
         {!overview && cancelledTasks.length > 0 && (
           <details className="mt-3">
-            <summary className="cursor-pointer text-sm font-black text-slate-500 dark:text-slate-400">Cancelled ({cancelledTasks.length})</summary>
+            <summary className="cursor-pointer text-sm font-black text-muted">Cancelled ({cancelledTasks.length})</summary>
             <div className="mt-3 space-y-3 opacity-60">{cancelledTasks.map(renderTask)}</div>
           </details>
         )}

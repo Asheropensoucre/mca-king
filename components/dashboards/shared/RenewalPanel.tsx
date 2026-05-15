@@ -46,33 +46,33 @@ export const RenewalPanel: React.FC<RenewalPanelProps> = ({ merchantId, currentU
       <div className="p-6">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Renewals</h3>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Broker-shop renewal follow-up after funding.</p>
+            <h3 className="text-lg font-black text-main ">Renewals</h3>
+            <p className="mt-1 text-sm text-muted">Broker-shop renewal follow-up after funding.</p>
           </div>
           <PrimaryButton label="Add Follow-Up" size="small" onClick={() => setCreating(true)} />
         </div>
-        {loading ? <div className="mt-4"><MCAKingLoader label="Loading renewals..." size="small" /></div> : error ? <p className="mt-4 text-sm text-red-600">{error}</p> : renewals.length > 0 ? (
+        {loading ? <div className="mt-4"><MCAKingLoader label="Loading renewals..." size="small" /></div> : error ? <p className="mt-4 text-sm text-danger">{error}</p> : renewals.length > 0 ? (
           <div className="mt-4 space-y-3">
             {renewals.map(renewal => (
-              <div key={renewal.id} className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
+              <div key={renewal.id} className="rounded-lg border border-line p-4 ">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="font-black text-theme-maroon dark:text-theme-yellow">{renewal.status.replaceAll('_', ' ')}</p>
-                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Eligible: {date(renewal.eligibility_date)} · Lender: {renewal.lender_name ?? 'N/A'}</p>
+                    <p className="font-black text-main ">{renewal.status.replaceAll('_', ' ')}</p>
+                    <p className="mt-1 text-sm text-muted">Eligible: {date(renewal.eligibility_date)} · Lender: {renewal.lender_name ?? 'N/A'}</p>
                   </div>
                   <PrimaryButton label="Update" size="small" onClick={() => setEditing(renewal)} />
                 </div>
                 <dl className="mt-3 grid grid-cols-2 gap-3 text-xs md:grid-cols-4">
-                  <div><dt className="font-bold text-slate-500">Funded</dt><dd>{money(renewal.funded_amount)}</dd></div>
-                  <div><dt className="font-bold text-slate-500">Est. Balance</dt><dd>{money(renewal.estimated_balance)}</dd></div>
-                  <div><dt className="font-bold text-slate-500">Payoff</dt><dd>{money(renewal.payoff_amount)}</dd></div>
-                  <div><dt className="font-bold text-slate-500">Next Follow-up</dt><dd>{date(renewal.next_follow_up_at)}</dd></div>
+                  <div><dt className="font-bold text-muted">Funded</dt><dd>{money(renewal.funded_amount)}</dd></div>
+                  <div><dt className="font-bold text-muted">Est. Balance</dt><dd>{money(renewal.estimated_balance)}</dd></div>
+                  <div><dt className="font-bold text-muted">Payoff</dt><dd>{money(renewal.payoff_amount)}</dd></div>
+                  <div><dt className="font-bold text-muted">Next Follow-up</dt><dd>{date(renewal.next_follow_up_at)}</dd></div>
                 </dl>
-                {renewal.notes && <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">{renewal.notes}</p>}
+                {renewal.notes && <p className="mt-3 text-sm text-muted">{renewal.notes}</p>}
               </div>
             ))}
           </div>
-        ) : <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">No renewal records yet.</p>}
+        ) : <p className="mt-4 text-sm text-muted">No renewal records yet.</p>}
       </div>
       {(editing || creating) && <RenewalModal renewal={editing} merchantId={merchantId} salesReps={salesReps} isAdmin={currentUser.role === 'admin'} onClose={() => { setEditing(null); setCreating(false); }} onSave={save} />}
     </Card>

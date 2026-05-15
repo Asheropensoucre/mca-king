@@ -84,35 +84,35 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ entityType, 
       <div className="p-6">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Activity Timeline</h3>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Newest activity first. System events are append-only.</p>
+            <h3 className="text-lg font-black text-main ">Activity Timeline</h3>
+            <p className="mt-1 text-sm text-muted">Newest activity first. System events are append-only.</p>
           </div>
         </div>
 
-        {error && <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</p>}
+        {error && <p className="mt-4 rounded-md bg-danger/10 px-3 py-2 text-sm text-danger dark:bg-danger/20 dark:text-danger">{error}</p>}
 
         <div className="mt-5 space-y-4">
           {loading ? (
             <MCAKingLoader label="Loading activity..." size="small" />
           ) : activities.length > 0 ? activities.map(activity => (
-            <div key={activity.id} className="relative flex gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/40">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-theme-yellow bg-slate-950 text-sm font-black text-theme-teal shadow-[3px_3px_0_var(--ct-primary)]">
+            <div key={activity.id} className="relative flex gap-3 rounded-xl border border-line bg-surface-muted/80 p-4  -muted">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-accent bg-primary text-sm font-black text-secondary shadow-[3px_3px_0_var(--ct-primary)]">
                 {activityIcon[activity.activity_type]}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{activity.body || activity.activity_type.replace('_', ' ')}</p>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-sm font-semibold text-main">{activity.body || activity.activity_type.replace('_', ' ')}</p>
+                <p className="mt-1 text-xs text-muted">
                   {activity.author_name || 'System'} • {relativeTime(activity.created_at)}
                 </p>
               </div>
             </div>
           )) : (
-            <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">No activity yet.</p>
+            <p className="rounded-xl border border-dashed border-line p-6 text-center text-sm text-muted  ">No activity yet.</p>
           )}
         </div>
 
         {canAddNote && (
-          <div className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-700">
+          <div className="mt-6 border-t border-line pt-5 ">
             <Textarea label="Add Note" name="activity_note" value={noteBody} onChange={event => setNoteBody(event.target.value)} rows={3} />
             <div className="mt-3 flex justify-end">
               <PrimaryButton label={saving ? 'Saving...' : 'Add Note'} size="small" variant="funded" onClick={() => void addNote()} disabled={saving || !noteBody.trim()} />

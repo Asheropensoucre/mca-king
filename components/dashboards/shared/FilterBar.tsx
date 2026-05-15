@@ -19,7 +19,7 @@ interface FilterBarProps {
   currentUserRole: 'admin' | 'sales_rep' | 'merchant' | 'lender';
 }
 
-const inputClass = 'rounded-lg border-2 border-theme-teal/50 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-theme-yellow dark:bg-slate-900 dark:text-slate-100';
+const inputClass = 'rounded-lg border-2 border-secondary/50 bg-surface px-3 py-2 text-sm font-semibold text-main outline-none focus:border-accent -muted ';
 
 export const FilterBar: React.FC<FilterBarProps> = ({ entityType, filters, onFilterChange, onReset, salesReps = [], isAdmin = false, currentUserRole }) => {
   const setFilter = (key: string, value: string) => {
@@ -30,11 +30,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({ entityType, filters, onFil
   };
 
   return (
-    <div className="mb-4 rounded-xl border-2 border-theme-maroon/70 bg-white/95 p-4 shadow-[5px_5px_0_var(--ct-primary)] dark:border-theme-yellow/70 dark:bg-dark-card/95 dark:shadow-[5px_5px_0_var(--ct-secondary-fixed-dim)]">
+    <div className="mb-4 rounded-xl border-2 border-line-strong/70 bg-surface/95 p-4 shadow-[5px_5px_0_var(--ct-primary)] dark:border-accent/70 /95 dark:shadow-[5px_5px_0_var(--ct-secondary-fixed-dim)]">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex flex-1 flex-wrap items-end gap-3">
           {(entityType === 'merchants' || entityType === 'leads' || entityType === 'lenders') && (
-            <label className="min-w-48 flex-1 text-xs font-black uppercase tracking-wider text-theme-teal">
+            <label className="min-w-48 flex-1 text-xs font-black uppercase tracking-wider text-secondary">
               Search
               <input value={filters.search ?? ''} onChange={event => setFilter('search', event.target.value)} className={`${inputClass} mt-1 w-full`} placeholder={`Search ${entityType}`} />
             </label>
@@ -76,7 +76,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ entityType, filters, onFil
 };
 
 const Select: React.FC<{ label: string; value: string; options: { value: string; label: string }[]; onChange: (value: string) => void }> = ({ label, value, options, onChange }) => (
-  <label className="min-w-40 text-xs font-black uppercase tracking-wider text-theme-teal">
+  <label className="min-w-40 text-xs font-black uppercase tracking-wider text-secondary">
     {label}
     <select value={value} onChange={event => onChange(event.target.value)} className={`${inputClass} mt-1 w-full`}>
       <option value="">All</option>
@@ -86,7 +86,7 @@ const Select: React.FC<{ label: string; value: string; options: { value: string;
 );
 
 const RepSelect: React.FC<{ value: string; reps: SalesRepresentative[]; onChange: (value: string) => void }> = ({ value, reps, onChange }) => (
-  <label className="min-w-44 text-xs font-black uppercase tracking-wider text-theme-teal">
+  <label className="min-w-44 text-xs font-black uppercase tracking-wider text-secondary">
     Rep
     <select value={value} onChange={event => onChange(event.target.value)} className={`${inputClass} mt-1 w-full`}>
       <option value="">All</option>
@@ -96,7 +96,7 @@ const RepSelect: React.FC<{ value: string; reps: SalesRepresentative[]; onChange
 );
 
 const Checkbox: React.FC<{ label: string; checked: boolean; onChange: (checked: boolean) => void }> = ({ label, checked, onChange }) => (
-  <label className="flex items-center gap-2 rounded-lg border-2 border-theme-teal/40 px-3 py-2 text-sm font-black text-theme-maroon dark:text-theme-yellow">
+  <label className="flex items-center gap-2 rounded-lg border-2 border-secondary/40 px-3 py-2 text-sm font-black text-main ">
     <input type="checkbox" checked={checked} onChange={event => onChange(event.target.checked)} />
     {label}
   </label>

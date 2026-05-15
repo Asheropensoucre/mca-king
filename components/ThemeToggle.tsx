@@ -29,9 +29,9 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, setTheme, class
       type="button"
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
       aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-      className={`inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:border-theme-teal/50 hover:bg-slate-50 hover:text-theme-teal focus:outline-none focus:ring-2 focus:ring-theme-yellow/70 dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-200 dark:hover:border-theme-yellow/50 dark:hover:bg-slate-700 dark:hover:text-theme-yellow ${className}`}
+      className={`inline-flex shrink-0 items-center gap-2 rounded-full border border-line bg-surface/95 px-3 py-2 text-xs font-bold text-main shadow-sm transition hover:border-secondary/50 hover:bg-surface-muted hover:text-secondary focus:outline-none focus:ring-2 focus:ring-accent/70  -muted/90  dark:hover:border-accent/50 hover:bg-surface-muted dark:hover:text-accent ${className}`}
     >
-      <span className={`flex h-7 w-7 items-center justify-center rounded-full ${isDark ? 'bg-theme-yellow text-theme-black' : 'bg-theme-teal text-theme-black'}`}>
+      <span className={`flex h-7 w-7 items-center justify-center rounded-full ${isDark ? 'bg-accent text-on-accent' : 'bg-secondary text-on-accent'}`}>
         {isDark ? <SunIcon /> : <MoonIcon />}
       </span>
       {!compact && <span>{isDark ? 'Light' : 'Dark'} Mode</span>}

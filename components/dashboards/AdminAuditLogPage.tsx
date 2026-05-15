@@ -50,8 +50,8 @@ export const AdminAuditLogPage: React.FC = () => {
     <Card>
       <div className="p-6">
         <div className="mb-5">
-          <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Audit Logs</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Admin-only security trail. Logs are read-only and sensitive metadata is redacted.</p>
+          <h3 className="text-lg font-black text-main ">Audit Logs</h3>
+          <p className="text-sm text-muted">Admin-only security trail. Logs are read-only and sensitive metadata is redacted.</p>
         </div>
 
         <form onSubmit={event => { event.preventDefault(); void load(1); }} className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-5">
@@ -66,12 +66,12 @@ export const AdminAuditLogPage: React.FC = () => {
           </div>
         </form>
 
-        {error && <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</p>}
+        {error && <p className="mb-4 rounded-md bg-danger/10 px-3 py-2 text-sm text-danger dark:bg-danger/20 dark:text-danger">{error}</p>}
         {loading ? <MCAKingLoader label="Loading audit logs..." size="small" /> : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-              <thead className="bg-slate-950/90">
-                <tr className="text-left text-xs font-black uppercase tracking-wider text-theme-yellow">
+              <thead className="bg-primary">
+                <tr className="text-left text-xs font-black uppercase tracking-wider text-accent">
                   <th className="px-3 py-3">Time</th>
                   <th className="px-3 py-3">User</th>
                   <th className="px-3 py-3">Action</th>
@@ -84,21 +84,21 @@ export const AdminAuditLogPage: React.FC = () => {
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {logs.length > 0 ? logs.map(log => (
                   <tr key={log.id}>
-                    <td className="px-3 py-3 text-xs text-slate-600 dark:text-slate-300">{fmt(log.created_at)}</td>
-                    <td className="px-3 py-3 text-xs font-bold text-slate-900 dark:text-slate-100">{log.user_name ?? log.user_email ?? log.user_id ?? 'System'}</td>
-                    <td className="px-3 py-3 text-xs font-black text-theme-maroon dark:text-theme-yellow">{log.action}</td>
-                    <td className="px-3 py-3 text-xs text-slate-600 dark:text-slate-300">{log.entity_type ?? '—'}<br />{log.entity_id ?? ''}</td>
-                    <td className="px-3 py-3 text-xs text-slate-600 dark:text-slate-300">{log.ip_address ?? '—'}</td>
-                    <td className="px-3 py-3 text-xs text-slate-600 dark:text-slate-300">{summarizeUserAgent(log.user_agent)}</td>
-                    <td className="px-3 py-3 text-xs text-slate-600 dark:text-slate-300"><code>{metadataPreview(log.metadata)}</code></td>
+                    <td className="px-3 py-3 text-xs text-muted">{fmt(log.created_at)}</td>
+                    <td className="px-3 py-3 text-xs font-bold text-main">{log.user_name ?? log.user_email ?? log.user_id ?? 'System'}</td>
+                    <td className="px-3 py-3 text-xs font-black text-main ">{log.action}</td>
+                    <td className="px-3 py-3 text-xs text-muted">{log.entity_type ?? '—'}<br />{log.entity_id ?? ''}</td>
+                    <td className="px-3 py-3 text-xs text-muted">{log.ip_address ?? '—'}</td>
+                    <td className="px-3 py-3 text-xs text-muted">{summarizeUserAgent(log.user_agent)}</td>
+                    <td className="px-3 py-3 text-xs text-muted"><code>{metadataPreview(log.metadata)}</code></td>
                   </tr>
-                )) : <tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-500">No audit logs found.</td></tr>}
+                )) : <tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-muted">No audit logs found.</td></tr>}
               </tbody>
             </table>
           </div>
         )}
 
-        <div className="mt-4 flex items-center justify-center gap-3 text-sm font-black text-theme-maroon dark:text-theme-yellow">
+        <div className="mt-4 flex items-center justify-center gap-3 text-sm font-black text-main ">
           <PrimaryButton label="Previous" size="small" disabled={page <= 1} onClick={() => void load(Math.max(1, page - 1))} />
           <span>Page {page} of {totalPages}</span>
           <PrimaryButton label="Next" size="small" disabled={page >= totalPages} onClick={() => void load(Math.min(totalPages, page + 1))} />

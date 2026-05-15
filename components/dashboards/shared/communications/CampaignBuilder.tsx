@@ -112,13 +112,13 @@ export const CampaignBuilder: React.FC = () => {
   return (
     <div className="space-y-5">
       <div>
-        <h3 className="text-xl font-black text-theme-maroon dark:text-theme-yellow">Email Campaigns</h3>
-        <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+        <h3 className="text-xl font-black text-main ">Email Campaigns</h3>
+        <p className="text-sm font-semibold text-muted">
           Step 1: choose a saved template or write HTML. Step 2: save/preview recipients. Step 3: send a controlled Resend batch.
         </p>
       </div>
-      {error && <p className="text-sm font-bold text-red-600 dark:text-red-300">{error}</p>}
-      {result && <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300">{result}</p>}
+      {error && <p className="text-sm font-bold text-danger dark:text-danger">{error}</p>}
+      {result && <p className="text-sm font-bold text-success dark:text-success">{result}</p>}
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <Input label="Campaign Name" value={form.name} onChange={e => { setForm({ ...form, name: e.target.value }); setPreview(null); }} />
@@ -129,11 +129,11 @@ export const CampaignBuilder: React.FC = () => {
         <option value="">No template / custom campaign</option>
         {templates.map(template => <option key={template.id} value={template.id}>{template.name} ({template.category})</option>)}
       </Select>
-      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Templates are sent by selecting them here. Choosing one fills the subject/body below, then the campaign sends that template content.</p>
+      <p className="text-xs font-semibold text-muted">Templates are sent by selecting them here. Choosing one fills the subject/body below, then the campaign sends that template content.</p>
 
       <Input label="Subject" value={form.subject} onChange={e => { setForm({ ...form, subject: e.target.value }); setPreview(null); }} />
-      <div className="flex flex-wrap items-center gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-900/50">
-        <span className="text-sm font-black text-theme-maroon dark:text-theme-yellow">Editor mode</span>
+      <div className="flex flex-wrap items-center gap-3 rounded-lg bg-surface-muted p-3 -muted">
+        <span className="text-sm font-black text-main ">Editor mode</span>
         <label className="text-sm font-bold"><input type="radio" checked={form.body_mode === 'html'} onChange={() => setForm({ ...form, body_mode: 'html' })} /> HTML</label>
         <label className="text-sm font-bold"><input type="radio" checked={form.body_mode === 'text'} onChange={() => setForm({ ...form, body_mode: 'text' })} /> Plain text auto-styled</label>
         <PrimaryButton label="Load Nice Starter HTML" size="small" onClick={() => setForm({ ...form, body: starterCampaignHtml(), body_mode: 'html' })} />
@@ -141,8 +141,8 @@ export const CampaignBuilder: React.FC = () => {
       <Textarea label={form.body_mode === 'html' ? 'HTML Body' : 'Plain Text Body'} rows={12} value={form.body} onChange={e => { setForm({ ...form, body: e.target.value }); setPreview(null); }} />
 
       <div>
-        <h4 className="mb-2 text-sm font-black uppercase text-theme-yellow">Email Preview</h4>
-        <iframe title="Email preview" srcDoc={htmlPreview} className="h-[460px] w-full rounded-xl border-2 border-slate-200 bg-white dark:border-slate-700" />
+        <h4 className="mb-2 text-sm font-black uppercase text-accent">Email Preview</h4>
+        <iframe title="Email preview" srcDoc={htmlPreview} className="h-[460px] w-full rounded-xl border-2 border-line bg-surface " />
       </div>
 
       <div className="flex flex-wrap justify-end gap-2">
@@ -153,8 +153,8 @@ export const CampaignBuilder: React.FC = () => {
       <CampaignRecipientPreview preview={preview} />
       <SmsComingSoonNotice />
       <div className="space-y-2">
-        <h4 className="text-sm font-black uppercase text-theme-yellow">Recent Campaign Drafts</h4>
-        {campaigns.map(c => <button key={c.id} onClick={() => loadCampaign(c)} className="block w-full rounded-lg border border-slate-200 bg-slate-50 p-3 text-left text-sm dark:border-slate-700 dark:bg-slate-900/60"><span className="font-black text-theme-maroon dark:text-theme-yellow">{c.name}</span><span className="float-right text-xs font-bold uppercase text-theme-teal">{c.status}</span></button>)}
+        <h4 className="text-sm font-black uppercase text-accent">Recent Campaign Drafts</h4>
+        {campaigns.map(c => <button key={c.id} onClick={() => loadCampaign(c)} className="block w-full rounded-lg border border-line bg-surface-muted p-3 text-left text-sm  -muted"><span className="font-black text-main ">{c.name}</span><span className="float-right text-xs font-bold uppercase text-secondary">{c.status}</span></button>)}
       </div>
     </div>
   );

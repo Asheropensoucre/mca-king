@@ -70,7 +70,7 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
     const renderPagination = () => {
         const totalPages = Math.max(1, Math.ceil(dealTotal / 25));
         return (
-            <div className="mt-4 flex items-center justify-center gap-3 text-sm font-black text-theme-maroon dark:text-theme-yellow">
+            <div className="mt-4 flex items-center justify-center gap-3 text-sm font-black text-main ">
                 <PrimaryButton label="Previous" size="small" disabled={dealPage <= 1} onClick={() => setDealPage(Math.max(1, dealPage - 1))} />
                 <span>Page {dealPage} of {totalPages}</span>
                 <PrimaryButton label="Next" size="small" disabled={dealPage >= totalPages} onClick={() => setDealPage(Math.min(totalPages, dealPage + 1))} />
@@ -103,7 +103,7 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
                 <div className="max-w-4xl mx-auto">
                     <PrimaryButton label={`← Back to ${activeSection === 'pipeline' ? 'Kamba Pipeline' : 'My Deals'}`} size="small" onClick={() => setSelectedDeal(null)} />
                     <div className="flex justify-between items-center mb-4 gap-3">
-                        <h2 className="text-2xl font-black text-theme-maroon dark:text-theme-yellow">{selectedDealCurrent.businessInfo.legalName}</h2>
+                        <h2 className="text-2xl font-black text-main ">{selectedDealCurrent.businessInfo.legalName}</h2>
                         {onPrint && (
                             <PrimaryButton label="Download PDF" size="small" onClick={() => onPrint(selectedDealCurrent)} />
                         )}
@@ -112,10 +112,10 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
                 </div>
             ) : (
                 <div className={activeSection === 'pipeline' ? 'w-full max-w-none' : 'max-w-7xl mx-auto'}>
-                    <div className="mb-5 rounded-xl border-2 border-theme-maroon/80 bg-white/95 p-4 shadow-[6px_6px_0_var(--ct-primary)] dark:border-theme-yellow/80 dark:bg-dark-card/95 dark:shadow-[6px_6px_0_var(--ct-secondary-fixed-dim)] flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="mb-5 rounded-xl border-2 border-line-strong/80 bg-surface/95 p-4 shadow-[6px_6px_0_var(--ct-primary)] dark:border-accent/80 /95 dark:shadow-[6px_6px_0_var(--ct-secondary-fixed-dim)] flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                         <div>
-                            <p className="text-sm font-bold text-theme-maroon dark:text-theme-teal">Signed in as {currentUser.full_name ?? currentUser.name ?? currentUser.email}</p>
-                            {listError && <p className="mt-1 text-xs font-bold text-red-600 dark:text-red-300">{listError}</p>}
+                            <p className="text-sm font-bold text-main ">Signed in as {currentUser.full_name ?? currentUser.name ?? currentUser.email}</p>
+                            {listError && <p className="mt-1 text-xs font-bold text-danger dark:text-danger">{listError}</p>}
                         </div>
                         <SearchBar onSelectResult={handleSearchSelect} />
                     </div>
@@ -126,8 +126,8 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
                             <Card>
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                                    <thead className="bg-slate-950/90">
-                                        <tr className="text-left text-xs font-black uppercase tracking-wider text-theme-yellow">
+                                    <thead className="bg-primary">
+                                        <tr className="text-left text-xs font-black uppercase tracking-wider text-accent">
                                             <th>Business Name</th>
                                             <th>Primary Contact</th>
                                             <th>Contact Info</th>
@@ -135,23 +135,23 @@ export const SalesRepDashboard: React.FC<SalesRepDashboardProps> = ({ currentUse
                                             <th className="relative"><span className="sr-only">View</span></th>
                                         </tr>
                                     </thead>
-                                    <tbody className="bg-white divide-y divide-slate-200 dark:bg-dark-card dark:divide-slate-700">
+                                    <tbody className="bg-surface divide-y divide-slate-200  dark:divide-slate-700">
                                         {dealRows.length > 0 ? dealRows.map((deal) => {
                                             const primaryOwner = deal.owners[0];
                                             return (
                                                 <tr key={deal.id}>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-slate-100">{deal.businessInfo.legalName}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{primaryOwner?.name || 'N/A'}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-                                                        {primaryOwner?.cellPhone && <a href={`tel:${primaryOwner.cellPhone}`} className="text-theme-teal hover:text-theme-teal/80 block">Call</a>}
-                                                        {primaryOwner?.email && <a href={`mailto:${primaryOwner.email}`} className="text-theme-teal hover:text-theme-teal/80 block mt-1">Email</a>}
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-main">{deal.businessInfo.legalName}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{primaryOwner?.name || 'N/A'}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                                                        {primaryOwner?.cellPhone && <a href={`tel:${primaryOwner.cellPhone}`} className="text-secondary hover:text-secondary/80 block">Call</a>}
+                                                        {primaryOwner?.email && <a href={`mailto:${primaryOwner.email}`} className="text-secondary hover:text-secondary/80 block mt-1">Email</a>}
                                                     </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{deal.status}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">{deal.status}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><PrimaryButton label="View Details" size="small" onClick={() => setSelectedDeal(deal)} /></td>
                                                 </tr>
                                             );
                                         }) : (
-                                            <tr><td colSpan={5} className="px-6 py-12 text-center text-sm text-slate-500 dark:text-slate-400">You have not been assigned any deals yet.</td></tr>
+                                            <tr><td colSpan={5} className="px-6 py-12 text-center text-sm text-muted">You have not been assigned any deals yet.</td></tr>
                                         )}
                                     </tbody>
                                 </table>

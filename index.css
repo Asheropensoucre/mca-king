@@ -3,53 +3,129 @@
 @tailwind utilities;
 
 :root {
-  --ct-surface: #fff7fa;
-  --ct-surface-dim: #fccaff;
-  --ct-surface-bright: #fff7fa;
-  --ct-surface-container-lowest: #ffffff;
-  --ct-surface-container-low: #ffeffb;
-  --ct-surface-container: #ffe7fd;
-  --ct-surface-container-high: #ffdefe;
-  --ct-surface-container-highest: #fed6ff;
-  --ct-on-surface: #350040;
-  --ct-on-surface-variant: #444651;
-  --ct-inverse-surface: #560068;
-  --ct-inverse-on-surface: #ffebfc;
-  --ct-outline: #757682;
-  --ct-outline-variant: #c5c5d3;
-  --ct-surface-tint: #4059aa;
-  --ct-primary: #00236f;
-  --ct-on-primary: #ffffff;
-  --ct-primary-container: #1e3a8a;
-  --ct-on-primary-container: #90a8ff;
-  --ct-inverse-primary: #b6c4ff;
-  --ct-secondary: #006a61;
-  --ct-on-secondary: #ffffff;
-  --ct-secondary-container: #86f2e4;
-  --ct-on-secondary-container: #006f66;
-  --ct-tertiary: #6f5d00;
-  --ct-on-tertiary: #ffffff;
-  --ct-tertiary-container: #c6aa23;
-  --ct-on-tertiary-container: #4b3f00;
-  --ct-error: #ba1a1a;
-  --ct-on-error: #ffffff;
-  --ct-error-container: #ffdad6;
-  --ct-on-error-container: #93000a;
-  --ct-primary-fixed: #dce1ff;
-  --ct-primary-fixed-dim: #b6c4ff;
-  --ct-on-primary-fixed: #00164e;
-  --ct-on-primary-fixed-variant: #264191;
-  --ct-secondary-fixed: #89f5e7;
-  --ct-secondary-fixed-dim: #6bd8cb;
-  --ct-on-secondary-fixed: #00201d;
-  --ct-on-secondary-fixed-variant: #005049;
-  --ct-tertiary-fixed: #ffe262;
-  --ct-tertiary-fixed-dim: #e3c53f;
-  --ct-on-tertiary-fixed: #221b00;
-  --ct-on-tertiary-fixed-variant: #534600;
-  --ct-background: #fff7fa;
-  --ct-on-background: #350040;
-  --ct-surface-variant: #fed6ff;
+  --brand-navy: #071A3D;
+  --brand-blue: #123B8A;
+  --brand-blue-soft: #DCE7FF;
+  --brand-teal: #007A70;
+  --brand-teal-soft: #C9FFF4;
+  --brand-teal-bright: #7CF4E6;
+  --brand-gold: #F4C430;
+  --brand-gold-soft: #FFF2B8;
+  --brand-plum: #4B145F;
+  --brand-red: #B42318;
+
+  --color-app-bg: 246 248 252;
+  --color-surface: 255 255 255;
+  --color-surface-muted: 238 243 250;
+  --color-surface-strong: 220 231 255;
+  --color-text-main: 7 26 61;
+  --color-text-muted: 80 98 122;
+  --color-border: 201 213 230;
+  --color-border-strong: 18 59 138;
+  --color-primary: 18 59 138;
+  --color-on-primary: 255 255 255;
+  --color-secondary: 0 122 112;
+  --color-on-secondary: 255 255 255;
+  --color-accent: 244 196 48;
+  --color-on-accent: 33 23 0;
+  --color-danger: 180 35 24;
+  --color-on-danger: 255 255 255;
+  --color-success: 0 122 112;
+  --color-on-success: 255 255 255;
+  --color-warning: 244 196 48;
+  --color-on-warning: 33 23 0;
+
+  /* Compatibility variables used by older components while the UI is refactored. */
+  --ct-surface: #F6F8FC;
+  --ct-surface-dim: #C9D5E6;
+  --ct-surface-bright: #FFFFFF;
+  --ct-surface-container-lowest: #FFFFFF;
+  --ct-surface-container-low: #F6F8FC;
+  --ct-surface-container: #EEF3FA;
+  --ct-surface-container-high: #DCE7FF;
+  --ct-surface-container-highest: #FFF2B8;
+  --ct-on-surface: #071A3D;
+  --ct-on-surface-variant: #50627A;
+  --ct-inverse-surface: #071A3D;
+  --ct-inverse-on-surface: #F7FAFF;
+  --ct-outline: #7D8FA8;
+  --ct-outline-variant: #C9D5E6;
+  --ct-surface-tint: #123B8A;
+  --ct-primary: #123B8A;
+  --ct-on-primary: #FFFFFF;
+  --ct-primary-container: #071A3D;
+  --ct-on-primary-container: #DCE7FF;
+  --ct-inverse-primary: #F4C430;
+  --ct-secondary: #007A70;
+  --ct-on-secondary: #FFFFFF;
+  --ct-secondary-container: #C9FFF4;
+  --ct-on-secondary-container: #002B27;
+  --ct-tertiary: #765900;
+  --ct-on-tertiary: #FFFFFF;
+  --ct-tertiary-container: #F4C430;
+  --ct-on-tertiary-container: #211700;
+  --ct-error: #B42318;
+  --ct-on-error: #FFFFFF;
+  --ct-error-container: #FEEBE9;
+  --ct-on-error-container: #7F1D1D;
+  --ct-primary-fixed: #DCE7FF;
+  --ct-primary-fixed-dim: #BFD3FF;
+  --ct-on-primary-fixed: #071A3D;
+  --ct-on-primary-fixed-variant: #123B8A;
+  --ct-secondary-fixed: #7CF4E6;
+  --ct-secondary-fixed-dim: #46D9CD;
+  --ct-on-secondary-fixed: #002B27;
+  --ct-on-secondary-fixed-variant: #00534D;
+  --ct-tertiary-fixed: #F4C430;
+  --ct-tertiary-fixed-dim: #D9A915;
+  --ct-on-tertiary-fixed: #211700;
+  --ct-on-tertiary-fixed-variant: #4D3A00;
+  --ct-background: #F6F8FC;
+  --ct-on-background: #071A3D;
+  --ct-surface-variant: #DCE7FF;
+}
+
+html.dark {
+  --color-app-bg: 6 18 38;
+  --color-surface: 11 30 58;
+  --color-surface-muted: 16 41 77;
+  --color-surface-strong: 18 59 138;
+  --color-text-main: 247 250 255;
+  --color-text-muted: 175 192 214;
+  --color-border: 41 69 109;
+  --color-border-strong: 244 196 48;
+  --color-primary: 244 196 48;
+  --color-on-primary: 33 23 0;
+  --color-secondary: 124 244 230;
+  --color-on-secondary: 0 43 39;
+  --color-accent: 124 244 230;
+  --color-on-accent: 0 43 39;
+  --color-danger: 248 113 113;
+  --color-on-danger: 43 7 10;
+  --color-success: 124 244 230;
+  --color-on-success: 0 43 39;
+  --color-warning: 244 196 48;
+  --color-on-warning: 33 23 0;
+
+  --ct-surface: #061226;
+  --ct-surface-container-lowest: #0B1E3A;
+  --ct-surface-container-low: #10294D;
+  --ct-surface-container: #10294D;
+  --ct-surface-container-high: #123B8A;
+  --ct-surface-container-highest: #29456D;
+  --ct-on-surface: #F7FAFF;
+  --ct-on-surface-variant: #AFC0D6;
+  --ct-inverse-surface: #061226;
+  --ct-inverse-on-surface: #F7FAFF;
+  --ct-outline: #AFC0D6;
+  --ct-outline-variant: #29456D;
+  --ct-primary: #F4C430;
+  --ct-on-primary: #211700;
+  --ct-primary-container: #0B1E3A;
+  --ct-secondary: #7CF4E6;
+  --ct-tertiary-fixed: #F4C430;
+  --ct-background: #061226;
+  --ct-on-background: #F7FAFF;
 }
 
 html {
@@ -59,9 +135,11 @@ html {
 body {
   min-height: 100%;
   margin: 0;
+  color: rgb(var(--color-text-main));
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--ct-primary-fixed) 78%, transparent), color-mix(in srgb, var(--ct-secondary-fixed) 68%, transparent) 45%, color-mix(in srgb, var(--ct-surface-variant) 75%, transparent)),
-    var(--ct-background);
+    radial-gradient(circle at 16% 14%, color-mix(in srgb, var(--brand-gold-soft) 50%, transparent), transparent 28%),
+    radial-gradient(circle at 86% 10%, color-mix(in srgb, var(--brand-teal-soft) 45%, transparent), transparent 26%),
+    linear-gradient(135deg, rgb(var(--color-app-bg)), color-mix(in srgb, var(--brand-blue-soft) 58%, rgb(var(--color-app-bg))) 55%, rgb(var(--color-app-bg)));
   background-attachment: fixed;
 }
 
@@ -72,28 +150,23 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background-image:
-    linear-gradient(90deg, color-mix(in srgb, var(--ct-on-surface) 7%, transparent) 1px, transparent 1px),
-    linear-gradient(color-mix(in srgb, var(--ct-on-surface) 7%, transparent) 1px, transparent 1px),
-    radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--ct-tertiary-fixed) 35%, transparent), transparent 28%),
-    radial-gradient(circle at 80% 10%, color-mix(in srgb, var(--ct-secondary-fixed) 32%, transparent), transparent 30%),
-    radial-gradient(circle at 70% 85%, color-mix(in srgb, var(--ct-primary-fixed-dim) 30%, transparent), transparent 32%);
-  background-size: 22px 22px, 22px 22px, 100% 100%, 100% 100%, 100% 100%;
+    linear-gradient(90deg, color-mix(in srgb, var(--brand-navy) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, var(--brand-navy) 6%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 html.dark body {
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--ct-inverse-surface) 92%, var(--ct-primary)), color-mix(in srgb, var(--ct-primary) 76%, var(--ct-inverse-surface)) 48%, color-mix(in srgb, var(--ct-secondary) 36%, var(--ct-inverse-surface))),
-    var(--ct-inverse-surface);
+    radial-gradient(circle at 16% 14%, color-mix(in srgb, var(--brand-gold) 16%, transparent), transparent 28%),
+    radial-gradient(circle at 86% 10%, color-mix(in srgb, var(--brand-teal-bright) 13%, transparent), transparent 26%),
+    linear-gradient(135deg, #061226, #0B1E3A 52%, #061226);
   background-attachment: fixed;
 }
 
 html.dark body::before {
   background-image:
-    linear-gradient(90deg, color-mix(in srgb, var(--ct-inverse-on-surface) 8%, transparent) 1px, transparent 1px),
-    linear-gradient(color-mix(in srgb, var(--ct-inverse-on-surface) 8%, transparent) 1px, transparent 1px),
-    radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--ct-tertiary-fixed) 18%, transparent), transparent 28%),
-    radial-gradient(circle at 80% 10%, color-mix(in srgb, var(--ct-secondary-fixed) 18%, transparent), transparent 30%),
-    radial-gradient(circle at 70% 85%, color-mix(in srgb, var(--ct-primary-fixed-dim) 20%, transparent), transparent 32%);
+    linear-gradient(90deg, color-mix(in srgb, #F7FAFF 7%, transparent) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, #F7FAFF 7%, transparent) 1px, transparent 1px);
 }
 
 #root {
@@ -117,16 +190,15 @@ html.dark #root .min-h-screen.p-4.sm\:p-6.lg\:p-8 {
   background-color: transparent !important;
 }
 
-/* Corporate Tech shadow overrides so Tailwind shadow utilities stay inside the approved palette. */
 .shadow-sm,
 .shadow,
 .shadow-md,
 .shadow-lg,
 .shadow-xl,
 .shadow-2xl {
-  --tw-shadow-color: var(--ct-primary);
-  --tw-shadow: 0 4px 0 color-mix(in srgb, var(--ct-primary) 60%, transparent);
-  --tw-shadow-colored: 0 4px 0 color-mix(in srgb, var(--ct-primary) 60%, transparent);
+  --tw-shadow-color: rgb(var(--color-border-strong));
+  --tw-shadow: 0 4px 0 color-mix(in srgb, rgb(var(--color-border-strong)) 55%, transparent);
+  --tw-shadow-colored: 0 4px 0 color-mix(in srgb, rgb(var(--color-border-strong)) 55%, transparent);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 transparent), var(--tw-ring-shadow, 0 0 transparent), var(--tw-shadow) !important;
 }
 
@@ -136,7 +208,7 @@ html.dark .shadow-md,
 html.dark .shadow-lg,
 html.dark .shadow-xl,
 html.dark .shadow-2xl {
-  --tw-shadow-color: var(--ct-secondary-fixed-dim);
-  --tw-shadow: 0 4px 0 color-mix(in srgb, var(--ct-secondary-fixed-dim) 60%, transparent);
-  --tw-shadow-colored: 0 4px 0 color-mix(in srgb, var(--ct-secondary-fixed-dim) 60%, transparent);
+  --tw-shadow-color: rgb(var(--color-accent));
+  --tw-shadow: 0 4px 0 color-mix(in srgb, rgb(var(--color-accent)) 55%, transparent);
+  --tw-shadow-colored: 0 4px 0 color-mix(in srgb, rgb(var(--color-accent)) 55%, transparent);
 }

@@ -43,13 +43,13 @@ export const EditLenderForm: React.FC<EditLenderFormProps> = ({ initialData, onS
                     <Textarea name="industryRestrictions" label="Industry Restrictions" value={data.industryRestrictions} onChange={handleChange} className="md:col-span-3" rows={5}/>
                     <Textarea name="notes" label="Notes" value={data.notes} onChange={handleChange} className="md:col-span-3" rows={3}/>
 
-                    <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow md:col-span-3 mt-4">Contact Info</h3>
+                    <h3 className="text-lg font-black text-main  md:col-span-3 mt-4">Contact Info</h3>
                     <Input name="isoRep" label="ISO Rep Name" value={data.isoRep} onChange={handleChange} />
                     <Input name="cell" label="Cell Phone" type="tel" value={data.cell} onChange={handleChange} />
                     <Input name="email" label="Email" type="email" value={data.email} onChange={handleChange} />
                 </div>
             </div>
-            <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-4">
+            <div className="p-6 bg-surface-muted -muted/50 border-t border-line flex justify-end space-x-4">
                 <PrimaryButton label="Cancel" size="small" variant="danger" onClick={onCancel} />
                 <PrimaryButton label="Save Changes" onClick={() => onSave(data)} />
             </div>

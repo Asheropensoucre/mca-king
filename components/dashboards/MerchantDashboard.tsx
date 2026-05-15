@@ -53,11 +53,11 @@ function getMonthsUntilReapply(merchant: FormData): number {
 
 const ReadOnlyField: React.FC<{ label: string; value: string }> = ({ label, value }) => (
     <label className="block">
-        <span className="block text-sm font-semibold text-slate-500 dark:text-slate-400">{label}</span>
+        <span className="block text-sm font-semibold text-muted">{label}</span>
         <input
             value={value}
             readOnly
-            className="mt-1 block w-full cursor-not-allowed rounded-md border-0 border-b-2 border-slate-200 bg-slate-100 px-4 py-3 text-base text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-400"
+            className="mt-1 block w-full cursor-not-allowed rounded-md border-0 border-b-2 border-line bg-surface-muted px-4 py-3 text-base text-muted shadow-sm  -muted/70 "
         />
     </label>
 );
@@ -75,8 +75,8 @@ const LockedApplicationView: React.FC<{ merchant: FormData }> = ({ merchant }) =
             <ReadOnlyField label="Entity Type" value={merchant.businessInfo.entityType} />
         </div>
         {merchant.owners.map((owner, index) => (
-            <div key={owner.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/40">
-                <h4 className="mb-4 font-semibold text-slate-700 dark:text-slate-300">Owner #{index + 1}</h4>
+            <div key={owner.id} className="rounded-lg border border-line bg-surface-muted p-4  -muted/40">
+                <h4 className="mb-4 font-semibold text-main">Owner #{index + 1}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <ReadOnlyField label="Name" value={owner.name} />
                     <ReadOnlyField label="Title" value={owner.title} />
@@ -176,11 +176,11 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
             <Card className="mb-6">
                 <div className="p-6">
                     <div className="mb-6 text-center">
-                        <h2 className="text-xl font-black text-theme-maroon dark:text-theme-yellow">Application Details</h2>
-                        {formState === 'submitted' && <p className="mt-2 text-sm text-theme-teal">Your application has been submitted and is under review.</p>}
-                        {formState === 'grace_pending' && <p className="mt-2 text-sm text-amber-600 dark:text-amber-300">You may reapply in {monthsUntilReapply} month{monthsUntilReapply === 1 ? '' : 's'}.</p>}
-                        {formState === 'can_reapply' && <p className="mt-2 text-sm text-theme-teal">You are eligible to apply again.</p>}
-                        {applicationMessage && <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{applicationMessage}</p>}
+                        <h2 className="text-xl font-black text-main ">Application Details</h2>
+                        {formState === 'submitted' && <p className="mt-2 text-sm text-secondary">Your application has been submitted and is under review.</p>}
+                        {formState === 'grace_pending' && <p className="mt-2 text-sm text-warning dark:text-warning">You may reapply in {monthsUntilReapply} month{monthsUntilReapply === 1 ? '' : 's'}.</p>}
+                        {formState === 'can_reapply' && <p className="mt-2 text-sm text-secondary">You are eligible to apply again.</p>}
+                        {applicationMessage && <p className="mt-2 text-sm text-muted">{applicationMessage}</p>}
                     </div>
                     <LockedApplicationView merchant={submission} />
                     <div className="mt-8 flex justify-center">
@@ -198,8 +198,8 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
             <div className="max-w-5xl mx-auto">
                 <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-6">
                     <div>
-                        <h1 className="text-3xl font-black text-theme-maroon dark:text-theme-yellow">{showSettings ? 'Settings' : 'My Application Dashboard'}</h1>
-                        <p className="text-slate-500 dark:text-slate-400">Welcome, {currentUser.full_name ?? currentUser.name ?? submission.owners[0]?.name ?? 'Valued Client'}</p>
+                        <h1 className="text-3xl font-black text-main ">{showSettings ? 'Settings' : 'My Application Dashboard'}</h1>
+                        <p className="text-muted">Welcome, {currentUser.full_name ?? currentUser.name ?? submission.owners[0]?.name ?? 'Valued Client'}</p>
                     </div>
                     <div className="flex items-center gap-3 self-start sm:self-auto">
                         {themeToggle}
@@ -214,10 +214,10 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
                     <div className="p-6">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                             <div>
-                                <h2 className="text-xl font-black text-theme-maroon dark:text-theme-yellow">Application Status</h2>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">Current step: <span className="font-semibold text-slate-700 dark:text-slate-200">{submission.status}</span></p>
+                                <h2 className="text-xl font-black text-main ">Application Status</h2>
+                                <p className="text-sm text-muted">Current step: <span className="font-semibold text-main">{submission.status}</span></p>
                             </div>
-                            <span className="inline-flex self-start sm:self-auto rounded-full bg-theme-yellow px-3 py-1 text-xs font-bold text-theme-black">
+                            <span className="inline-flex self-start sm:self-auto rounded-full bg-accent px-3 py-1 text-xs font-bold text-on-accent">
                                 Step {currentStatusIndex + 1} of {APPLICATION_STATUS_CONFIG.length}
                             </span>
                         </div>
@@ -227,9 +227,9 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
                                 const isCurrent = statusIdx === currentStatusIndex;
                                 const isComplete = statusIdx < currentStatusIndex;
                                 return (
-                                    <div key={statusConfig.label} className={`rounded-lg border p-3 text-xs transition-colors ${isCurrent ? 'border-theme-yellow bg-theme-yellow/20 text-slate-900 dark:text-slate-100' : isComplete ? 'border-theme-teal/40 bg-theme-teal/10 text-slate-700 dark:text-slate-200' : 'border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-400'}`}>
+                                    <div key={statusConfig.label} className={`rounded-lg border p-3 text-xs transition-colors ${isCurrent ? 'border-accent bg-accent/20 text-main' : isComplete ? 'border-secondary/40 bg-secondary/10 text-main' : 'border-line bg-surface-muted text-muted  -muted/40 '}`}>
                                         <div className="flex gap-2 items-start">
-                                            <span className={`shrink-0 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${isCurrent ? 'bg-theme-yellow text-black' : isComplete ? 'bg-theme-teal text-black' : themeClasses.badge}`}>{statusIdx + 1}</span>
+                                            <span className={`shrink-0 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${isCurrent ? 'bg-accent text-black' : isComplete ? 'bg-secondary text-black' : themeClasses.badge}`}>{statusIdx + 1}</span>
                                             <span className="font-semibold leading-snug">{statusConfig.label}</span>
                                         </div>
                                     </div>
@@ -244,9 +244,9 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
                 {eligibleRenewal && (
                     <Card className="mb-6">
                         <div className="p-6">
-                            <h2 className="text-xl font-black text-theme-maroon dark:text-theme-yellow">Renewal Review</h2>
-                            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">You may be eligible for renewal funding. Contact your broker shop to review options.</p>
-                            {renewalMessage && <p className="mt-2 text-sm font-semibold text-theme-teal">{renewalMessage}</p>}
+                            <h2 className="text-xl font-black text-main ">Renewal Review</h2>
+                            <p className="mt-2 text-sm text-muted">You may be eligible for renewal funding. Contact your broker shop to review options.</p>
+                            {renewalMessage && <p className="mt-2 text-sm font-semibold text-secondary">{renewalMessage}</p>}
                             <div className="mt-4"><PrimaryButton label="Request Renewal Review" size="small" onClick={() => void handleRenewalReviewRequest()} /></div>
                         </div>
                     </Card>
@@ -255,9 +255,9 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
                 {submission.status === 'FUNDED' && (
                     <Card className="mb-6">
                         <div className="p-6">
-                            <h2 className="text-xl font-black text-theme-maroon dark:text-theme-yellow">Early Payoff</h2>
-                            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">If you want to pay off early, request an official payoff letter from your current lender/funder. MCA King tracks the request only; the lender/funder provides the official payoff letter.</p>
-                            {payoffMessage && <p className="mt-2 text-sm font-semibold text-theme-teal">{payoffMessage}</p>}
+                            <h2 className="text-xl font-black text-main ">Early Payoff</h2>
+                            <p className="mt-2 text-sm text-muted">If you want to pay off early, request an official payoff letter from your current lender/funder. MCA King tracks the request only; the lender/funder provides the official payoff letter.</p>
+                            {payoffMessage && <p className="mt-2 text-sm font-semibold text-secondary">{payoffMessage}</p>}
                             <div className="mt-4"><PrimaryButton label="Request Payoff Letter" size="small" onClick={() => void handlePayoffRequest()} /></div>
                         </div>
                     </Card>
@@ -269,14 +269,14 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
 
                 <Card className="mb-6">
                     <div className="p-6">
-                        <h2 className="text-xl font-black text-theme-maroon dark:text-theme-yellow mb-4">Stipulations</h2>
+                        <h2 className="text-xl font-black text-main  mb-4">Stipulations</h2>
                         {stipulations.length > 0 ? (
                             <div className="space-y-4">
                                 {stipulations.map(stip => (
-                                    <div key={stip.id} className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg">
+                                    <div key={stip.id} className="p-4 border border-line rounded-lg">
                                         <div className="flex justify-between gap-3">
-                                            <p className="font-medium text-slate-800 dark:text-slate-200">{stip.description}</p>
-                                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${stip.is_fulfilled ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200'}`}>{stip.is_fulfilled ? 'Complete' : 'Needed'}</span>
+                                            <p className="font-medium text-main ">{stip.description}</p>
+                                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${stip.is_fulfilled ? 'bg-success/15 text-success dark:bg-success/25 dark:text-success' : 'bg-warning/15 text-warning dark:bg-warning/25 dark:text-warning'}`}>{stip.is_fulfilled ? 'Complete' : 'Needed'}</span>
                                         </div>
                                         {!stip.is_fulfilled && (
                                             <div className="mt-3">
@@ -286,21 +286,21 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
                                     </div>
                                 ))}
                             </div>
-                        ) : <p className="text-sm text-slate-500 dark:text-slate-400">No additional documents have been requested.</p>}
+                        ) : <p className="text-sm text-muted">No additional documents have been requested.</p>}
                     </div>
                 </Card>
 
                 <Card>
                     <div className="p-6">
-                        <h2 className="text-xl font-black text-theme-maroon dark:text-theme-yellow mb-4">Offers</h2>
+                        <h2 className="text-xl font-black text-main  mb-4">Offers</h2>
                         {submission.offers && submission.offers.length > 0 ? (
                             <div className="space-y-4">
                                 {submission.offers.map(offer => (
-                                    <div key={offer.id || offer.lenderId} className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                                    <div key={offer.id || offer.lenderId} className="p-4 border border-line rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center">
                                         <div>
-                                            <p className="font-semibold text-slate-800 dark:text-slate-200">{offer.lenderName}</p>
-                                            <p className="text-slate-600 dark:text-slate-400">Amount: <span className="font-medium">${Number(offer.amount).toLocaleString()}</span></p>
-                                            <p className="text-slate-600 dark:text-slate-400">Term: <span className="font-medium">{offer.term} Days</span></p>
+                                            <p className="font-semibold text-main ">{offer.lenderName}</p>
+                                            <p className="text-muted ">Amount: <span className="font-medium">${Number(offer.amount).toLocaleString()}</span></p>
+                                            <p className="text-muted ">Term: <span className="font-medium">{offer.term} Days</span></p>
                                         </div>
                                         <div className="mt-4 sm:mt-0 flex space-x-2">
                                             {offer.status === 'Pending' ? (
@@ -309,13 +309,13 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
                                                     <PrimaryButton label="Accept" size="small" variant="funded" onClick={() => onUpdateOffer(offer.id || offer.lenderId, 'Accepted')} />
                                                 </>
                                             ) : (
-                                                <span className={`px-3 py-1.5 text-xs font-medium rounded-full ${offer.status === 'Accepted' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200'}`}>{offer.status}</span>
+                                                <span className={`px-3 py-1.5 text-xs font-medium rounded-full ${offer.status === 'Accepted' ? 'bg-success/15 text-success dark:bg-success/25 dark:text-success' : 'bg-danger/15 text-danger dark:bg-danger/25 dark:text-danger'}`}>{offer.status}</span>
                                             )}
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                        ) : <p className="text-sm text-slate-500 dark:text-slate-400">No offers have been made yet. You will be notified when an offer is available.</p>}
+                        ) : <p className="text-sm text-muted">No offers have been made yet. You will be notified when an offer is available.</p>}
                     </div>
                 </Card>
                 </>}

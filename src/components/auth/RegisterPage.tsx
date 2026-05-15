@@ -3,7 +3,7 @@ import type { AuthUser, UserRole } from '../../../types'
 import { DarkModeToggle } from '../ui/DarkModeToggle'
 import { PrimaryButton } from '../ui/PrimaryButton'
 import { RoleToggle } from '../ui/RoleToggle'
-import { blurAuthInput, focusAuthInput, getAuthCardStyle, getAuthInputStyle } from '../ui/authTheme'
+import { authCardClassName, authInputClassName } from '../ui/authTheme'
 
 type AuthMode = 'login' | 'register'
 
@@ -36,8 +36,6 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onModeCh
   const [role, setRole] = useState<SelfRegisterRole>('merchant')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const isDark = theme === 'dark'
-  const authInputStyle = getAuthInputStyle(isDark)
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -84,57 +82,39 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onModeCh
   }
 
   return (
-    <div className="relative min-h-screen bg-slate-50 p-4 dark:bg-dark-bg">
+    <div className="relative min-h-screen bg-app p-4 text-main">
       <div className="absolute right-6 top-6 z-10">
         <DarkModeToggle isDark={theme === 'dark'} onToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')} />
       </div>
       <div className="flex min-h-[calc(100vh-6rem)] items-center justify-center">
-        <div className="w-full max-w-md p-8" style={getAuthCardStyle(isDark)}>
+        <div className={`w-full max-w-md ${authCardClassName}`}>
           <img src="/logo.png" alt="MCA King Logo" className="mx-auto mb-6 h-20 w-auto" />
-          <h1 className="text-center text-3xl font-bold text-slate-800 dark:text-slate-100">Create Account</h1>
-          <p className="mt-2 text-center text-sm text-slate-500 dark:text-slate-400">Merchant and lender self-registration.</p>
+          <h1 className="text-center text-3xl font-black text-main">Create Account</h1>
+          <p className="mt-2 text-center text-sm font-semibold text-muted">Merchant and lender self-registration.</p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-            <label className="block">
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Full Name</span>
-              <input name="full_name" type="text" required autoComplete="name" style={authInputStyle} onFocus={event => focusAuthInput(event, isDark)} onBlur={event => blurAuthInput(event, isDark)} />
-            </label>
-
-            <label className="block">
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Email</span>
-              <input name="email" type="email" required autoComplete="email" style={authInputStyle} onFocus={event => focusAuthInput(event, isDark)} onBlur={event => blurAuthInput(event, isDark)} />
-            </label>
-
-            <label className="block">
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Password</span>
-              <input name="password" type="password" required minLength={8} autoComplete="new-password" style={authInputStyle} onFocus={event => focusAuthInput(event, isDark)} onBlur={event => blurAuthInput(event, isDark)} />
-            </label>
-
-            <label className="block">
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Confirm Password</span>
-              <input name="confirm_password" type="password" required minLength={8} autoComplete="new-password" style={authInputStyle} onFocus={event => focusAuthInput(event, isDark)} onBlur={event => blurAuthInput(event, isDark)} />
-            </label>
+            <label className="block"><span className="text-sm font-bold text-main">Full Name</span><input name="full_name" type="text" required autoComplete="name" className={authInputClassName} /></label>
+            <label className="block"><span className="text-sm font-bold text-main">Email</span><input name="email" type="email" required autoComplete="email" className={authInputClassName} /></label>
+            <label className="block"><span className="text-sm font-bold text-main">Password</span><input name="password" type="password" required minLength={8} autoComplete="new-password" className={authInputClassName} /></label>
+            <label className="block"><span className="text-sm font-bold text-main">Confirm Password</span><input name="confirm_password" type="password" required minLength={8} autoComplete="new-password" className={authInputClassName} /></label>
 
             <div className="flex flex-col items-center gap-2">
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Account Type</span>
+              <span className="text-sm font-bold text-main">Account Type</span>
               <RoleToggle<SelfRegisterRole>
                 value={role}
                 onChange={setRole}
-                options={[
-                  { value: 'merchant', label: 'Merchant' },
-                  { value: 'lender', label: 'Lender' },
-                ]}
+                options={[{ value: 'merchant', label: 'Merchant' }, { value: 'lender', label: 'Lender' }]}
               />
             </div>
 
-            {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</p>}
+            {error && <p className="rounded-lg bg-danger px-3 py-2 text-sm font-bold text-on-danger">{error}</p>}
 
             <div className="flex justify-center pt-2">
               <PrimaryButton type="submit" label={submitting ? 'Creating Account...' : 'Create Account'} disabled={submitting} onClick={() => undefined} fullWidth />
             </div>
           </form>
 
-          <div className="mt-6 flex flex-col items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
+          <div className="mt-6 flex flex-col items-center gap-3 text-sm font-semibold text-muted">
             <span>Already have an account?</span>
             <PrimaryButton label="Sign In" size="small" onClick={() => onModeChange('login')} />
           </div>

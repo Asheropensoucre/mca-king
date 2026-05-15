@@ -79,27 +79,27 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ entityType, en
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4">
       <Card className="w-full max-w-xl">
         <form onSubmit={handleSubmit}>
-          <div className="border-b border-slate-200 p-6 dark:border-slate-700">
-            <h3 className="text-xl font-black text-theme-maroon dark:text-theme-yellow">Create Task</h3>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Add a follow-up reminder for this {entityType}.</p>
+          <div className="border-b border-line p-6 ">
+            <h3 className="text-xl font-black text-main ">Create Task</h3>
+            <p className="mt-1 text-sm text-muted">Add a follow-up reminder for this {entityType}.</p>
           </div>
 
           <div className="space-y-4 p-6">
-            {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</p>}
+            {error && <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger dark:bg-danger/20 dark:text-danger">{error}</p>}
             <Input label="Title" name="title" value={title} onChange={event => setTitle(event.target.value)} required />
             <Textarea label="Description" name="description" value={description} onChange={event => setDescription(event.target.value)} rows={3} />
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Priority</span>
-                <select value={priority} onChange={event => setPriority(event.target.value as TaskPriority)} className="mt-1 block w-full rounded-md border-0 px-3 py-2 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-theme-yellow dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600">
+                <span className="text-sm font-medium text-main">Priority</span>
+                <select value={priority} onChange={event => setPriority(event.target.value as TaskPriority)} className="mt-1 block w-full rounded-md border-0 px-3 py-2 text-main ring-1 ring-inset ring-line focus:ring-2 focus:ring-accent   ring-line">
                   {priorityOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
                 </select>
               </label>
 
               <label className="block">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Assign To</span>
-                <select value={assignedTo} onChange={event => setAssignedTo(event.target.value)} className="mt-1 block w-full rounded-md border-0 px-3 py-2 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-theme-yellow dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600">
+                <span className="text-sm font-medium text-main">Assign To</span>
+                <select value={assignedTo} onChange={event => setAssignedTo(event.target.value)} className="mt-1 block w-full rounded-md border-0 px-3 py-2 text-main ring-1 ring-inset ring-line focus:ring-2 focus:ring-accent   ring-line">
                   {assigneeOptions.map(rep => <option key={rep.id} value={rep.id}>{rep.name}</option>)}
                 </select>
               </label>
@@ -108,7 +108,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ entityType, en
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+          <div className="flex justify-end gap-2 border-t border-line bg-surface-muted p-4  -muted/50">
             <PrimaryButton label="Cancel" size="small" variant="danger" onClick={onClose} />
             <PrimaryButton type="submit" label={submitting ? 'Creating...' : 'Create Task'} size="small" disabled={submitting || !title.trim()} />
           </div>

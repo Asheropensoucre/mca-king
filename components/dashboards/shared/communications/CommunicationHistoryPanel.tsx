@@ -20,20 +20,20 @@ export const CommunicationHistoryPanel: React.FC<Props> = ({ entityType, entityI
 
   return (
     <Card className="p-5">
-      <h3 className="text-lg font-black text-theme-maroon dark:text-theme-yellow">Communication History</h3>
-      {error && <p className="mt-2 text-sm font-bold text-red-600 dark:text-red-300">{error}</p>}
+      <h3 className="text-lg font-black text-main ">Communication History</h3>
+      {error && <p className="mt-2 text-sm font-bold text-danger dark:text-danger">{error}</p>}
       {events.length === 0 ? (
-        <p className="mt-3 text-sm font-semibold text-slate-500 dark:text-slate-300">No communications recorded yet.</p>
+        <p className="mt-3 text-sm font-semibold text-muted ">No communications recorded yet.</p>
       ) : (
         <div className="mt-4 space-y-3 max-h-96 overflow-y-auto">
           {events.map(event => (
-            <div key={event.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-700 dark:bg-slate-900/60">
+            <div key={event.id} className="rounded-lg border border-line bg-surface-muted p-3 text-sm  -muted">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-black text-theme-maroon dark:text-theme-yellow">{event.subject || event.communication_type}</p>
-                <span className="text-xs font-bold uppercase text-theme-teal">{event.channel} • {event.status}</span>
+                <p className="font-black text-main ">{event.subject || event.communication_type}</p>
+                <span className="text-xs font-bold uppercase text-secondary">{event.channel} • {event.status}</span>
               </div>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{new Date(event.created_at).toLocaleString()} → {event.to_contact || 'N/A'}</p>
-              {event.body_preview && <p className="mt-2 text-slate-700 dark:text-slate-200">{event.body_preview}</p>}
+              <p className="mt-1 text-xs text-muted">{new Date(event.created_at).toLocaleString()} → {event.to_contact || 'N/A'}</p>
+              {event.body_preview && <p className="mt-2 text-main">{event.body_preview}</p>}
             </div>
           ))}
         </div>

@@ -42,7 +42,7 @@ export const AgreementsForm: React.FC<AgreementsFormProps> = ({ data, updateData
   return (
     <div className="space-y-8">
       <div>
-        <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Terms & Authorizations</h3>
+        <h3 className="text-lg font-semibold text-main  mb-4">Terms & Authorizations</h3>
         <div className="relative flex items-start">
           <div className="flex h-6 items-center">
             <input
@@ -51,22 +51,22 @@ export const AgreementsForm: React.FC<AgreementsFormProps> = ({ data, updateData
               type="checkbox"
               checked={data.creditAuth}
               onChange={handleCheckboxChange}
-              className="h-4 w-4 rounded border-gray-300 text-theme-yellow focus:ring-theme-yellow"
+              className="h-4 w-4 rounded border-line text-accent focus:ring-accent"
             />
           </div>
           <div className="ml-3 text-sm leading-6">
-            <label htmlFor="creditAuth" className="font-medium text-slate-900 dark:text-slate-100">
+            <label htmlFor="creditAuth" className="font-medium text-main">
               Authorization to Obtain Credit Report
             </label>
-            <p className="text-slate-500 dark:text-slate-400">
+            <p className="text-muted">
               By checking this box, you authorize us and our partners to obtain credit reports in connection with this application and for any lawful purpose, including but not limited to, for underwriting, servicing, and collections.
             </p>
           </div>
         </div>
       </div>
       <div>
-        <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2">Signature</h3>
-        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        <h3 className="text-lg font-semibold text-main  mb-2">Signature</h3>
+        <p className="text-sm text-muted  mb-4">
           Please sign in the box below. By signing, you certify that all information provided is true and correct and that you agree to the terms and conditions of this application.
         </p>
         <SignaturePad onSignatureEnd={handleSignatureEnd} />

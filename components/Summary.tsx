@@ -9,15 +9,15 @@ interface SummaryProps {
 
 const SummaryItem: React.FC<{ label: string; value?: string | number }> = ({ label, value }) => (
   <div>
-    <dt className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</dt>
-    <dd className="mt-1 text-sm text-slate-900 dark:text-slate-100">{value || 'N/A'}</dd>
+    <dt className="text-sm font-medium text-muted">{label}</dt>
+    <dd className="mt-1 text-sm text-main">{value || 'N/A'}</dd>
   </div>
 );
 
 const Section: React.FC<{title: string, onEdit: () => void, children: React.ReactNode}> = ({ title, onEdit, children }) => (
-    <div className="border-b border-slate-200 dark:border-slate-700 pb-6">
+    <div className="border-b border-line pb-6">
         <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">{title}</h3>
+            <h3 className="text-lg font-semibold text-main ">{title}</h3>
             <PrimaryButton label="Edit" size="small" onClick={onEdit} />
         </div>
         {children}
@@ -49,8 +49,8 @@ export const Summary: React.FC<SummaryProps> = ({ formData, onEditStep }) => {
       <Section title="Owner Information" onEdit={() => onEditStep(1)}>
         <div className="space-y-6">
         {formData.owners.map((owner, index) => (
-          <div key={owner.id} className="border-t border-slate-200 dark:border-slate-700 pt-4 first:border-t-0 first:pt-0">
-              <h4 className="text-md font-semibold text-slate-700 dark:text-slate-300">Owner #{index + 1} - {owner.name}</h4>
+          <div key={owner.id} className="border-t border-line pt-4 first:border-t-0 first:pt-0">
+              <h4 className="text-md font-semibold text-main">Owner #{index + 1} - {owner.name}</h4>
               <dl className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                 <SummaryItem label="Name" value={owner.name} />
                 <SummaryItem label="Title" value={owner.title} />
@@ -73,10 +73,10 @@ export const Summary: React.FC<SummaryProps> = ({ formData, onEditStep }) => {
           <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
              <SummaryItem label="Credit Authorization" value={formData.agreements.creditAuth ? 'Agreed' : 'Not Agreed'} />
              <div>
-                <dt className="text-sm font-medium text-slate-500 dark:text-slate-400">Signature</dt>
+                <dt className="text-sm font-medium text-muted">Signature</dt>
                 <dd className="mt-1">
                     {formData.agreements.signatureDataUrl ? (
-                         <img src={formData.agreements.signatureDataUrl} alt="Signature" className="border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-300 h-24" />
+                         <img src={formData.agreements.signatureDataUrl} alt="Signature" className="border border-line  rounded-md bg-surface  h-24" />
                     ): 'N/A'}
                 </dd>
             </div>
