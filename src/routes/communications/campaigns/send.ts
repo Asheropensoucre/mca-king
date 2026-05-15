@@ -1,6 +1,7 @@
 import { writeAuditLog } from '../../../lib/audit'
 import { sendEmailWithCompliance } from '../../../lib/communications/communication-service'
 import { listRecipientCandidates, renderTemplate } from '../../../lib/communications/entities'
+import { buildCommunicationEmailHtml } from '../../../lib/communications/html'
 import { evaluateEmailEligibility } from '../../../lib/communications/suppression'
 import { requireAuth } from '../../../lib/requireAuth'
 import { badRequest, forbidden, getId, json, notFound, type RouteContext } from '../../../lib/route-utils'
@@ -72,7 +73,7 @@ export async function POST(req: Request, context?: RouteContext): Promise<Respon
       req,
       to: candidate.email,
       subject: renderTemplate(campaign.subject, candidate),
-      html: renderTemplate(campaign.body, candidate).split('\n').map(line => `<p>${line}</p>`).join(''),
+      html: buildCommunicationEmailHtml({ title: renderTemplate(campaign.subject, candidate), body: renderTemplate(campaign.body, candidate), preheader: renderTemplate(campaign.subject, candidate) }),
       category: 'campaign',
       entity_type: candidate.entity_type,
       entity_id: candidate.entity_id,

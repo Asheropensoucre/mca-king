@@ -1,4 +1,5 @@
 import { canAccessCommunicationEntity, resolveRecipient } from '../../lib/communications/entities'
+import { buildCommunicationEmailHtml } from '../../lib/communications/html'
 import { sendEmailWithCompliance, sendSmsDisabled } from '../../lib/communications/communication-service'
 import type { CommunicationEntityType } from '../../lib/communications/types'
 import { requireAuth } from '../../lib/requireAuth'
@@ -6,10 +7,6 @@ import { badRequest, forbidden, json } from '../../lib/route-utils'
 
 function isEntityType(value: unknown): value is CommunicationEntityType {
   return value === 'lead' || value === 'merchant' || value === 'contact' || value === 'user'
-}
-
-function htmlFromText(value: string): string {
-  return value.split('\n').map(line => `<p>${line.replace(/[&<>]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[char] ?? char))}</p>`).join('')
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -28,7 +25,7 @@ export async function POST(req: Request): Promise<Response> {
     req,
     to,
     subject: body.subject,
-    html: htmlFromText(body.body),
+    html: buildCommunicationEmailHtml({ title: body.subject, body: body.body, preheader: body.subject }),
     category: body.category === 'campaign' ? 'campaign' : 'transactional',
     entity_type: body.entity_type,
     entity_id: body.entity_id,

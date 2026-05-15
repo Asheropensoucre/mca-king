@@ -65709,6 +65709,71 @@ async function GET41(req) {
   return json(data ?? []);
 }
 
+// src/lib/communications/html.ts
+var colors2 = {
+  surface: "#ffffff",
+  page: "#f6f7fb",
+  primary: "#00236f",
+  primaryContainer: "#1e3a8a",
+  teal: "#006a61",
+  yellow: "#ffe262",
+  text: "#172033",
+  muted: "#64748b",
+  border: "#d8dbe8"
+};
+function escapeHtml3(value) {
+  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function looksLikeHtml(value) {
+  return /<\s*(p|div|table|tr|td|h1|h2|h3|a|img|ul|ol|li|br|strong|span|section|article|button)\b/i.test(value);
+}
+function textToHtml2(value) {
+  return value.split(/\n{2,}/).map((paragraph) => `<p style="margin:0 0 16px;">${escapeHtml3(paragraph).replace(/\n/g, "<br />")}</p>`).join(`
+`);
+}
+function communicationEmailShell(title, body, preheader) {
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>${escapeHtml3(title)}</title>
+  </head>
+  <body style="margin:0;padding:0;background:${colors2.page};font-family:Inter,Arial,sans-serif;color:${colors2.text};">
+    ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml3(preheader)}</div>` : ""}
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${colors2.page};padding:28px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:${colors2.surface};border:1px solid ${colors2.border};border-radius:18px;overflow:hidden;box-shadow:0 16px 40px rgba(15,23,42,.12);">
+            <tr>
+              <td style="background:${colors2.primary};padding:28px 30px;border-bottom:6px solid ${colors2.yellow};">
+                <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:800;color:${colors2.yellow};">MCA King</div>
+                <h1 style="margin:8px 0 0;font-size:26px;line-height:1.25;color:#ffffff;">${escapeHtml3(title)}</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:30px;font-size:16px;line-height:1.65;color:${colors2.text};">
+                ${body}
+              </td>
+            </tr>
+            <tr>
+              <td style="background:#f8fafc;padding:18px 30px;font-size:12px;color:${colors2.muted};border-top:1px solid ${colors2.border};">
+                Sent from MCA King Brokerage CRM
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+function buildCommunicationEmailHtml(params) {
+  const content = looksLikeHtml(params.body) ? params.body : textToHtml2(params.body);
+  const alreadyFullDocument = /<\s*html[\s>]/i.test(params.body) || /<\s*body[\s>]/i.test(params.body);
+  return alreadyFullDocument ? params.body : communicationEmailShell(params.title, content, params.preheader ?? undefined);
+}
+
 // src/lib/communications/providers/resend-provider.ts
 async function sendResendEmail(payload) {
   const config2 = getEmailConfig();
@@ -65903,10 +65968,6 @@ async function sendSmsDisabled() {
 function isEntityType4(value) {
   return value === "lead" || value === "merchant" || value === "contact" || value === "user";
 }
-function htmlFromText(value) {
-  return value.split(`
-`).map((line) => `<p>${line.replace(/[&<>]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[char] ?? char)}</p>`).join("");
-}
 async function POST32(req) {
   const user = await requireAuth(req);
   if (user.role === "merchant" || user.role === "lender")
@@ -65928,7 +65989,7 @@ async function POST32(req) {
     req,
     to,
     subject: body.subject,
-    html: htmlFromText(body.body),
+    html: buildCommunicationEmailHtml({ title: body.subject, body: body.body, preheader: body.subject }),
     category: body.category === "campaign" ? "campaign" : "transactional",
     entity_type: body.entity_type,
     entity_id: body.entity_id,
@@ -66219,8 +66280,7 @@ async function POST36(req, context) {
       req,
       to: candidate.email,
       subject: renderTemplate(campaign.subject, candidate),
-      html: renderTemplate(campaign.body, candidate).split(`
-`).map((line) => `<p>${line}</p>`).join(""),
+      html: buildCommunicationEmailHtml({ title: renderTemplate(campaign.subject, candidate), body: renderTemplate(campaign.body, candidate), preheader: renderTemplate(campaign.subject, candidate) }),
       category: "campaign",
       entity_type: candidate.entity_type,
       entity_id: candidate.entity_id,
