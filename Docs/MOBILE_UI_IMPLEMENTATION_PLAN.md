@@ -35,9 +35,10 @@ Mobile support should be additive:
 This is already the most important responsive foundation:
 
 - Desktop uses a left sidebar at `lg:` and above.
-- Mobile/tablet currently uses a top header with horizontally scrollable nav buttons.
+- Mobile/tablet uses a compact top header with a menu button that opens a hidden left drawer.
+- Settings and logout actions live in the sidebar/drawer footer instead of appearing as regular mobile top tabs.
 
-This is a good start and should be preserved.
+This pattern should be preserved for V1.
 
 ### Shared visual components
 
@@ -93,7 +94,7 @@ The app already has several responsive foundations:
 5. Tables are commonly wrapped in `overflow-x-auto`, preventing immediate page breakage.
 6. Modals generally use `fixed inset-0`, `p-4`, `max-h-[90vh]`, and `overflow-y-auto` patterns.
 7. Auth pages are already centered and constrained with `max-w-md`.
-8. The mobile top nav already supports horizontal scrolling.
+8. Mobile dashboard navigation now uses a hidden left drawer instead of a horizontally scrolling top tab bar.
 
 ### Main mobile risks
 
@@ -407,17 +408,22 @@ Tablet/desktop behavior:
 
 ---
 
-### 6. `MobileSectionNav` or improved `DashboardShell` mobile nav
+### 6. `DashboardShell` mobile drawer nav
 
-Current mobile nav works as horizontal scroll. It can remain for Phase 1.
+V1 status: implemented.
 
-Later improvement:
+Current mobile navigation uses the shared `DashboardShell` pattern:
 
-- Use a compact dropdown/select for many sections.
-- Or split primary nav and settings/logout actions.
-- Or add a hamburger drawer.
+- Desktop keeps the persistent left sidebar at `lg:` and above.
+- Mobile/tablet keeps a compact top header with a `Menu` button.
+- The `Menu` button opens a hidden left drawer containing the same section list as desktop.
+- Settings and logout actions live in the drawer footer, matching the desktop sidebar model.
 
-Because the current top nav does work, this should be a lower-risk enhancement after main content is made mobile-friendly.
+Future optional improvements:
+
+- Add focus trapping/escape-key handling to the drawer for stronger accessibility.
+- Consider a compact current-section label in the mobile header if users need more context.
+- Continue avoiding duplicated mobile-only pages unless a workflow truly needs different interaction.
 
 ---
 

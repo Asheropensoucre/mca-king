@@ -5,7 +5,7 @@
 # MCA King
 
 <p align="center">
-  A production-focused brokerage CRM for merchant cash advance intake, lender matching, offer management, documents, stipulations, and funding workflow automation.
+  A broker-shop CRM for merchant cash advance intake, lender/funder matching, offers, documents, stipulations, renewals, communications, reporting, and funding workflow automation.
 </p>
 
 <p align="center">
@@ -19,88 +19,111 @@
 
 ## Overview
 
-MCA King is a broker-shop merchant cash advance CRM for managing merchant funding files from lead intake through merchant-file submission to lenders/funders, approvals, offers, contracts, stipulations, and final funding. The broker shop sources merchant deals; admins and sales reps manage those files; lenders/funders sign in to review broker-submitted merchant files, approve or decline them, request stipulations, and send offers.
+MCA King is a broker-shop merchant cash advance CRM. The broker shop sources merchant files, manages them through internal admins and sales reps, submits qualified merchant packages to lenders/funders, and tracks the full workflow through matching, offers, stipulations, contracts, funding, renewals, payoff requests, reporting, and communications.
 
-The app is designed for MCA broker owners, broker shops, internal sales reps, merchants, and lender/funder users. Admin users represent the broker shop owner or operator, not a lender marketplace operator.
+This is **not** a lender-originated deal marketplace. Lenders/funders sign in only to review broker-submitted or broker-matched merchant files, approve/decline them, request stipulations, and send offers. Admin users represent the broker shop owner/operator.
 
-<!-- Add screenshots here -->
+## Current Product Scope
+
+MCA King includes four primary role experiences:
+
+| Role | Purpose |
+|---|---|
+| Admin | Broker-shop owner/operator. Manages users, sales reps, merchants, lenders/funders, pipeline, matching, renewals, revenue, commissions, reporting, audit logs, and communications. |
+| Sales Rep | Internal broker-shop rep. Works assigned leads, merchant files, tasks, renewals, reports, communications, and pipeline activity. |
+| Merchant | Funding applicant/customer. Submits applications, uploads documents, responds to stipulations, reviews offers, requests payoff letters, and manages safe self-service account settings. |
+| Lender/Funder | Funding partner reviewer. Reviews broker-submitted merchant files, submits offers, requests stipulations, manages their lender profile, and sees only their own authorized relationship data. |
 
 ## Features
 
-- **Role-based dashboards** for broker-shop Admins, internal Sales Reps, Merchants, and Lender/Funder users.
-- **12-step Kamba pipeline** with drag-and-drop deal movement powered by `@dnd-kit`.
-- **Automated and manual lender matching engine** that helps the broker shop decide which lenders/funders should review each merchant file.
-- **Leads system** with a mini pipeline, assignment, notes/call log, and lead-to-merchant conversion.
-- **Document uploads** to Supabase Storage with private files and signed URLs.
-- **Stipulations flow** for lenders/funders or broker admins to request additional documents and merchants to fulfill them.
-- **Email automation** with 7 Resend-powered triggers for merchant, lender, offer, stipulation, contract, and funded-deal events.
-- **Real auth with Better Auth-compatible email/password and database sessions**, backed by Supabase auth tables and secure HTTP-only session cookies.
-- **AI Assistant with page-aware context** through the MCA King Assistant powered by Gemini.
-- **Dark/light mode** using the Corporate Tech/MCA King theme and global wallpaper background.
-- **Grace period reapply logic** for merchants after terminal statuses such as `FUNDED`, `all lenders decline`, or `Declined by funder`.
-- **Funded-deal finance tracking** for first funding, renewal funding, and additional/split funding positions, plus broker revenue receivable from lenders/funders and internal sales rep commission status.
-- **Merchant-file submission tracking** for broker-to-lender/funder package submissions, response statuses, declines, no-response outcomes, offers, and stipulation requests.
-- **Search, filters, pagination, and saved views** so admins and sales reps can find merchants, leads, lenders, tasks, and funded records at scale.
-- **Account settings and admin user management** where users can change only their own password, while admins manage emails, roles, resets, account disable/close actions, and sales rep creation from a dedicated Settings area.
-- **Renewals tracking** for funded merchants, including broker-side eligibility queues, renewal funding history, and early-payoff request tracking. Merchants/admins/assigned reps can request payoff letters after funding; only the funding lender/funder for that deal or an admin can upload/link the official lender-provided payoff letter.
-- **Reporting and analytics** for admins and scoped sales reps, including overview, pipeline, funding, leads, lender/funder performance, broker revenue, commissions, renewals, tasks, and CSV exports. Lender/funder dashboards include only their own relationship analytics such as files sent, funded deals together, total funded together, and pending payoff requests.
-- **Compliance and audit hardening** with server-side audit logs, admin audit log viewer, document upload MIME/size validation, signed URL audit events, production security headers, sensitive-field masking, and first-pass rate limiting.
-- **Email-first Communications Center** with communication preferences, global suppressions, email templates, selected-recipient campaign drafts, recipient preview, unsubscribe handling, communication history, Resend webhook ingestion, and SMS-disabled future readiness. Resend is used for app/campaign email, Zoho Mail remains for human inboxes only, and live SMS is intentionally deferred until provider budget, A2P 10DLC registration, STOP/HELP handling, quiet hours, and documented SMS consent workflows are ready.
+- **Role-based dashboards** for Admin, Sales Rep, Merchant, and Lender/Funder users.
+- **Responsive dashboard shell** with persistent desktop left navigation and mobile drawer navigation.
+- **12-step Kamba pipeline** with drag-and-drop status movement powered by `@dnd-kit`.
+- **Lead management** with lead assignment, notes/call log, saved views, filtering, and lead-to-merchant conversion.
+- **Automated and manual lender/funder matching** based on lender criteria and merchant profile data.
+- **Merchant-file submission tracking** for broker-to-lender/funder packages, response statuses, declines, no-response outcomes, offers, and stipulation requests.
+- **Private document storage** through Supabase Storage, including upload validation, signed URLs, permission checks, and audit events.
+- **Stipulations workflow** for admins/lenders to request additional documents and merchants to fulfill those requests.
+- **Offer workflow** with lender/funder offer creation and merchant offer accept/reject decisions.
+- **Renewals and payoff requests** for funded merchants, including renewal records, early-payoff request tracking, and official payoff-letter upload/linking by the funding lender/funder or admin.
+- **Funded-deal finance tracking** for first fundings, renewal fundings, additional/split funding positions, broker revenue receivables, and internal sales rep commission status.
+- **Reporting and analytics** for admins and scoped sales reps, including overview, pipeline, funding, leads, lender/funder performance, broker revenue, commissions, renewals, tasks, and CSV export support.
+- **Lender/funder analytics** scoped to that lender/funder relationship only.
+- **Search, filters, pagination, and saved views** for operational work queues.
+- **Account settings and admin user management** with self-service password changes for normal users and admin-controlled email, role, reset, disable, and close-account actions.
+- **Email automation** using Resend for transactional workflow emails.
+- **Email-first Communications Center** with preferences, suppressions, templates, selected-recipient campaign drafts, recipient preview, unsubscribe handling, communication history, and Resend webhook ingestion.
+- **AI Assistant** with page-aware context through Gemini via a server-side API route.
+- **Audit and security hardening foundation** including server-side audit logs, admin audit viewer, sensitive-field masking, CSRF protection, production security headers, and first-pass rate limiting.
+- **Dark/light Corporate Tech theme** with semantic Tailwind tokens and global MCA King styling.
 
 ## Tech Stack
 
 | Area | Technology |
 |---|---|
-| Frontend | React 19, TypeScript, Vite, build-time Tailwind CSS/PostCSS configuration |
-| Backend | Vite development middleware API bridge, server route handlers in `src/routes` |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS/PostCSS |
+| Backend/API | Custom Vite dev middleware and Vercel serverless API bundle |
 | Database | Supabase Postgres |
 | Storage | Supabase Storage private `documents` bucket with signed URLs |
-| Auth | Better Auth configuration, Better Auth-compatible tables, custom HTTP-only session-cookie route helpers |
-| Email | Resend for app/campaign email; Zoho Mail for human mailbox hosting |
+| Auth/session | Better Auth-compatible auth models plus custom HTTP-only session-cookie route helpers |
+| Email | Resend for app/campaign email; Zoho Mail intended only for human mailbox hosting |
 | AI | Google Gemini via `@google/genai` |
-| Build | Bun, Vite, TypeScript |
+| Build/package manager | Bun, Vite, TypeScript |
 
 ## Architecture Overview
 
 ### Vite API bridge
 
-MCA King is a Vite React application, not a full-stack framework with automatic filesystem API routes. The project implements a custom Vite middleware bridge in `vite.config.ts` that intercepts `/api/*` requests during local development and forwards them to `src/server/api.ts`.
+MCA King is a Vite React application, not a full-stack framework with automatic filesystem API routes. During local development, `vite.config.ts` intercepts `/api/*` requests and forwards them to `src/server/api.ts`.
 
-`src/server/api.ts` maps HTTP methods and paths to handlers under `src/routes`, including auth, merchants, lenders, offers, leads, documents, stipulations, matching, and users.
+`src/server/api.ts` maps HTTP methods and API paths to handlers under `src/routes`, including auth, merchants, lenders, offers, leads, documents, stipulations, matching, tasks, renewals, reports, communications, settings, audit logs, and webhooks.
 
-> **Production note:** Vercel production uses a single bundled serverless function at `api/index.js`, generated from `src/server/vercel-entry.ts` by `bun run build:api`. The bundle includes `src/server/api.ts` and route dependencies so Vercel does not need to resolve extensionless TypeScript imports at runtime.
+### Vercel production API bundle
+
+Production uses a single bundled serverless function at `api/index.js`, generated from `src/server/vercel-entry.ts` by:
+
+```bash
+bun run build:api
+```
+
+The full production build runs both the API bundle and the web build:
+
+```bash
+bun run build
+```
+
+See [`Docs/VERCEL_DEPLOYMENT.md`](Docs/VERCEL_DEPLOYMENT.md) for deployment notes.
 
 ### Role-based access control
 
-Server routes call `requireAuth(req)` from `src/lib/requireAuth.ts`, which resolves the current user from the `mca_session` HTTP-only cookie. Route handlers then enforce role access using shared helpers from `src/lib/route-utils.ts`.
+Server routes use `requireAuth(req)` from `src/lib/requireAuth.ts` to resolve the current user from the `mca_session` HTTP-only cookie. Route handlers then enforce role and ownership access with helpers from `src/lib/route-utils.ts` and route-specific checks.
 
-Role examples:
+Important access rules:
 
-- Admins are broker shop owners or operators who can manage merchants, lenders/funders, leads, sales reps, matching, documents, and pipeline movement.
-- Sales reps are internal broker-shop users who manage assigned deals and leads.
-- Merchants can access their own applications, offers, stipulations, and documents.
-- Lenders/funders can access their own profile and merchant files submitted or matched to them; they do not originate merchant deals in this CRM.
-- Lender-side account/relationship managers are treated as lender contact people only; they are not broker commission recipients and do not submit deals to the brokerage.
-
+- Admins can operate broker-shop-wide data.
+- Sales reps are scoped to assigned leads/merchants and permitted broker workflows.
+- Merchants can access their own applications, offers, stipulations, documents, and safe account settings.
+- Lenders/funders can access only their own lender profile and merchant files tied to that lender/funder through matching/submission/funding relationships.
+- Lenders/funders must not see competing lender/funder offers on the same merchant file.
 
 ### Communications strategy
 
 MCA King's communications implementation is intentionally **email-first and SMS-later**:
 
-- Use **Resend** for controlled app email and future campaign email.
-- Use **Zoho Mail** only for regular human inboxes/business email, not bulk campaign sending.
-- Communication preferences, suppressions, unsubscribe handling, templates, campaign recipient tracking, communication history, and Resend webhook ingestion are implemented for Phase I.
-- Keep SMS disabled until there is provider/budget approval and compliance readiness, including A2P 10DLC registration, documented opt-in proof, STOP/HELP webhooks, quiet hours, and rate limits.
+- Use **Resend** for controlled app email and campaign email.
+- Use **Zoho Mail** only for normal human inbox/business email, not bulk campaign sending.
+- Communication preferences, global suppressions, unsubscribe handling, email templates, campaign recipient tracking, communication history, and Resend webhook ingestion are implemented.
+- SMS fields and consent planning exist for future readiness, but live SMS sending is intentionally deferred until there is a real company/client need that justifies provider setup, A2P 10DLC registration, STOP/HELP handling, quiet hours, documented opt-in proof, budget, and legal/compliance review.
 
-See [`Docs/COMMUNICATIONS_COMPLIANCE_STRATEGY.md`](Docs/COMMUNICATIONS_COMPLIANCE_STRATEGY.md) and [`Docs/PHASE_I_GOOSE_PROMPT.md`](Docs/PHASE_I_GOOSE_PROMPT.md).
+See [`Docs/COMMUNICATIONS_COMPLIANCE_STRATEGY.md`](Docs/COMMUNICATIONS_COMPLIANCE_STRATEGY.md).
 
 ### 12-step status machine
 
-The application status source of truth is the `ApplicationStatus` union in `types.ts`, with display configuration in `components/dashboards/shared/applicationStatus.ts`. Dashboard views, the Kamba pipeline, merchant reapply logic, matching triggers, and email triggers all depend on these status values.
+The application status source of truth is the `ApplicationStatus` union in `types.ts`, with display configuration in `components/dashboards/shared/applicationStatus.ts`. Dashboard views, Kamba pipeline behavior, merchant reapply logic, matching triggers, status history, and email triggers depend on these status values.
 
-### Matching engine criteria
+### Matching engine
 
-The server-side matching engine lives in `src/lib/matching.ts`. Auto-matching evaluates active lenders against merchant attributes, then upserts matches into `lender_matches` without creating duplicates.
+The server-side matching engine lives in `src/lib/matching.ts`. Auto-matching evaluates active lenders/funders against merchant attributes, then upserts matches into `lender_matches` without creating duplicates.
 
 Matching criteria include:
 
@@ -110,50 +133,55 @@ Matching criteria include:
 - Industry restrictions
 - State restrictions
 - Requested funding amount minimum/maximum
-- Active lender status
+- Active lender/funder status
 
 ## Getting Started
-
-For production hosting, see the [Vercel Deployment Guide](Docs/VERCEL_DEPLOYMENT.md).
 
 ### Prerequisites
 
 - [Bun](https://bun.sh/) installed locally
-- Supabase account and project
-- Resend account and API key
-- Gemini API key from Google AI Studio
-- Node-compatible shell environment for Vite/Bun scripts
+- Supabase project
+- Supabase Postgres schema compatible with this app
+- Supabase Storage bucket for private documents
+- Resend account/API key for email features
+- Gemini API key for AI Assistant features
+- Vercel account for production hosting, if deploying publicly
 
 ### Clone and install
 
 ```bash
-git clone https://github.com/Asheropensoucre/mca-king
-cd "Brokerage CRM"
+git clone https://github.com/Asheropensource/mca-king.git
+cd mca-king
 bun install
 ```
 
+If your local folder has a different name, `cd` into that project folder before running the commands below.
+
 ### Environment variables
 
-Create a local environment file:
+Create your local environment file from the checked-in example:
 
 ```bash
 cp .env.example .env.local
 ```
 
-If `.env.example` does not exist yet, create `.env.local` manually and add the variables listed in the [Environment Variables](#environment-variables) section.
+Then fill in your Supabase, auth, Resend, Gemini, and app URL values.
+
+> Never commit `.env`, `.env.local`, service-role keys, database URLs, API keys, or webhook secrets.
 
 ### Supabase setup
 
-The app expects a Supabase project with Postgres tables for users, merchants, owners, lenders, lender matches, merchant file submissions, offers, documents, status history, stipulations, leads, lead notes, activities, tasks, fundings, broker revenue, sales rep commissions, renewals, payoff requests, saved views, account-status fields on users, and Better Auth-compatible session/account tables. Reporting and dashboard analytics are generated from existing tables through server routes; no separate reporting schema is required for Phase G.
+The app expects Supabase Postgres tables for users, sessions/accounts, merchants, owners, lenders/funders, matches, merchant-file submissions, offers, documents, status history, stipulations, leads, lead notes, activities, tasks, fundings, broker revenue, sales rep commissions, renewals, payoff requests, saved views, audit logs, communication preferences, suppressions, templates, campaigns, campaign recipients, communication history, and account-status fields.
 
-There is currently no checked-in canonical SQL schema file in this repository. The schema is reflected by:
+There is not yet a checked-in standalone Supabase SQL schema/migration folder in this repository. The current required schema is reflected by:
 
-- data models in `types.ts`
-- row mapping logic in `src/lib/data-shapes.ts`
-- route handlers in `src/routes`
-- Supabase client/server helpers in `src/lib/supabase.ts` and `src/lib/supabase-server.ts`
+- shared models in `types.ts`
+- database/frontend mapping in `src/lib/data-shapes.ts`
+- API route handlers in `src/routes`
+- Supabase helpers in `src/lib/supabase.ts` and `src/lib/supabase-server.ts`
+- planning docs under `Docs/`
 
-For a clean deploy, create a formal Supabase migration from the current remote schema before production rollout.
+Self-hosters should run MCA King against a compatible Supabase schema. If a reusable one-command self-host setup is added later, it should describe application schema setup only; customer data should stay in each operator's own Supabase backups and should never be committed to this repo.
 
 ### Run locally
 
@@ -167,13 +195,14 @@ Vite starts on port `3000` when available:
 http://localhost:3000
 ```
 
-Build for production:
+### Typecheck and build
 
 ```bash
+bun run tsc
 bun run build
 ```
 
-Preview the production build:
+Preview the production web build:
 
 ```bash
 bun run preview
@@ -183,133 +212,96 @@ bun run preview
 
 | Variable name | Description | Required |
 |---|---|---|
-| `SUPABASE_URL` | Supabase project API URL used by server-side Supabase admin client. | Yes |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key used only on the server for privileged route operations. Never expose in browser code. | Yes |
+| `SUPABASE_URL` | Supabase project API URL used by the server-side Supabase admin client. | Yes |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key used only on the server for privileged route operations. Never expose this in browser code. | Yes |
+| `SUPABASE_ANON_KEY` | Supabase anon key, included for compatibility with some server/auth setup patterns. | If used by your deployment |
 | `VITE_SUPABASE_URL` | Supabase project URL exposed to the Vite client. | Yes |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anon/publishable key exposed to the Vite client. | Yes |
-| `DATABASE_URL` | Postgres connection string for Better Auth/Kysely configuration and auth table compatibility. | Yes |
+| `DATABASE_URL` | Postgres connection string for Better Auth/Kysely compatibility and auth table access. | Yes |
 | `BETTER_AUTH_URL` | Public application URL used by auth/email flows and email links. | Yes |
-| `BETTER_AUTH_SECRET` | Secret for Better Auth deployments that use Better Auth runtime/session features. | Recommended |
-| `RESEND_API_KEY` | Resend API key used for outbound email automation and Phase I email communications. | Yes for email |
+| `BETTER_AUTH_SECRET` | Secret for Better Auth/runtime signing and communication unsubscribe signing fallback. | Yes in production |
+| `APP_ALLOWED_ORIGINS` | Comma-separated allowed browser origins for authenticated mutating API requests. | Yes in production |
+| `RATE_LIMIT_STORE` | Rate-limit backend. Use Supabase-backed durable limits in production; `memory` is for local/dev fallback only. | Recommended |
+| `RESEND_API_KEY` | Resend API key used for outbound workflow and campaign email. | Yes for email |
 | `EMAIL_FROM` | Verified sender address used for Resend emails. | Yes for email |
-| `BROKER_PHYSICAL_ADDRESS` | Physical mailing address/footer value for campaign email compliance. Required before sending marketing/campaign emails. | Recommended for Phase I campaigns |
-| `GEMINI_API_KEY` | Server-only Google Gemini API key used by MCA King Assistant through `/api/ai/chat`. Do not prenewalx with `VITE_`. | Yes for AI |
+| `RESEND_WEBHOOK_SECRET` | Optional Resend webhook signing secret. If set, `/api/webhooks/resend` rejects invalid webhook signatures. | Recommended |
+| `BROKER_PHYSICAL_ADDRESS` | Mailing address/footer value required before sending marketing/campaign emails. | Yes for campaign email |
+| `GEMINI_API_KEY` | Server-only Google Gemini API key used by `/api/ai/chat`. Do **not** prefix with `VITE_`. | Yes for AI |
 
 ## Project Structure
 
 ```txt
-Brokerage CRM/
-├── App.tsx                         # Root React app, auth/session routing, forms, dashboards, chat mounting
+mca-king/
+├── App.tsx                         # Root React app, auth/session routing, dashboards, print flow
 ├── index.html                      # Vite HTML entry
-├── index.css                       # Global Corporate Tech wallpaper, CSS variables, shadow overrides
+├── index.css                       # Tailwind directives, semantic theme tokens, global styling
 ├── index.tsx                       # React root mount
 ├── package.json                    # Bun/Vite scripts and dependencies
 ├── types.ts                        # Shared application data model
-├── vite.config.ts                  # Vite config and /api middleware bridge
-├── LICENSE                         # MIT license
-├── README.md                       # Project documentation
+├── vite.config.ts                  # Vite config and local /api middleware bridge
+├── vercel.json                     # Vercel routing/build config
+├── api/
+│   └── index.js                    # Generated bundled Vercel serverless API function
+├── scripts/
+│   └── build-api.ts                # API bundling script
 ├── public/
-│   └── logo.png                    # MCA King logo used by app and README
-├── Docs/
-│   ├── CORPORATE_TECH_THEME.md     # Theme palette and design-system notes
-│   ├── PHASE_1_GOOSE_PROMPT.md     # Historical implementation prompt
-│   ├── PHASE_2_GOOSE_PROMPT.md
-│   ├── PHASE_3_GOOSE_PROMPT.md
-│   ├── PHASE_4_GOOSE_PROMPT.md
-│   ├── PHASE_5_GOOSE_PROMPT.md
-│   └── PHASE_6_GOOSE_PROMPT.md
+│   └── logo.png                    # MCA King logo
+├── Docs/                           # Roadmaps, phase notes, security, deployment, communications docs
 ├── components/
-│   ├── BusinessInfoForm.tsx        # Merchant business information form step
-│   ├── OwnersForm.tsx              # Merchant owner information form step
+│   ├── BusinessInfoForm.tsx        # Merchant application form step
+│   ├── OwnersForm.tsx              # Owner information form step
 │   ├── AgreementsForm.tsx          # Credit authorization/signature step
-│   ├── DocumentUploadStep.tsx      # Merchant bank statement upload step
-│   ├── DocumentUpload.tsx          # Reusable document upload component
-│   ├── LenderForm.tsx              # Lender criteria/profile form
+│   ├── DocumentUploadStep.tsx      # Merchant bank-statement upload step
+│   ├── LenderForm.tsx              # Lender/funder profile and criteria form
 │   ├── PrintView.tsx               # Printable merchant application package
-│   ├── SignaturePad.tsx            # Canvas signature capture
-│   ├── StepIndicator.tsx           # Multi-step form progress display
-│   ├── Summary.tsx                 # Merchant application review step
-│   ├── Chatbot.tsx                 # MCA King Assistant Gemini chat UI
-│   ├── icons/
-│   │   └── index.tsx               # SVG icon components
-│   ├── ui/
-│   │   ├── Card.tsx                # Shared card/panel component
-│   │   ├── Input.tsx               # Shared input component
-│   │   ├── Select.tsx              # Shared select component
-│   │   └── Textarea.tsx            # Shared textarea component
+│   ├── Chatbot.tsx                 # MCA King Assistant UI
 │   └── dashboards/
 │       ├── DashboardController.tsx # Loads data and routes users to role dashboards
-│       ├── AdminDashboard.tsx      # Admin dashboard, directories, reps, pipeline
-│       ├── AdminSettingsPage.tsx   # Admin user management and sales rep creation
-│       ├── RenewalsView.tsx        # Admin/rep renewal queue
-│       ├── SalesRepDashboard.tsx   # Sales rep leads/deals/pipeline dashboard
-│       ├── MerchantDashboard.tsx   # Merchant application, docs, stips, offers, reapply logic
-│       ├── LenderDashboard.tsx     # Lender matched merchants, offers, stip requests
-│       ├── LeadManager.tsx         # Lead list/detail/notes/conversion UI with filters and saved views
-│       └── shared/
-│           ├── DashboardShell.tsx  # Shared dashboard layout/sidebar shell
-│           ├── KanbanPipelineView.tsx # 12-step Kamba drag-and-drop board and fullscreen views
-│           ├── DocumentsPanel.tsx  # Server-backed document list/upload/delete panel
-│           ├── MerchantDetailView.tsx # Merchant detail, documents, matches, offers
-│           ├── LenderDetailView.tsx   # Lender detail summary
-│           ├── SearchBar.tsx       # Admin/rep global search across merchants, leads, lenders
-│           ├── FilterBar.tsx       # Shared list filters for merchants, leads, lenders, tasks
-│           ├── SavedViewsMenu.tsx  # Saved filter/work-queue dropdown
-│           ├── UserSettingsPage.tsx # User self-service password settings
-│           ├── RenewalPanel.tsx    # Merchant detail renewal records
-│           ├── PayoffRequestsPanel.tsx # Merchant detail payoff request records
-│           ├── EditMerchantForm.tsx   # Merchant edit form
-│           ├── EditLenderForm.tsx     # Lender edit form
-│           ├── SummaryItem.tsx        # Detail key/value row
-│           └── applicationStatus.ts   # Status labels, themes, helpers
+│       ├── AdminDashboard.tsx      # Broker admin dashboard
+│       ├── SalesRepDashboard.tsx   # Sales rep dashboard
+│       ├── MerchantDashboard.tsx   # Merchant dashboard
+│       ├── LenderDashboard.tsx     # Lender/funder dashboard
+│       ├── AdminSettingsPage.tsx   # Admin user/account settings
+│       ├── LeadManager.tsx         # Lead list/detail/notes/conversion UI
+│       ├── ReportsView.tsx         # Reporting/analytics UI
+│       ├── RenewalsView.tsx        # Renewal queue UI
+│       └── shared/                 # Shared dashboard shell, pipeline, documents, tasks, search, mobile helpers
 └── src/
     ├── components/
-    │   ├── auth/
-    │   │   ├── LoginPage.tsx       # Email/password login UI
-    │   │   └── RegisterPage.tsx    # Merchant/lender self-registration UI
-    │   └── ui/
-    │       ├── PrimaryButton.tsx   # Neumorphic themed primary button
-    │       ├── DarkModeToggle.tsx  # Dark/light toggle
-    │       ├── RoleToggle.tsx      # Merchant/lender role selector
-    │       ├── MCAKingLoader.tsx   # Animated SVG loader
-    │       ├── authTheme.ts        # Auth card/input styling helpers
-    │       └── corporateTechTheme.ts # Corporate Tech palette export
-    ├── lib/
-    │   ├── api-client.ts           # Browser API wrapper
-    │   ├── auth.ts                 # Better Auth configuration
-    │   ├── session-auth.ts         # Cookie session helpers backed by Supabase
-    │   ├── requireAuth.ts          # Route authentication helper
-    │   ├── supabase.ts             # Browser Supabase client
-    │   ├── supabase-server.ts      # Server Supabase service-role client
-    │   ├── data-shapes.ts          # Frontend/DB row mapping
-    │   ├── list-query.ts           # Pagination/search query helpers
-    │   ├── account-users.ts        # Safe account user shape/query helpers
-    │   ├── revoke-sessions.ts      # Session revocation for account security actions
-    │   ├── matching.ts             # Auto lender matching engine
-    │   ├── route-utils.ts          # Route response/access helpers
-    │   ├── email.ts                # Resend client/env validation
-    │   ├── email-data.ts           # Email data fetch helpers
-    │   ├── email-templates.ts      # HTML email templates
-    │   ├── send-email.ts           # Email send wrappers
-    │   └── email-triggers.ts       # Fire-and-forget workflow email triggers
+    │   ├── auth/                   # Login and registration UIs
+    │   └── ui/                     # Shared UI components and theme helpers
+    ├── lib/                        # API client, auth/session, Supabase, security, audit, email, matching, reporting helpers
     ├── server/
-    │   └── api.ts                  # /api route dispatcher used by Vite middleware
-    └── routes/
-        ├── auth/                   # register/login/logout/me
-        ├── merchants/              # merchant CRUD and status updates
-        ├── lenders/                # lender CRUD
-        ├── offers/                 # lender offers and merchant offer decisions
-        ├── leads/                  # leads, notes, conversion
-        ├── documents/              # uploads, signed URLs, delete
-        ├── stipulations/           # stipulation list/create
-        ├── matching/               # auto/manual matching and lender notify
-        ├── search/                 # global admin/rep search
-        ├── saved-views/            # saved filters/work queues
-        ├── renewals/               # renewal tracking
-        ├── payoff-requests/        # broker payoff-letter request tracking
-        ├── settings/               # own-account settings and password change
-        ├── admin/users/            # admin-only user management
-        └── users/                  # sales rep lookup
+    │   ├── api.ts                  # /api route dispatcher used locally and in production bundle
+    │   └── vercel-entry.ts         # Vercel serverless entry point
+    └── routes/                     # API route handlers by feature area
+        ├── activities/
+        ├── ai/
+        ├── audit/
+        ├── audit-logs/
+        ├── auth/
+        ├── broker-revenue/
+        ├── communications/
+        ├── documents/
+        ├── fundings/
+        ├── leads/
+        ├── lender-dashboard/
+        ├── lenders/
+        ├── matching/
+        ├── merchant-file-submissions/
+        ├── merchants/
+        ├── offers/
+        ├── payoff-requests/
+        ├── renewals/
+        ├── reports/
+        ├── sales-rep-commissions/
+        ├── saved-views/
+        ├── search/
+        ├── settings/
+        ├── stipulations/
+        ├── tasks/
+        ├── users/
+        └── webhooks/
 ```
 
 ## The 12-Step Pipeline
@@ -317,33 +309,44 @@ Brokerage CRM/
 | Step | Status | Plain English description |
 |---:|---|---|
 | 1 | `application & 3 months bank statements in` | Merchant submitted the application and required bank statements; the file is waiting for review. |
-| 2 | `sent to lender` | Application is being matched and sent to lenders. This can trigger server-side auto-matching. |
-| 3 | `all lenders decline` | No lenders approved the application. This is a red/dead-end outcome. |
-| 4 | `one or more lender's sent offer` | One or more lenders/funders responded to the broker-submitted file with offers for merchant review. |
+| 2 | `sent to lender` | Application is being matched and sent to lenders/funders. This can trigger server-side auto-matching. |
+| 3 | `all lenders decline` | No lenders/funders approved the application. |
+| 4 | `one or more lender's sent offer` | One or more lenders/funders sent offers for merchant review. |
 | 5 | `Merchant accepts offer` | Merchant selected an offer and the deal moves toward contract. |
 | 6 | `Merchant Declines Offer's` | Merchant rejected all offers. |
-| 7 | `more docs requested` | A lender requested additional documents/stipulations from the merchant. This is yellow/action-needed. |
+| 7 | `more docs requested` | A lender/funder requested additional documents/stipulations. |
 | 8 | `contract sent` | Contract is ready for merchant review and signature. |
-| 9 | `contract signed` | Contract is signed and awaiting funder approval. |
+| 9 | `contract signed` | Contract is signed and awaiting funder approval/funding. |
 | 10 | `contract declined by the merchant` | Merchant declined the contract. |
-| 11 | `Declined by funder` | Funder rejected the deal after contract stage. This is a red/dead-end outcome. |
-| 12 | `FUNDED` | Deal is complete and the merchant received funding. This is green/funded. |
+| 11 | `Declined by funder` | Funder rejected the deal after contract stage. |
+| 12 | `FUNDED` | Deal is complete and the merchant received funding. |
 
-Color coding is configured in `components/dashboards/shared/applicationStatus.ts`:
+Color coding and helper logic live in `components/dashboards/shared/applicationStatus.ts`.
 
-- **Red** = declined/dead-end statuses
-- **Green** = funded/completed status
-- **Yellow** = action-needed statuses such as more documents or offers
-- Neutral/accent colors = active in-progress pipeline steps
+## Security Notes
 
-## Role Permissions
+- Keep `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `BETTER_AUTH_SECRET`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, and `GEMINI_API_KEY` server-only.
+- Do not prefix server secrets with `VITE_`; Vite exposes `VITE_*` variables to browser code.
+- The app uses HTTP-only cookies for session state and CSRF protection for authenticated mutating routes.
+- Supabase Storage documents should remain private and be served only through permission-checked signed URLs.
+- Campaign email must enforce unsubscribe/suppression logic and a configured physical mailing address.
+- SMS sending is intentionally disabled until compliance requirements are complete.
+- Review [`Docs/PRODUCTION_SECURITY_HARDENING_PLAN.md`](Docs/PRODUCTION_SECURITY_HARDENING_PLAN.md) and [`Docs/SECURITY_THREAT_MODEL.md`](Docs/SECURITY_THREAT_MODEL.md) before handling real customer data at scale.
 
-| Role | Can See | Can Do |
-|---|---|---|
-| Admin / Broker Owner | All merchants, lenders/funders, leads, sales reps, documents, matches, offers, stipulations, renewal queues, payoff requests, and full Kamba pipeline | Operate the broker shop: create sales reps from Settings, assign reps, edit merchants/lenders, run auto-match, add/remove manual matches, submit/notify lenders, manage leads, delete documents, move deals through the pipeline, print applications, and manage user account emails/status/password reset flows |
-| Sales Rep | Assigned merchant files, leads, renewal records/payoff requests for assigned merchants, lender list for matching, pipeline view for assigned deals | Work broker-shop leads, convert leads, update assigned merchant files, run matching, manually add matches, print assigned applications, and change only their own password in User Settings |
-| Merchant | Own application, own documents, own stipulations, own offers, current pipeline status | Submit application, upload documents, fulfill stipulations, accept/reject offers, request an early payoff letter after funding, edit active application, reapply after grace period, and change only their own password in User Settings |
-| Lender/Funder | Own lender profile, merchant files submitted/matched to that lender, only that lender/funder's own offers/responses, and payoff requests only for deals that lender/funder actually funded; no broker renewal queue or payoff strategy access | Maintain criteria, review broker-submitted merchant files, approve/decline, send offers, request stipulations/documents, upload/link official payoff letters only for their own funded deals, and change only their own password in User Settings. Lenders/funders must not see competing offers from other lenders on the same merchant file. |
+## Key Documentation
+
+| Document | Purpose |
+|---|---|
+| [`project overview.md`](project%20overview.md) | Product summary, role model, and implemented phase overview. |
+| [`Project Road Map.md`](Project%20Road%20Map.md) | Historical roadmap/audit notes. Some older sections are retained for context. |
+| [`ENGINEERING_PLAN.md`](ENGINEERING_PLAN.md) | Engineering plan and stack decisions. |
+| [`Docs/VERCEL_DEPLOYMENT.md`](Docs/VERCEL_DEPLOYMENT.md) | Production deployment checklist for Vercel. |
+| [`Docs/PRODUCTION_SECURITY_HARDENING_PLAN.md`](Docs/PRODUCTION_SECURITY_HARDENING_PLAN.md) | Security hardening plan and route/data risk model. |
+| [`Docs/SECURITY_ROUTE_INVENTORY.md`](Docs/SECURITY_ROUTE_INVENTORY.md) | API route authorization inventory. |
+| [`Docs/SECURITY_THREAT_MODEL.md`](Docs/SECURITY_THREAT_MODEL.md) | Threat model summary. |
+| [`Docs/COMMUNICATIONS_COMPLIANCE_STRATEGY.md`](Docs/COMMUNICATIONS_COMPLIANCE_STRATEGY.md) | Email-first/SMS-later communication compliance strategy. |
+| [`Docs/MOBILE_UI_IMPLEMENTATION_PLAN.md`](Docs/MOBILE_UI_IMPLEMENTATION_PLAN.md) | Mobile/responsive UI plan and audit notes. |
+| [`Docs/UI_THEME_AUDIT_AND_PLAN.md`](Docs/UI_THEME_AUDIT_AND_PLAN.md) | Corporate Tech theme and UI audit notes. |
 
 ## Contributing
 
@@ -368,21 +371,22 @@ bun install
 5. Typecheck and build before opening a PR:
 
 ```bash
-bun run --bun tsc -p ./tsconfig.json --noEmit
+bun run tsc
 bun run build
 ```
 
-6. Open a pull request with a clear description, screenshots for UI changes, and notes for any schema or environment changes.
+6. Open a pull request with a clear description and notes for any schema or environment changes.
 
 ### Code style notes
 
 - Use TypeScript throughout.
-- Avoid `any`; model data explicitly in `types.ts` or local route/component types.
-- Keep shared API/data shape logic in `src/lib`.
+- Avoid `any`; model data explicitly in `types.ts` or route/component-local types.
+- Keep shared API/data/security logic in `src/lib`.
 - Keep route handlers in `src/routes` and register them through `src/server/api.ts`.
 - Use Bun for dependency management.
-- Do not expose service-role keys or database URLs to client-side code.
+- Do not expose service-role keys, database URLs, webhook secrets, or AI/email keys to client-side code.
 - Preserve the 12-step `ApplicationStatus` union unless a migration plan is included.
+- Enforce permissions server-side; UI hiding is not security.
 
 ## License
 
@@ -396,7 +400,7 @@ MCA King is built with and inspired by excellent open-source and developer-platf
 
 - [Supabase](https://supabase.com/) for Postgres, Storage, signed URLs, and service APIs
 - [Better Auth](https://www.better-auth.com/) for auth architecture and database-compatible auth models
-- [Resend](https://resend.com/) for transactional email automation
+- [Resend](https://resend.com/) for transactional and campaign email
 - [Vite](https://vite.dev/) for frontend tooling and development server middleware
 - [React](https://react.dev/) for the UI framework
 - [Tailwind CSS](https://tailwindcss.com/) for build-time utility-first styling

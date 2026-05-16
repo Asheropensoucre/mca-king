@@ -1,66 +1,56 @@
 # Project Road Map and Audit
 
-> **Current master expansion plan:** see [`Docs/MCA_BROKER_CRM_EXPANSION_PLAN.md`](Docs/MCA_BROKER_CRM_EXPANSION_PLAN.md) for the detailed broker CRM gap analysis and next phased build plan.
->
-> **Customer-data security plan:** see [`Docs/PRODUCTION_SECURITY_HARDENING_PLAN.md`](Docs/PRODUCTION_SECURITY_HARDENING_PLAN.md) for the dedicated security hardening phase required before handling real merchant/customer data beyond MVP/demo use.
->
-> **Business model correction:** MCA King is a broker-shop CRM. Admin users represent the broker owner/operator, sales reps are internal broker-shop users, merchants submit funding applications, and lenders/funders only review broker-submitted or broker-matched merchant files. Lenders do not originate or submit merchant deals into this CRM. Lender-side account/relationship managers are lender contacts only; MCA King should not track payouts to them.
->
+_Last updated: 2026-05-16_
 
-> **Communications strategy:** Phase I is implemented as email-first and SMS-later. Resend should handle controlled app/campaign email, Zoho Mail should remain for human mailboxes only, and live SMS should wait until provider selection, A2P 10DLC registration, STOP/HELP handling, quiet hours, consent proof, and budget are ready. See [`Docs/COMMUNICATIONS_COMPLIANCE_STRATEGY.md`](Docs/COMMUNICATIONS_COMPLIANCE_STRATEGY.md).
+> **Current product summary:** see [`project overview.md`](project%20overview.md).
 >
-> **Settings/account-management roadmap correction:** User Settings and Admin Settings must be separate. Normal users may change only their own password and safe preferences. Only admins may change user emails, roles, password reset flows, disabled/closed account status, and sales rep account creation.
+> **Deployment:** see [`Docs/VERCEL_DEPLOYMENT.md`](Docs/VERCEL_DEPLOYMENT.md).
+>
+> **Security:** see [`Docs/PRODUCTION_SECURITY_HARDENING_PLAN.md`](Docs/PRODUCTION_SECURITY_HARDENING_PLAN.md), [`Docs/SECURITY_ROUTE_INVENTORY.md`](Docs/SECURITY_ROUTE_INVENTORY.md), and [`Docs/SECURITY_THREAT_MODEL.md`](Docs/SECURITY_THREAT_MODEL.md).
+>
+> **Communications:** see [`Docs/COMMUNICATIONS_COMPLIANCE_STRATEGY.md`](Docs/COMMUNICATIONS_COMPLIANCE_STRATEGY.md).
 
 ## Executive Summary
 
-The project has been consolidated into a single main application folder: `mca-application-form/`.
+MCA King has moved beyond its early prototype phase into a V1 broker-shop CRM foundation. The current app uses React/Vite on the frontend, server-side API routes bundled for Vercel, Supabase Postgres/Storage, Better Auth-compatible session tables with custom HTTP-only session cookies, Resend email, and Gemini through a server-side AI route.
 
-The former standalone `mind-map-kanban/` mockup has been removed. Its Kamba/Kanban board concept has been merged into the main MCA app as the official internal pipeline for Admin and Sales Rep users.
+The product model is broker-shop centered:
 
-The biggest current architectural change is that the old 6-status application system has been replaced by the 12-step Kamba Pipeline. The pipeline is now the source of truth for `merchant.status`.
+- Admin = broker-shop owner/operator.
+- Sales Rep = internal broker-shop rep.
+- Merchant = funding applicant/customer.
+- Lender/Funder = external funding partner who reviews broker-submitted or broker-matched merchant files.
 
----
+This is **not** a lender-originated deal marketplace. Lenders/funders do not create merchant deals in MCA King.
 
-## 1. Current Working State
+## V1 Current Working State
 
 ### Completed / Good
 
-* **Single Main App:** The active app is now `mca-application-form/`. The old standalone Kanban mockup folder has been deleted.
-* **12-Step Kamba Status System:** `ApplicationStatus` in `types.ts` now uses the 12-step funding flow:
-  1. `application & 3 months bank statements in`
-  2. `sent to lender`
-  3. `all lenders decline`
-  4. `one or more lender's sent offer`
-  5. `Merchant accepts offer`
-  6. `Merchant Declines Offer's`
-  7. `more docs requested`
-  8. `contract sent`
-  9. `contract signed`
-  10. `contract declined by the merchant`
-  11. `Declined by funder`
-  12. `FUNDED`
-* **Shared Status Configuration:** `components/dashboards/shared/applicationStatus.ts` centralizes status labels, themes, default status, and old-status migration.
-* **Kamba Pipeline Integration:** `components/dashboards/shared/KanbanPipelineView.tsx` provides a real-data drag-and-drop pipeline using merchant submissions.
-* **Admin Pipeline Access:** Admin users have a left-side dashboard shell with:
-  * Merchant Directory
-  * Lender Directory
-  * Kamba Pipeline
-* **Sales Rep Pipeline Access:** Sales reps have a left-side dashboard shell with:
-  * My Deals
-  * Kamba Pipeline
-* **Restricted Pipeline Visibility:** The Kamba Pipeline is only available in Admin and Sales Rep views. Merchant and Lender dashboards do not show it.
-* **Real Data Cards:** Kamba cards display merchant names, requested amount, phone, email, state, matched lender count, offer count, accepted offer information, and contract-signed indicator.
-* **Drag-and-Drop Status Updates:** Moving a card updates the actual `merchant.status` value.
-* **Offer Flow Update:** Lender-created offers now move merchants to `one or more lender's sent offer`.
-* **Accepted Offer Update:** Merchant-accepted offers now move merchants to `Merchant accepts offer`, not `FUNDED`.
-* **Rejected Offer Update:** If all offers are rejected, the merchant moves to `Merchant Declines Offer's`.
-* **Legacy LocalStorage Migration:** Old records with the previous 6 statuses are migrated automatically when the dashboard loads.
-* **Role-Based Component Structure:** Admin, Sales Rep, Lender, and Merchant dashboards remain separated into their own files.
-* **Prototype Data Persistence:** Merchant and lender records are still saved to browser `localStorage` for development/demo use.
+- **Real backend data layer:** Core data is stored through Supabase-backed API routes, not browser `localStorage` for business records.
+- **Real authentication/session foundation:** Email/password login/register routes, HTTP-only `mca_session` cookie, CSRF token cookie/header flow, logout, and current-user restore.
+- **Role-based dashboards:** Admin, Sales Rep, Merchant, and Lender/Funder dashboard experiences.
+- **Responsive dashboard shell:** Desktop has persistent left navigation; mobile/tablet uses a hidden left drawer opened by the menu button.
+- **12-step Kamba status system:** `ApplicationStatus` in `types.ts` defines the funding workflow status machine.
+- **Shared status configuration:** `components/dashboards/shared/applicationStatus.ts` centralizes status labels, themes, defaults, and helpers.
+- **Kamba pipeline:** `components/dashboards/shared/KanbanPipelineView.tsx` provides real-data drag-and-drop workflow movement for Admin and Sales Rep users.
+- **Leads:** Lead creation, assignment, notes/call log, filters, saved views, and lead-to-merchant conversion.
+- **Matching:** Server-side automated matching plus manual broker routing to lenders/funders.
+- **Merchant-file submissions:** Tracks broker-to-lender/funder package submissions and response outcomes.
+- **Documents:** Supabase Storage-backed private document uploads, signed URLs, validation, deletion, and audit events.
+- **Stipulations:** Lender/funder/admin document requests and merchant fulfillment flow.
+- **Offers:** Lender/funder offer creation and merchant accept/reject workflow with lender offer isolation.
+- **Funding/finance:** Funding records, broker revenue receivables, and internal sales rep commission tracking.
+- **Renewals and payoff requests:** Renewal queues/history plus early-payoff request tracking and official payoff-letter linking.
+- **Reports/analytics:** Admin and sales-rep scoped reporting; lender/funder analytics scoped to their own relationship.
+- **Search/work queues:** Global search, filters, pagination, and saved views.
+- **Settings/account management:** User self-service password settings and admin-only user/account management.
+- **Communications Center:** Email-first communications with preferences, suppressions, templates, campaign recipients, history, unsubscribe handling, and Resend webhooks. SMS remains disabled/future-ready.
+- **AI Assistant:** Gemini is called server-side through `/api/ai/chat`; client secrets are not exposed.
+- **Security hardening foundation:** CSRF, origin checks, rate limiting, route authorization inventory, audit logs, sensitive-data masking, private documents, and security headers.
+- **Theme/UI:** Corporate Tech theme, dark/light mode, Tailwind/PostCSS build, and mobile-aware UI components.
 
----
-
-## 2. Important Current Files
+## Important Current Files
 
 ### Core App
 
@@ -68,7 +58,12 @@ The biggest current architectural change is that the old 6-status application sy
 App.tsx
 types.ts
 vite.config.ts
+vercel.json
+api/index.js
+scripts/build-api.ts
 index.html
+index.css
+index.tsx
 ```
 
 ### Dashboard System
@@ -79,201 +74,95 @@ components/dashboards/AdminDashboard.tsx
 components/dashboards/SalesRepDashboard.tsx
 components/dashboards/LenderDashboard.tsx
 components/dashboards/MerchantDashboard.tsx
+components/dashboards/shared/DashboardShell.tsx
 ```
 
-### Kamba Pipeline / Status System
+### Backend/API System
+
+```txt
+src/server/api.ts
+src/server/vercel-entry.ts
+src/routes/**
+src/lib/requireAuth.ts
+src/lib/session-auth.ts
+src/lib/csrf.ts
+src/lib/route-utils.ts
+src/lib/supabase-server.ts
+src/lib/api-client.ts
+```
+
+### Pipeline / Status System
 
 ```txt
 components/dashboards/shared/applicationStatus.ts
 components/dashboards/shared/KanbanPipelineView.tsx
-components/dashboards/shared/DashboardShell.tsx
+types.ts
 ```
 
----
-
-## 3. Known Issues / Cleanup Needed
-
-### Styling / Build Cleanup
-
-* ✅ Tailwind CDN was removed in Phase H.
-* ✅ Tailwind now builds through local Tailwind/PostCSS config.
-* ✅ `index.css` is imported by `index.tsx` and contains Tailwind directives plus Corporate Tech theme CSS.
-
-### Legacy Files
-
-The main app still contains some older components that appear unused, such as:
+### Security / Compliance
 
 ```txt
-components/AdminView.tsx
-components/LenderView.tsx
+src/lib/audit.ts
+src/lib/rate-limit.ts
+src/lib/security-headers.ts
+src/lib/sensitive-data.ts
+src/lib/webhook-security.ts
+Docs/SECURITY_ROUTE_INVENTORY.md
+Docs/SECURITY_THREAT_MODEL.md
+Docs/PRODUCTION_SECURITY_HARDENING_PLAN.md
+Docs/COMMUNICATIONS_COMPLIANCE_STRATEGY.md
 ```
 
-These should be reviewed and removed only after confirming they are not imported anywhere in the active app.
+## The 12-Step Kamba Pipeline
 
-### Package / Build Process
+1. `application & 3 months bank statements in`
+2. `sent to lender`
+3. `all lenders decline`
+4. `one or more lender's sent offer`
+5. `Merchant accepts offer`
+6. `Merchant Declines Offer's`
+7. `more docs requested`
+8. `contract sent`
+9. `contract signed`
+10. `contract declined by the merchant`
+11. `Declined by funder`
+12. `FUNDED`
 
-The app should be run with Vite, not by double-clicking `index.html`.
+The pipeline is the source of truth for `merchant.status` and is shared across dashboard, matching, offer, renewal, and notification workflows.
+
+## Post-V1 Roadmap / Next Priorities
+
+V1 is ready for controlled real-data production use based on the completed security sweeps, account access policies, activity/audit logging, private document controls, route authorization inventory, threat model, monitoring/log visibility, and email-first compliance foundation.
+
+This is a free/self-hostable project, not a corporate SaaS launch plan. The practical next priorities are:
+
+1. **CSV/Excel lead import:** This is the main missing core workflow. No broker shop wants to manually enter every lead one at a time. Add lead import with strict column mapping, validation, duplicate detection, safe defaults, audit logging, and communication consent/suppression rules.
+2. **Document malware scanning:** Add malware scanning for uploaded bank statements, contracts, payoff letters, and stipulation documents. This complements the current MIME/size validation, private storage, signed URLs, authorization checks, and audit logging.
+3. **Targeted security regression checks:** The broad security sweeps are complete. Keep lightweight regression checks only for future changes to sensitive auth, role access, document access, CSRF, or lender/merchant isolation logic.
+4. **Future SMS activation:** Keep SMS disabled until there is an actual company/client need that justifies provider selection, budget, A2P 10DLC registration, STOP/HELP handling, quiet hours, opt-in proof, and legal/compliance review.
+
+Self-hosting note: this repo contains the application code. Customer data belongs in each operator's own Supabase/project backups and should never be committed to the repo.
+
+## Development Commands
+
+Use Bun and Vite:
 
 ```bash
-cd mca-application-form
-npm install
-npm run dev
+bun install
+bun run dev
+bun run tsc
+bun run build
 ```
 
----
+Do not open `index.html` directly from the file system. The app expects the Vite dev server or the production build/serverless API route setup.
 
-## 4. What Still Needs to be Added for Production
+## Historical Notes
 
-The current app is still a front-end prototype. To become production-ready, the following infrastructure is needed.
+Older phase prompt files under `Docs/PHASE_*` are retained as implementation history. Some older prompt wording may describe work that is now complete. For current project status, prefer:
 
-### Backend Database
-
-Replace browser `localStorage` with a secure database such as:
-
-* PostgreSQL
-* Supabase
-* Firebase/Firestore
-* Custom Node/Express API with database
-
-Required stored entities:
-
-* Users
-* Roles
-* Merchants
-* Owners
-* Lenders
-* Offers
-* Documents
-* Status history
-* Sales rep assignments
-
-### Real Authentication
-
-Add real login/authentication for:
-
-* Admins
-* Sales reps
-* Merchants
-* Lenders
-
-Current sales rep, merchant, and lender login flows are still profile-selector mockups.
-
-### Backend Role-Based Access Control
-
-RBAC must be enforced server-side:
-
-* Admin sees all records
-* Sales rep sees assigned deals
-* Merchant sees only their own application
-* Lender sees only assigned merchants
-
-### Secure Document Storage
-
-Uploaded documents should move to secure storage such as:
-
-* AWS S3
-* Supabase Storage
-* Firebase Storage
-
-The app also needs document permissions, download URLs, and audit logs.
-
-### Server-Side Matching Engine
-
-Current lender matching is client-side and should move to the backend.
-
-Backend matching should consider:
-
-* Revenue
-* Credit score
-* Industry
-* State restrictions
-* NSF count
-* Requested amount
-* Time in business
-* Lender-specific rules
-
-### Email and Notification Automation / Communications
-
-Current direction:
-
-* Resend is the preferred provider for app email and Phase I controlled campaign email.
-* Zoho Mail should remain for human mailbox hosting only.
-* Phase I adds communication preferences, suppressions, templates, unsubscribe handling, campaign recipient tracking, communication history, recipient preview, and Resend webhook ingestion.
-* Live SMS should not be enabled yet; SMS waits for provider selection, A2P 10DLC, STOP/HELP webhooks, quiet hours, documented consent, and budget.
-
-Potential email providers if Resend is later replaced:
-
-* Resend
-* SendGrid
-* AWS SES
-
-Potential later SMS providers to compare:
-
-* Telnyx
-* Plivo
-* Twilio
-* Zoho Voice for human phone/UCaaS workflows, not as the default automated campaign engine unless API/webhook support is verified
-
-### PDF Package Generation
-
-The current print/PDF flow is browser-based. Production should generate lender-ready packages server-side with:
-
-* Application PDF
-* Uploaded bank statements
-* Owner information
-* Offer/status history
-* Dynamic email templates
-
-### Formal State Machine / Status History
-
-The 12-step Kamba status system is now in place, but production should also record:
-
-* Who moved the deal
-* Previous status
-* New status
-* Timestamp
-* Notes/reason
-
-This will become the audit trail for funding operations.
-
----
-
-## 5. Recommended Next Steps
-
-### Immediate Cleanup
-
-1. Fix the `index.css` build warning.
-2. Review and remove unused legacy files like `AdminView.tsx` if confirmed unused.
-3. Smoke test all views:
-   * Main landing page
-   * Merchant application
-   * Admin dashboard
-   * Admin Kamba Pipeline
-   * Sales Rep Kamba Pipeline
-   * Lender offer creation
-   * Merchant offer acceptance/rejection
-
-### Next Development Phase
-
-1. Choose backend stack.
-2. Design database schema around the 12-step pipeline.
-3. Add authentication and real user roles.
-4. Replace `localStorage` with API calls.
-5. Move lender matching to the backend.
-6. Add secure document storage.
-7. Add email automation.
-8. Add status history/audit log.
-
----
-
-## 6. Current Development Command
-
-Use Vite:
-
-```bash
-cd mca-application-form
-npm install
-npm run dev
-```
-
-Do not open `index.html` directly from the file system.
+- `README.md`
+- `project overview.md`
+- `Project Road Map.md`
+- `Docs/SECURITY_ROUTE_INVENTORY.md`
+- `Docs/SECURITY_THREAT_MODEL.md`
+- `Docs/VERCEL_DEPLOYMENT.md`

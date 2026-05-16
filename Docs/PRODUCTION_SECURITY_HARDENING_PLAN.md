@@ -59,20 +59,13 @@ Already completed or mostly in place:
 
 ## Security Gap Summary
 
-The app has a good security foundation, but a production security hardening phase is still needed in these areas:
+The app has completed a substantial V1 security hardening pass. The current implemented foundation includes endpoint authorization/ownership checks, CSRF protection, origin checks, first-pass durable rate limiting, login lockout tracking, audit logging, document upload hardening, sensitive-field masking, user lifecycle controls, production headers, route inventory, and a threat model/runbook.
 
-1. Endpoint-by-endpoint authorization.
-2. Record ownership checks.
-3. CSRF protection for cookie-authenticated mutations.
-4. Rate limiting and brute-force protection.
-5. Input validation and schema enforcement.
-6. Audit logging.
-7. Document/file upload hardening.
-8. Sensitive data masking and minimization.
-9. User lifecycle controls.
-10. Security headers and browser protections.
-11. Supabase RLS/storage policy verification.
-12. Incident response and operational logging.
+Remaining recommended hardening enhancements:
+
+1. Malware scanning for uploaded documents.
+2. Targeted authorization/security regression checks when sensitive auth, role access, document access, CSRF, or lender/merchant isolation logic changes.
+3. Periodic dependency and secret-rotation reviews.
 
 ---
 

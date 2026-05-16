@@ -66,15 +66,27 @@ Important terminology:
 | AI | MCA King Assistant with user/page context |
 | Theme | Corporate Tech light/dark theme |
 
-### Core limitation
+### V1 implementation status
 
-MCA King currently manages the **deal workflow** well. It does not yet fully manage the broker's daily CRM work, revenue, follow-ups, lender outcomes, renewal cycles, or compliance/audit requirements.
+The original expansion plan identified missing broker CRM modules around daily work, revenue, follow-ups, lender outcomes, renewals, reporting, compliance/audit, and communications. Those V1 modules have since been implemented in the active app:
+
+- Activity timeline and tasks
+- Fundings, broker revenue, and internal sales rep commissions
+- Merchant-file submission outcomes
+- Search, filters, pagination, and saved views
+- Account settings and admin user management
+- Renewals and payoff requests
+- Reporting and analytics
+- Compliance/audit hardening foundation
+- Email-first Communications Center
+
+The practical remaining work is CSV/Excel lead import, document malware scanning, targeted security regression checks when sensitive auth/access code changes, and eventual SMS activation only after there is a real company/client need plus compliance and budget readiness.
 
 ---
 
-## Executive Summary: What Is Missing
+## Original Gap Analysis / Historical Planning Notes
 
-The highest-value missing modules are:
+The highest-value modules identified by the original plan were:
 
 1. Activity timeline across merchants, leads, lenders, offers, docs, and users
 2. Tasks and follow-up reminders
