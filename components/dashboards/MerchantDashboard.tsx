@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import type { ApplicationStatus, AuthUser, DocumentInfo, FormData, Renewal, Stipulation } from '../../types';
 import { Card } from '../ui/Card';
 import { DocumentUpload } from '../DocumentUpload';
-import { APPLICATION_STATUS_CONFIG, DEFAULT_APPLICATION_STATUS, getStatusIndex, getStatusThemeClasses } from './shared/applicationStatus';
+import { APPLICATION_STATUS_CONFIG, DEFAULT_APPLICATION_STATUS, getStatusIndex } from './shared/applicationStatus';
 import { DocumentsPanel } from './shared/DocumentsPanel';
 import { EditMerchantForm } from './shared/EditMerchantForm';
 import { PrimaryButton } from '../../src/components/ui/PrimaryButton';
@@ -50,6 +50,120 @@ function getMonthsUntilReapply(merchant: FormData): number {
     if (diffMs <= 0) return 0;
     return Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24 * 30)));
 }
+
+type MerchantFacingStatus = {
+    label: string;
+    summary: string;
+    nextAction: string;
+    tone: 'default' | 'action' | 'success' | 'danger';
+}
+
+function getMerchantFacingStatus(status: ApplicationStatus, hasPendingOffers: boolean, hasOpenStipulations: boolean): MerchantFacingStatus {
+    if (hasOpenStipulations || status === 'more docs requested') {
+        return {
+            label: 'Additional documents needed',
+            summary: 'The broker team needs more information before your file can keep moving.',
+            nextAction: 'Upload the requested documents in the stipulations or documents section below.',
+            tone: 'action',
+        };
+    }
+
+    if (hasPendingOffers || status === "one or more lender's sent offer") {
+        return {
+            label: 'Offer available',
+            summary: 'A funding offer is ready for your review.',
+            nextAction: 'Review the offer details below and accept or reject the offer when you are ready.',
+            tone: 'action',
+        };
+    }
+
+    switch (status) {
+        case 'application & 3 months bank statements in':
+            return {
+                label: 'Application received',
+                summary: 'We have your application and bank statements.',
+                nextAction: 'The broker team is reviewing your file. Watch this dashboard for document requests or offers.',
+                tone: 'default',
+            };
+        case 'sent to lender':
+            return {
+                label: 'Under review',
+                summary: 'Your file has been sent to funding partners for review.',
+                nextAction: 'No action is needed right now unless the team asks for more documents.',
+                tone: 'default',
+            };
+        case 'all lenders decline':
+            return {
+                label: 'Not approved at this time',
+                summary: 'The available funding partners declined this file.',
+                nextAction: 'Contact your broker contact if you have questions about next steps or future eligibility.',
+                tone: 'danger',
+            };
+        case 'Merchant accepts offer':
+            return {
+                label: 'Offer accepted',
+                summary: 'You accepted a funding offer.',
+                nextAction: 'The broker team is preparing the next step and will follow up if anything else is needed.',
+                tone: 'success',
+            };
+        case "Merchant Declines Offer's":
+            return {
+                label: 'Offers declined',
+                summary: 'The available offers were declined.',
+                nextAction: 'Contact your broker contact if you want to discuss other options or future eligibility.',
+                tone: 'danger',
+            };
+        case 'contract sent':
+            return {
+                label: 'Contract sent',
+                summary: 'Your funding contract has been sent for review.',
+                nextAction: 'Review and sign the contract using the instructions provided by the broker team.',
+                tone: 'action',
+            };
+        case 'contract signed':
+            return {
+                label: 'Contract signed',
+                summary: 'Your signed contract is in final review.',
+                nextAction: 'No action is needed right now unless the team contacts you.',
+                tone: 'success',
+            };
+        case 'contract declined by the merchant':
+            return {
+                label: 'Contract declined',
+                summary: 'The contract was declined.',
+                nextAction: 'Contact your broker contact if you want to review other options.',
+                tone: 'danger',
+            };
+        case 'Declined by funder':
+            return {
+                label: 'Funding declined',
+                summary: 'The funder declined the file after review.',
+                nextAction: 'Contact your broker contact if you have questions about the decision or future options.',
+                tone: 'danger',
+            };
+        case 'FUNDED':
+            return {
+                label: 'Funded',
+                summary: 'Your deal has been funded.',
+                nextAction: 'You can request renewal review or a payoff letter when eligible.',
+                tone: 'success',
+            };
+        default:
+            return {
+                label: 'Application in review',
+                summary: 'Your application is moving through the broker review process.',
+                nextAction: 'Watch this dashboard for document requests, offers, or contract updates.',
+                tone: 'default',
+            };
+    }
+}
+
+const statusToneClasses: Record<MerchantFacingStatus['tone'], string> = {
+    default: 'border-secondary/50 bg-secondary/10 text-secondary',
+    action: 'border-warning/60 bg-warning/15 text-warning',
+    success: 'border-success/60 bg-success/15 text-success',
+    danger: 'border-danger/60 bg-danger/15 text-danger',
+};
 
 const ReadOnlyField: React.FC<{ label: string; value: string }> = ({ label, value }) => (
     <label className="block">
@@ -100,6 +214,9 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
     const [showSettings, setShowSettings] = useState(false);
     const formState = useMemo(() => getMerchantFormState(submission), [submission]);
     const monthsUntilReapply = useMemo(() => getMonthsUntilReapply(submission), [submission]);
+    const openStipulations = useMemo(() => stipulations.filter(stip => !stip.is_fulfilled), [stipulations]);
+    const hasPendingOffers = useMemo(() => (submission.offers ?? []).some(offer => offer.status === 'Pending'), [submission.offers]);
+    const merchantStatus = useMemo(() => getMerchantFacingStatus(submission.status, hasPendingOffers, openStipulations.length > 0), [submission.status, hasPendingOffers, openStipulations]);
     const eligibleRenewal = useMemo(() => renewals.find(renewal => renewal.is_eligible), [renewals]);
 
     const loadStipulations = async () => {
@@ -210,31 +327,25 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
 
                 {showSettings ? <UserSettingsPage currentUser={currentUser} onLogout={onExit} /> : <>
 
-                <Card className="mb-6">
-                    <div className="p-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                            <div>
-                                <h2 className="text-xl font-black text-main ">Application Status</h2>
-                                <p className="text-sm text-muted">Current step: <span className="font-semibold text-main">{submission.status}</span></p>
-                            </div>
-                            <span className="inline-flex self-start sm:self-auto rounded-full bg-accent px-3 py-1 text-xs font-bold text-on-accent">
-                                Step {currentStatusIndex + 1} of {APPLICATION_STATUS_CONFIG.length}
-                            </span>
+                <Card className="mb-6 overflow-hidden">
+                    <div className="border-b-2 border-line-strong bg-surface-strong/70 px-6 py-4">
+                        <p className="text-xs font-black uppercase tracking-[0.2em] text-muted">Application Status</p>
+                        <h2 className="mt-1 text-2xl font-black text-main">{merchantStatus.label}</h2>
+                    </div>
+                    <div className="grid gap-4 p-6 lg:grid-cols-[1fr_16rem]">
+                        <div>
+                            <p className="text-base font-semibold text-main">{merchantStatus.summary}</p>
+                            <p className="mt-3 text-sm text-muted">{merchantStatus.nextAction}</p>
+                            <p className="mt-4 text-xs font-semibold text-muted">Internal file status: {submission.status}</p>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                            {APPLICATION_STATUS_CONFIG.map((statusConfig, statusIdx) => {
-                                const themeClasses = getStatusThemeClasses(statusConfig.theme);
-                                const isCurrent = statusIdx === currentStatusIndex;
-                                const isComplete = statusIdx < currentStatusIndex;
-                                return (
-                                    <div key={statusConfig.label} className={`rounded-lg border p-3 text-xs transition-colors ${isCurrent ? 'border-accent bg-accent/20 text-main' : isComplete ? 'border-secondary/40 bg-secondary/10 text-main' : 'border-line bg-surface-muted text-muted  -muted/40 '}`}>
-                                        <div className="flex gap-2 items-start">
-                                            <span className={`shrink-0 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${isCurrent ? 'bg-accent text-black' : isComplete ? 'bg-secondary text-black' : themeClasses.badge}`}>{statusIdx + 1}</span>
-                                            <span className="font-semibold leading-snug">{statusConfig.label}</span>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                        <div className={`rounded-xl border-2 p-4 ${statusToneClasses[merchantStatus.tone]}`}>
+                            <p className="text-xs font-black uppercase tracking-wider">What this means</p>
+                            <p className="mt-2 text-sm font-bold">
+                                {merchantStatus.tone === 'action' && 'Action may be needed from you.'}
+                                {merchantStatus.tone === 'success' && 'Your file is moving forward.'}
+                                {merchantStatus.tone === 'danger' && 'This file is not moving forward right now.'}
+                                {merchantStatus.tone === 'default' && 'The broker team is working on your file.'}
+                            </p>
                         </div>
                     </div>
                 </Card>
@@ -329,7 +440,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
                 currentStep: currentStatusIndex + 1,
                 totalSteps: APPLICATION_STATUS_CONFIG.length,
                 offers: submission.offers ?? [],
-                openStipulations: stipulations.filter(stip => !stip.is_fulfilled),
+                openStipulations,
                 formState,
                 monthsUntilReapply,
             }}
