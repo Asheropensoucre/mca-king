@@ -11,7 +11,7 @@ import { assertRole, badRequest, forbidden, getId, json, notFound, type RouteCon
 import { supabaseAdmin } from '../../lib/supabase-server'
 
 async function fetchMerchant(id: string): Promise<MerchantRow | null | Response> {
-  const { data, error } = await supabaseAdmin.from('merchants').select('*').eq('id', id).single<MerchantRow>()
+  const { data, error } = await supabaseAdmin.from('merchants').select('*, assigned_rep:users!merchants_assigned_rep_id_fkey(id,full_name,name,email)').eq('id', id).single<MerchantRow>()
   if (error) return error.code === 'PGRST116' ? null : badRequest(error.message)
   return data
 }
@@ -160,7 +160,7 @@ export async function PATCH(req: Request, context?: RouteContext): Promise<Respo
     .from('merchants')
     .update(update)
     .eq('id', id)
-    .select('*')
+    .select('*, assigned_rep:users!merchants_assigned_rep_id_fkey(id,full_name,name,email)')
     .single<MerchantRow>()
 
   if (error) return badRequest(error.message)

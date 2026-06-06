@@ -84,6 +84,7 @@ Broker admins can:
 - Match and submit files to lenders/funders
 - Move merchant files through the 12-step Kamba pipeline
 - Review status history and operational workflow
+- Keep merchant-facing status simpler than the internal pipeline
 
 ### Sales Rep Dashboard
 
@@ -95,6 +96,7 @@ Sales reps can:
 - Help collect documents
 - Match files to lenders when permitted
 - Track assigned files in the Kamba pipeline
+- Serve as the assigned broker contact shown on the merchant dashboard
 - Change only their own password in User Settings
 - View scoped relationship analytics on their own dashboard, including files sent to them, funded deals together, total funded volume together, average funded amount, this-month funded volume, and pending payoff requests
 

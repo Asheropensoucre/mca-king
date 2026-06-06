@@ -1,4 +1,4 @@
-import type { ApplicationStatus, FormData, LenderInfo, Offer } from '../../types'
+import type { ApplicationStatus, FormData, LenderInfo, Offer, SalesRepresentative } from '../../types'
 import { DEFAULT_APPLICATION_STATUS } from '../../components/dashboards/shared/applicationStatus'
 
 export type MerchantRow = {
@@ -16,6 +16,7 @@ export type MerchantRow = {
   current_positions: number | null
   status: ApplicationStatus
   payload: FormData | null
+  assigned_rep?: { id: string; full_name: string | null; name: string | null; email: string } | null
   created_at?: string
   updated_at?: string
 }
@@ -65,6 +66,15 @@ const getStateFromAddress = (address?: string): string | null => {
   if (!address) return null
   const match = address.toUpperCase().match(/\b[A-Z]{2}\b(?!.*\b[A-Z]{2}\b)/)
   return match?.[0] ?? null
+}
+
+const toAssignedRep = (rep: MerchantRow['assigned_rep']): SalesRepresentative | null => {
+  if (!rep) return null
+  return {
+    id: rep.id,
+    name: rep.full_name ?? rep.name ?? rep.email,
+    email: rep.email,
+  }
 }
 
 export function merchantToInsert(merchant: FormData, userId?: string) {
@@ -124,6 +134,7 @@ export function rowToMerchant(row: MerchantRow): FormData {
     offers: [],
     requestedAmount: row.requested_amount ? String(row.requested_amount) : '',
     salesRepId: row.assigned_rep_id ?? undefined,
+    assignedRep: toAssignedRep(row.assigned_rep),
     matchedLenderIds: [],
     updated_at: row.updated_at,
   }
@@ -143,6 +154,7 @@ export function rowToMerchant(row: MerchantRow): FormData {
     offers: Array.isArray(base.offers) ? base.offers : fallback.offers,
     requestedAmount: base.requestedAmount ?? fallback.requestedAmount,
     salesRepId: row.assigned_rep_id ?? base.salesRepId,
+    assignedRep: toAssignedRep(row.assigned_rep) ?? base.assignedRep ?? fallback.assignedRep,
     matchedLenderIds: Array.isArray(base.matchedLenderIds) ? base.matchedLenderIds : fallback.matchedLenderIds,
     updated_at: row.updated_at,
   }

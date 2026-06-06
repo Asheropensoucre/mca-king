@@ -74,6 +74,7 @@ export interface FormData {
   offers: Offer[];
   requestedAmount: string;
   salesRepId?: string;
+  assignedRep?: SalesRepresentative | null;
   matchedLenderIds?: string[];
   updated_at?: string;
 }

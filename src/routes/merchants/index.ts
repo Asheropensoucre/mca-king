@@ -30,7 +30,7 @@ export async function GET(req: Request): Promise<Response> {
 
   let query = supabaseAdmin
     .from('merchants')
-    .select('*', { count: shouldPaginate ? 'exact' : undefined })
+    .select('*, assigned_rep:users!merchants_assigned_rep_id_fkey(id,full_name,name,email)', { count: shouldPaginate ? 'exact' : undefined })
   let currentLenderId: string | null = null
 
   if (user.role === 'sales_rep') query = query.eq('assigned_rep_id', user.id)
@@ -107,7 +107,7 @@ export async function POST(req: Request): Promise<Response> {
   const { data, error } = await supabaseAdmin
     .from('merchants')
     .insert(insert)
-    .select('*')
+    .select('*, assigned_rep:users!merchants_assigned_rep_id_fkey(id,full_name,name,email)')
     .single<MerchantRow>()
 
   if (error) return badRequest(error.message)

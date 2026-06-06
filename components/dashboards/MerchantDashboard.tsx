@@ -176,6 +176,33 @@ const ReadOnlyField: React.FC<{ label: string; value: string }> = ({ label, valu
     </label>
 );
 
+const BrokerContactCard: React.FC<{ assignedRep: FormData['assignedRep'] }> = ({ assignedRep }) => (
+    <Card className="mb-6">
+        <div className="p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-muted">Your Broker Contact</p>
+                    <h2 className="mt-1 text-xl font-black text-main">{assignedRep?.name ?? 'Broker team'}</h2>
+                    <p className="mt-2 text-sm text-muted">
+                        {assignedRep
+                            ? 'Questions about documents, offers, or next steps? Contact your assigned rep.'
+                            : 'A broker team member has not been assigned yet. The team will follow up when your file is reviewed.'}
+                    </p>
+                </div>
+                {assignedRep?.email && (
+                    <a
+                        href={`mailto:${assignedRep.email}`}
+                        className="inline-flex min-h-10 items-center justify-center rounded-lg border-2 border-line-strong bg-accent px-4 py-2 text-sm font-black text-on-accent shadow-[4px_4px_0_rgb(var(--color-border-strong))] transition-all hover:bg-warning active:translate-x-1 active:translate-y-1 active:shadow-inner"
+                    >
+                        Email Rep
+                    </a>
+                )}
+            </div>
+            {assignedRep?.email && <p className="mt-4 break-all text-sm font-semibold text-secondary">{assignedRep.email}</p>}
+        </div>
+    </Card>
+);
+
 const LockedApplicationView: React.FC<{ merchant: FormData }> = ({ merchant }) => (
     <div className="space-y-6 opacity-80">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -349,6 +376,8 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ currentUse
                         </div>
                     </div>
                 </Card>
+
+                <BrokerContactCard assignedRep={submission.assignedRep} />
 
                 {renderApplicationSection()}
 

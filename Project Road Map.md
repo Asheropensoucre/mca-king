@@ -34,6 +34,7 @@ This is **not** a lender-originated deal marketplace. Lenders/funders do not cre
 - **12-step Kamba status system:** `ApplicationStatus` in `types.ts` defines the funding workflow status machine.
 - **Shared status configuration:** `components/dashboards/shared/applicationStatus.ts` centralizes status labels, themes, defaults, and helpers.
 - **Kamba pipeline:** `components/dashboards/shared/KanbanPipelineView.tsx` provides real-data drag-and-drop workflow movement for Admin and Sales Rep users.
+- **Merchant-facing status:** `components/dashboards/MerchantDashboard.tsx` maps internal Kamba statuses to simpler merchant messages, next-action guidance, and assigned broker contact details.
 - **Leads:** Lead creation, assignment, notes/call log, filters, saved views, and lead-to-merchant conversion.
 - **Matching:** Server-side automated matching plus manual broker routing to lenders/funders.
 - **Merchant-file submissions:** Tracks broker-to-lender/funder package submissions and response outcomes.

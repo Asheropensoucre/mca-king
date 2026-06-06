@@ -38046,6 +38046,15 @@ var getStateFromAddress = (address) => {
   const match = address.toUpperCase().match(/\b[A-Z]{2}\b(?!.*\b[A-Z]{2}\b)/);
   return match?.[0] ?? null;
 };
+var toAssignedRep = (rep) => {
+  if (!rep)
+    return null;
+  return {
+    id: rep.id,
+    name: rep.full_name ?? rep.name ?? rep.email,
+    email: rep.email
+  };
+};
 function merchantToInsert(merchant, userId) {
   return {
     id: merchant.id,
@@ -38101,6 +38110,7 @@ function rowToMerchant(row) {
     offers: [],
     requestedAmount: row.requested_amount ? String(row.requested_amount) : "",
     salesRepId: row.assigned_rep_id ?? undefined,
+    assignedRep: toAssignedRep(row.assigned_rep),
     matchedLenderIds: [],
     updated_at: row.updated_at
   };
@@ -38119,6 +38129,7 @@ function rowToMerchant(row) {
     offers: Array.isArray(base.offers) ? base.offers : fallback.offers,
     requestedAmount: base.requestedAmount ?? fallback.requestedAmount,
     salesRepId: row.assigned_rep_id ?? base.salesRepId,
+    assignedRep: toAssignedRep(row.assigned_rep) ?? base.assignedRep ?? fallback.assignedRep,
     matchedLenderIds: Array.isArray(base.matchedLenderIds) ? base.matchedLenderIds : fallback.matchedLenderIds,
     updated_at: row.updated_at
   };
@@ -43848,7 +43859,7 @@ async function GET(req) {
   const minRevenue = url.searchParams.get("min_revenue");
   const maxRevenue = url.searchParams.get("max_revenue");
   const stale = url.searchParams.get("stale");
-  let query = supabaseAdmin.from("merchants").select("*", { count: shouldPaginate ? "exact" : undefined });
+  let query = supabaseAdmin.from("merchants").select("*, assigned_rep:users!merchants_assigned_rep_id_fkey(id,full_name,name,email)", { count: shouldPaginate ? "exact" : undefined });
   let currentLenderId = null;
   if (user.role === "sales_rep")
     query = query.eq("assigned_rep_id", user.id);
@@ -43919,7 +43930,7 @@ async function POST(req) {
     salesRepId: user.role === "merchant" ? undefined : merchant.salesRepId
   };
   const insert = merchantToInsert(newMerchant, user.role === "merchant" ? user.id : undefined);
-  const { data, error } = await supabaseAdmin.from("merchants").insert(insert).select("*").single();
+  const { data, error } = await supabaseAdmin.from("merchants").insert(insert).select("*, assigned_rep:users!merchants_assigned_rep_id_fkey(id,full_name,name,email)").single();
   if (error)
     return badRequest(error.message);
   const created = rowToMerchant(data);
@@ -44183,7 +44194,7 @@ async function canAccessActivityEntity(user, entityType, entityId) {
 
 // src/routes/merchants/[id].ts
 async function fetchMerchant(id) {
-  const { data, error } = await supabaseAdmin.from("merchants").select("*").eq("id", id).single();
+  const { data, error } = await supabaseAdmin.from("merchants").select("*, assigned_rep:users!merchants_assigned_rep_id_fkey(id,full_name,name,email)").eq("id", id).single();
   if (error)
     return error.code === "PGRST116" ? null : badRequest(error.message);
   return data;
@@ -44316,7 +44327,7 @@ async function PATCH(req, context) {
   const update = merchantToUpdate(merged);
   if (hasAssignedRepId || hasSalesRepId)
     update.assigned_rep_id = nextAssignedRepId;
-  const { data, error } = await supabaseAdmin.from("merchants").update(update).eq("id", id).select("*").single();
+  const { data, error } = await supabaseAdmin.from("merchants").update(update).eq("id", id).select("*, assigned_rep:users!merchants_assigned_rep_id_fkey(id,full_name,name,email)").single();
   if (error)
     return badRequest(error.message);
   if (assignmentChanged) {

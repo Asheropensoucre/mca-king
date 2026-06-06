@@ -38,7 +38,8 @@ MCA King includes four primary role experiences:
 
 - **Role-based dashboards** for Admin, Sales Rep, Merchant, and Lender/Funder users.
 - **Responsive dashboard shell** with persistent desktop left navigation and mobile drawer navigation.
-- **12-step Kamba pipeline** with drag-and-drop status movement powered by `@dnd-kit`.
+- **12-step Kamba pipeline** with drag-and-drop status movement powered by `@dnd-kit` for internal broker workflows.
+- **Merchant-facing application dashboard** with simplified status messaging, next-action guidance, assigned broker contact details, document upload, stipulations, offers, renewals, and payoff requests.
 - **Lead management** with lead assignment, notes/call log, saved views, filtering, and lead-to-merchant conversion.
 - **Automated and manual lender/funder matching** based on lender criteria and merchant profile data.
 - **Merchant-file submission tracking** for broker-to-lender/funder packages, response statuses, declines, no-response outcomes, offers, and stipulation requests.
@@ -119,7 +120,7 @@ See [`Docs/COMMUNICATIONS_COMPLIANCE_STRATEGY.md`](Docs/COMMUNICATIONS_COMPLIANC
 
 ### 12-step status machine
 
-The application status source of truth is the `ApplicationStatus` union in `types.ts`, with display configuration in `components/dashboards/shared/applicationStatus.ts`. Dashboard views, Kamba pipeline behavior, merchant reapply logic, matching triggers, status history, and email triggers depend on these status values.
+The application status source of truth is the `ApplicationStatus` union in `types.ts`, with display configuration in `components/dashboards/shared/applicationStatus.ts`. Internal dashboard views, Kamba pipeline behavior, merchant reapply logic, matching triggers, status history, and email triggers depend on these status values. The merchant dashboard maps those internal statuses into simpler customer-facing status messages and next-action guidance so merchants are not shown the internal 12-step workflow as a linear journey.
 
 ### Matching engine
 
@@ -259,7 +260,7 @@ mca-king/
 │       ├── DashboardController.tsx # Loads data and routes users to role dashboards
 │       ├── AdminDashboard.tsx      # Broker admin dashboard
 │       ├── SalesRepDashboard.tsx   # Sales rep dashboard
-│       ├── MerchantDashboard.tsx   # Merchant dashboard
+│       ├── MerchantDashboard.tsx   # Merchant-facing status, broker contact, documents, offers, renewals
 │       ├── LenderDashboard.tsx     # Lender/funder dashboard
 │       ├── AdminSettingsPage.tsx   # Admin user/account settings
 │       ├── LeadManager.tsx         # Lead list/detail/notes/conversion UI
