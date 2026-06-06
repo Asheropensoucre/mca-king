@@ -23,7 +23,7 @@ export const SavedViewsMenu: React.FC<SavedViewsMenuProps> = ({ entityType, filt
       setError(null);
       setViews(await api.savedViews.list(entityType));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load saved views');
+      setError(err instanceof Error ? err.message : 'Could not load saved filters');
     }
   };
 
@@ -49,7 +49,7 @@ export const SavedViewsMenu: React.FC<SavedViewsMenuProps> = ({ entityType, filt
   };
 
   const deleteView = async (id: string) => {
-    if (!confirm('Delete this saved view?')) return;
+    if (!confirm('Delete this saved filter?')) return;
     try {
       await api.savedViews.delete(id);
       setViews(prev => prev.filter(view => view.id !== id));
@@ -60,23 +60,23 @@ export const SavedViewsMenu: React.FC<SavedViewsMenuProps> = ({ entityType, filt
 
   return (
     <div className="relative">
-      <PrimaryButton label="Saved Views" size="small" onClick={() => setOpen(prev => !prev)} />
+      <PrimaryButton label="Saved Filters" size="small" onClick={() => setOpen(prev => !prev)} />
       {open && (
         <div className="absolute right-0 z-40 mt-2 w-[calc(100vw-2rem)] max-w-80 rounded-xl border-2 border-line-strong bg-surface p-4 shadow-[6px_6px_0_var(--ct-primary)] dark:border-accent  dark:shadow-[6px_6px_0_var(--ct-secondary-fixed-dim)]">
           <div className="mb-3 flex items-center justify-between">
-            <h4 className="font-black text-main ">Saved Views</h4>
-            <button className="text-sm font-bold text-secondary" onClick={() => setSaving(prev => !prev)}>{saving ? 'Cancel' : 'Save current'}</button>
+            <h4 className="font-black text-main ">Saved Filters</h4>
+            <button className="text-sm font-bold text-secondary" onClick={() => setSaving(prev => !prev)}>{saving ? 'Cancel' : 'Save current filters'}</button>
           </div>
           {error && <p className="mb-2 rounded bg-danger/10 p-2 text-xs text-danger dark:bg-danger/20 dark:text-danger">{error}</p>}
           {saving && (
             <div className="mb-3 rounded-lg border border-line p-3 ">
-              <input value={name} onChange={event => setName(event.target.value)} placeholder="View name" className="w-full rounded-md border px-3 py-2 text-sm text-main -muted " />
+              <input value={name} onChange={event => setName(event.target.value)} placeholder="Filter name" className="w-full rounded-md border bg-surface px-3 py-2 text-sm text-main dark:bg-surface-muted" />
               {currentUserRole === 'admin' && (
                 <label className="mt-2 flex items-center gap-2 text-xs font-semibold text-muted">
                   <input type="checkbox" checked={shared} onChange={event => setShared(event.target.checked)} /> Shared with reps
                 </label>
               )}
-              <div className="mt-3"><PrimaryButton label="Save View" size="small" onClick={() => void saveView()} /></div>
+              <div className="mt-3"><PrimaryButton label="Save Filters" size="small" onClick={() => void saveView()} /></div>
             </div>
           )}
           <div className="max-h-72 space-y-2 overflow-y-auto">
@@ -89,7 +89,7 @@ export const SavedViewsMenu: React.FC<SavedViewsMenuProps> = ({ entityType, filt
                 <button type="button" onClick={() => void deleteView(view.id)} className="text-xs font-black text-danger dark:text-danger">Delete</button>
               </div>
             ))}
-            {views.length === 0 && <p className="py-6 text-center text-sm text-muted">No saved views yet.</p>}
+            {views.length === 0 && <p className="py-6 text-center text-sm text-muted">No saved filters yet.</p>}
           </div>
         </div>
       )}

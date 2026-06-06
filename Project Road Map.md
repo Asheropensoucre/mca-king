@@ -35,7 +35,7 @@ This is **not** a lender-originated deal marketplace. Lenders/funders do not cre
 - **Shared status configuration:** `components/dashboards/shared/applicationStatus.ts` centralizes status labels, themes, defaults, and helpers.
 - **Kamba pipeline:** `components/dashboards/shared/KanbanPipelineView.tsx` provides real-data drag-and-drop workflow movement for Admin and Sales Rep users.
 - **Merchant-facing status:** `components/dashboards/MerchantDashboard.tsx` maps internal Kamba statuses to simpler merchant messages, next-action guidance, and assigned broker contact details.
-- **Leads:** Lead creation, assignment, notes/call log, filters, saved views, and lead-to-merchant conversion.
+- **Leads:** Lead creation, assignment, notes/call log, filters, saved filters, and lead-to-merchant conversion.
 - **Matching:** Server-side automated matching plus manual broker routing to lenders/funders.
 - **Merchant-file submissions:** Tracks broker-to-lender/funder package submissions and response outcomes.
 - **Documents:** Supabase Storage-backed private document uploads, signed URLs, validation, deletion, and audit events.
@@ -44,7 +44,7 @@ This is **not** a lender-originated deal marketplace. Lenders/funders do not cre
 - **Funding/finance:** Funding records, broker revenue receivables, and internal sales rep commission tracking.
 - **Renewals and payoff requests:** Renewal queues/history plus early-payoff request tracking and official payoff-letter linking.
 - **Reports/analytics:** Admin and sales-rep scoped reporting; lender/funder analytics scoped to their own relationship.
-- **Search/work queues:** Global search, filters, pagination, and saved views.
+- **Search/work queues:** Global search, filters, pagination, and saved filters.
 - **Settings/account management:** User self-service password settings and admin-only user/account management.
 - **Communications Center:** Email-first communications with preferences, suppressions, templates, campaign recipients, history, unsubscribe handling, and Resend webhooks. SMS remains disabled/future-ready.
 - **AI Assistant:** Gemini is called server-side through `/api/ai/chat`; client secrets are not exposed.

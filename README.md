@@ -40,7 +40,7 @@ MCA King includes four primary role experiences:
 - **Responsive dashboard shell** with persistent desktop left navigation and mobile drawer navigation.
 - **12-step Kamba pipeline** with drag-and-drop status movement powered by `@dnd-kit` for internal broker workflows.
 - **Merchant-facing application dashboard** with simplified status messaging, next-action guidance, assigned broker contact details, document upload, stipulations, offers, renewals, and payoff requests.
-- **Lead management** with lead assignment, CSV import with mapping/validation/duplicate skipping, notes/call log, saved views, filtering, and lead-to-merchant conversion.
+- **Lead management** with lead assignment, CSV import with mapping/validation/duplicate skipping, notes/call log, saved filters, filtering, and lead-to-merchant conversion.
 - **Automated and manual lender/funder matching** based on lender criteria and merchant profile data.
 - **Merchant-file submission tracking** for broker-to-lender/funder packages, response statuses, declines, no-response outcomes, offers, and stipulation requests.
 - **Private document storage** through Supabase Storage, including upload validation, signed URLs, permission checks, and audit events.
@@ -50,7 +50,7 @@ MCA King includes four primary role experiences:
 - **Funded-deal finance tracking** for first fundings, renewal fundings, additional/split funding positions, broker revenue receivables, and internal sales rep commission status.
 - **Reporting and analytics** for admins and scoped sales reps, including overview, pipeline, funding, leads, lender/funder performance, broker revenue, commissions, renewals, tasks, and CSV export support.
 - **Lender/funder analytics** scoped to that lender/funder relationship only.
-- **Search, filters, pagination, and saved views** for operational work queues.
+- **Search, filters, pagination, and saved filters** for operational work queues.
 - **Account settings and admin user management** with self-service password changes for normal users and admin-controlled email, role, reset, disable, and close-account actions.
 - **Email automation** using Resend for transactional workflow emails.
 - **Email-first Communications Center** with preferences, suppressions, templates, selected-recipient campaign drafts, recipient preview, unsubscribe handling, communication history, and Resend webhook ingestion.
@@ -172,7 +172,7 @@ Then fill in your Supabase, auth, Resend, Gemini, and app URL values.
 
 ### Supabase setup
 
-The app expects Supabase Postgres tables for users, sessions/accounts, merchants, owners, lenders/funders, matches, merchant-file submissions, offers, documents, status history, stipulations, leads, lead notes, activities, tasks, fundings, broker revenue, sales rep commissions, renewals, payoff requests, saved views, audit logs, communication preferences, suppressions, templates, campaigns, campaign recipients, communication history, and account-status fields.
+The app expects Supabase Postgres tables for users, sessions/accounts, merchants, owners, lenders/funders, matches, merchant-file submissions, offers, documents, status history, stipulations, leads, lead notes, activities, tasks, fundings, broker revenue, sales rep commissions, renewals, payoff requests, saved filters stored in the `saved_views` table, audit logs, communication preferences, suppressions, templates, campaigns, campaign recipients, communication history, and account-status fields.
 
 There is not yet a checked-in standalone Supabase SQL schema/migration folder in this repository. The current required schema is reflected by:
 

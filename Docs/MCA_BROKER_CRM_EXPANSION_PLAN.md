@@ -73,7 +73,7 @@ The original expansion plan identified missing broker CRM modules around daily w
 - Activity timeline and tasks
 - Fundings, broker revenue, and internal sales rep commissions
 - Merchant-file submission outcomes
-- Search, filters, pagination, and saved views
+- Search, filters, pagination, and saved filters
 - Account settings and admin user management
 - Renewals and payoff requests
 - Reporting and analytics
@@ -93,7 +93,7 @@ The highest-value modules identified by the original plan were:
 3. Funding records as first-class entities
 4. Funded-deal records, broker revenue receivable from lenders/funders, and internal sales rep commission tracking
 5. Outbound merchant-file submission tracking beyond simple matches
-6. Search, filters, and saved views
+6. Search, filters, and saved filters
 7. Account settings and admin user management
 8. Renewal/renewal tracking
 9. Rich offer and contract management
@@ -107,7 +107,7 @@ Phase A — Activity + Tasks ✅ complete
 Phase A.1 — Lender Offer Visibility + Data Isolation ✅ complete
 Phase B — Funded Deals + Broker Revenue + Sales Rep Commissions ✅ complete
 Phase C — Merchant-File Submissions ✅ complete
-Phase D — Search, Filters, Saved Views ✅ complete
+Phase D — Search, Filters, Saved Filters ✅ complete
 Phase E — Account Settings + Admin User Management ✅ complete
 Phase F — Renewals ✅ complete
 Phase G — Reporting and Analytics ✅ complete
@@ -592,7 +592,7 @@ Show:
 
 ---
 
-# Phase D — Search, Filters, and Saved Views ✅ COMPLETE
+# Phase D — Search, Filters, and Saved Filters ✅ COMPLETE
 
 ## Goal
 
@@ -652,7 +652,7 @@ SavedViewsMenu.tsx
 
 Wired into admin and sales rep dashboards, merchant/deal lists, lender list, and lead manager. Search result clicks open merchant/lender details or the lead manager, and pagination controls are present on filtered lists.
 
-Seeded shared saved views:
+Seeded shared saved filters:
 
 - Needs Docs
 - Offers Out
@@ -667,8 +667,8 @@ Seeded shared saved views:
 
 - Admin can search all merchants/leads/lenders. ✅
 - Sales reps can search only allowed records. ✅
-- Filters can be saved as reusable saved views. ✅
-- Shared saved views can be created by admins and reused by reps. ✅
+- Filters can be saved as reusable saved filters. ✅
+- Shared saved filters can be created by admins and reused by reps. ✅
 - Paginated list routes prevent unbounded list queries. ✅
 
 ---
@@ -1992,7 +1992,7 @@ Activity + Tasks ✅ complete
 Lender Offer Visibility + Data Isolation ✅ complete
 Funded Deals + Broker Revenue + Sales Rep Commissions ✅ complete
 Merchant-File Submissions ✅ complete
-Search + Saved Views ✅ complete
+Search + Saved Filters ✅ complete
 Account Settings + Admin User Management ✅ complete
 Renewals ✅ complete
 Reporting and Analytics ✅ complete
