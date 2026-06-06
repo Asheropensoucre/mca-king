@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import type { LeadImportField, LeadImportResult, LeadImportRow, LeadStatus } from '../../../types';
 import { api } from '../../../src/lib/api-client';
-import { parseCsv } from '../../../src/lib/csv';
+import { downloadCsv, parseCsv } from '../../../src/lib/csv';
 import { Card } from '../../ui/Card';
 import { PrimaryButton } from '../../../src/components/ui/PrimaryButton';
 
@@ -25,6 +25,29 @@ const FIELDS: Array<{ value: LeadImportField; label: string; required?: boolean 
 ];
 
 const STATUS_VALUES: LeadStatus[] = ['new', 'contacted', 'docs_requested', 'dead'];
+
+const EXAMPLE_CSV_ROWS: LeadImportRow[] = [
+  {
+    business_name: 'Blue Sky Deli',
+    owner_name: 'Maria Lopez',
+    phone: '555-555-0101',
+    email: 'maria@example.com',
+    state: 'NY',
+    initial_note: 'Interested in working capital',
+    assigned_rep_email: '',
+    status: 'new',
+  },
+  {
+    business_name: 'Desert Auto Repair',
+    owner_name: 'James Carter',
+    phone: '555-555-0199',
+    email: 'james@example.com',
+    state: 'AZ',
+    initial_note: 'Asked for follow-up next week',
+    assigned_rep_email: 'rep@example.com',
+    status: 'contacted',
+  },
+];
 
 const aliases: Record<LeadImportField, string[]> = {
   business_name: ['business_name', 'business name', 'company', 'company name', 'dba', 'legal name', 'business'],
@@ -123,6 +146,10 @@ export const LeadImportModal: React.FC<LeadImportModalProps> = ({ isAdmin, onClo
   const validation = useMemo(() => validateRows(importRows), [importRows]);
   const canImport = importRows.length > 0 && mapping.business_name.length > 0 && validation.valid > 0 && !importing;
 
+  const downloadExampleCsv = () => {
+    downloadCsv('mca-king-lead-import-example.csv', EXAMPLE_CSV_ROWS);
+  };
+
   const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     setError(null);
@@ -185,11 +212,14 @@ export const LeadImportModal: React.FC<LeadImportModalProps> = ({ isAdmin, onClo
 
         <div className="space-y-6 p-6">
           <div className="rounded-xl border-2 border-dashed border-line bg-surface-muted p-5">
-            <label className="block">
-              <span className="text-sm font-black text-main">CSV File</span>
-              <input type="file" accept=".csv,text/csv" onChange={handleFile} className="mt-3 block w-full text-sm text-main file:mr-4 file:rounded-lg file:border-0 file:bg-accent file:px-4 file:py-2 file:font-black file:text-on-accent" />
-            </label>
-            <p className="mt-3 text-xs font-semibold text-muted">Supported columns include Business Name, Owner Name, Phone, Email, State, Notes, Status{isAdmin ? ', and Assigned Rep Email' : ''}.</p>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <label className="block flex-1">
+                <span className="text-sm font-black text-main">CSV File</span>
+                <input type="file" accept=".csv,text/csv" onChange={handleFile} className="mt-3 block w-full text-sm text-main file:mr-4 file:rounded-lg file:border-0 file:bg-accent file:px-4 file:py-2 file:font-black file:text-on-accent" />
+              </label>
+              <PrimaryButton label="Download Example CSV" size="small" onClick={downloadExampleCsv} />
+            </div>
+            <p className="mt-3 text-xs font-semibold text-muted">Supported columns include Business Name, Owner Name, Phone, Email, State, Notes, Status{isAdmin ? ', and Assigned Rep Email' : ''}. Sales reps can leave assigned_rep_email blank because imports are assigned to them automatically.</p>
           </div>
 
           {message && <p className="rounded-lg bg-secondary/10 p-3 text-sm font-bold text-secondary">{message}</p>}
