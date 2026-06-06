@@ -137,7 +137,7 @@ V1 is ready for controlled real-data production use based on the completed secur
 
 This is a free/self-hostable project, not a corporate SaaS launch plan. The practical next priorities are:
 
-1. **CSV/Excel lead import:** This is the main missing core workflow. No broker shop wants to manually enter every lead one at a time. Add lead import with strict column mapping, validation, duplicate detection, safe defaults, audit logging, and communication consent/suppression rules.
+1. **Excel/XLSX lead import follow-up:** CSV lead import is implemented for admin/sales-rep users with column mapping, validation, duplicate skipping, safe assignment rules, and audit/activity logging. Add Excel/XLSX support only if CSV is not enough for real operators.
 2. **Document malware scanning:** Add malware scanning for uploaded bank statements, contracts, payoff letters, and stipulation documents. This complements the current MIME/size validation, private storage, signed URLs, authorization checks, and audit logging.
 3. **Targeted security regression checks:** The broad security sweeps are complete. Keep lightweight regression checks only for future changes to sensitive auth, role access, document access, CSRF, or lender/merchant isolation logic.
 4. **Future SMS activation:** Keep SMS disabled until there is an actual company/client need that justifies provider selection, budget, A2P 10DLC registration, STOP/HELP handling, quiet hours, opt-in proof, and legal/compliance review.

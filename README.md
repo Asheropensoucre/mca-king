@@ -40,7 +40,7 @@ MCA King includes four primary role experiences:
 - **Responsive dashboard shell** with persistent desktop left navigation and mobile drawer navigation.
 - **12-step Kamba pipeline** with drag-and-drop status movement powered by `@dnd-kit` for internal broker workflows.
 - **Merchant-facing application dashboard** with simplified status messaging, next-action guidance, assigned broker contact details, document upload, stipulations, offers, renewals, and payoff requests.
-- **Lead management** with lead assignment, notes/call log, saved views, filtering, and lead-to-merchant conversion.
+- **Lead management** with lead assignment, CSV import with mapping/validation/duplicate skipping, notes/call log, saved views, filtering, and lead-to-merchant conversion.
 - **Automated and manual lender/funder matching** based on lender criteria and merchant profile data.
 - **Merchant-file submission tracking** for broker-to-lender/funder packages, response statuses, declines, no-response outcomes, offers, and stipulation requests.
 - **Private document storage** through Supabase Storage, including upload validation, signed URLs, permission checks, and audit events.

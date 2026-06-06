@@ -11,6 +11,7 @@ import { CommunicationHistoryPanel } from './shared/communications/Communication
 import { CommunicationPreferencesPanel } from './shared/communications/CommunicationPreferencesPanel';
 import { ManualEmailModal } from './shared/communications/ManualEmailModal';
 import { FilterBar } from './shared/FilterBar';
+import { LeadImportModal } from './shared/LeadImportModal';
 
 const STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
 const STATUS_OPTIONS: { value: LeadStatus; label: string }[] = [
@@ -52,6 +53,7 @@ export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, on
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [communicationRefreshKey, setCommunicationRefreshKey] = useState(0);
   const [showNewForm, setShowNewForm] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [noteBody, setNoteBody] = useState('');
   const [form, setForm] = useState({ business_name: '', owner_name: '', phone: '', email: '', state: '', assigned_rep_id: '', initial_note: '' });
   const [filters, setFilters] = useState<Record<string, string>>({});
@@ -119,7 +121,10 @@ export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, on
           <h2 className="text-2xl font-black text-main ">Leads</h2>
           <p className="text-sm text-muted">Track prospects before they become merchant applications.</p>
         </div>
-        <PrimaryButton label="New Lead" size="small" onClick={() => setShowNewForm(true)} />
+        <div className="flex flex-wrap gap-2">
+          <PrimaryButton label="Import Leads" size="small" onClick={() => setShowImportModal(true)} />
+          <PrimaryButton label="New Lead" size="small" onClick={() => setShowNewForm(true)} />
+        </div>
       </div>
       <FilterBar entityType="leads" filters={filters} onFilterChange={(next) => { setFilters(next); setPage(1); }} onReset={() => { setFilters({}); setPage(1); }} salesReps={salesReps} isAdmin={isAdmin} currentUserRole={currentUser.role} />
       {error && <div className="mb-4 rounded-md bg-danger/10 p-3 text-sm text-danger">{error}</div>}
@@ -148,6 +153,8 @@ export const LeadManager: React.FC<LeadManagerProps> = ({ isAdmin, salesReps, on
         <span>Page {page} of {Math.max(1, Math.ceil(total / 24))}</span>
         <PrimaryButton label="Next" size="small" disabled={page >= Math.max(1, Math.ceil(total / 24))} onClick={() => setPage(Math.min(Math.max(1, Math.ceil(total / 24)), page + 1))} />
       </div>
+
+      {showImportModal && <LeadImportModal isAdmin={isAdmin} onClose={() => setShowImportModal(false)} onImported={async () => { setPage(1); await loadLeads(); }} />}
 
       {(showNewForm || selectedLead) && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">

@@ -80,7 +80,7 @@ The original expansion plan identified missing broker CRM modules around daily w
 - Compliance/audit hardening foundation
 - Email-first Communications Center
 
-The practical remaining work is CSV/Excel lead import, document malware scanning, targeted security regression checks when sensitive auth/access code changes, and eventual SMS activation only after there is a real company/client need plus compliance and budget readiness.
+CSV lead import is implemented for admin/sales-rep users with column mapping, validation, duplicate skipping, safe assignment rules, and audit/activity logging. The practical remaining work is Excel/XLSX import support if CSV is not enough, document malware scanning, targeted security regression checks when sensitive auth/access code changes, and eventual SMS activation only after there is a real company/client need plus compliance and budget readiness.
 
 ---
 

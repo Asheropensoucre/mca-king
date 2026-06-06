@@ -6,6 +6,7 @@ import { GET as getOffers, POST as postOffers } from '../routes/offers/index'
 import { PATCH as patchOffer } from '../routes/offers/[id]'
 import { GET as getLeads, POST as postLeads } from '../routes/leads/index'
 import { GET as getLead, PATCH as patchLead, DELETE as deleteLead } from '../routes/leads/[id]'
+import { POST as importLeads } from '../routes/leads/import'
 import { POST as postLeadNote } from '../routes/leads/[id]/notes'
 import { POST as convertLead } from '../routes/leads/[id]/convert'
 import { POST as uploadDocument } from '../routes/documents/upload'
@@ -430,6 +431,10 @@ function matchRoute(method: string, pathname: string): RouteMatch | null {
   if (pathname === '/api/leads') {
     if (method === 'GET') return { handler: getLeads }
     if (method === 'POST') return { handler: postLeads }
+  }
+
+  if (pathname === '/api/leads/import') {
+    if (method === 'POST') return { handler: importLeads }
   }
 
   const leadNotesMatch = pathname.match(/^\/api\/leads\/([^/]+)\/notes$/)

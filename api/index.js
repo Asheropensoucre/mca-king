@@ -44871,8 +44871,218 @@ async function DELETE3(req, context) {
   return new Response(null, { status: 204 });
 }
 
+// src/lib/audit.ts
+var SENSITIVE_KEY_PATTERNS = [
+  /password/i,
+  /new_password/i,
+  /current_password/i,
+  /token/i,
+  /session/i,
+  /secret/i,
+  /api[_-]?key/i,
+  /service[_-]?role/i,
+  /authorization/i,
+  /cookie/i,
+  /^ssn$/i,
+  /dateofbirth/i,
+  /^dob$/i,
+  /taxid/i,
+  /signature/i
+];
+function getRequestIp(req) {
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded)
+    return forwarded.split(",")[0]?.trim() || null;
+  return req.headers.get("x-real-ip") ?? null;
+}
+function getUserAgent(req) {
+  return req.headers.get("user-agent");
+}
+function isSensitiveKey(key) {
+  return SENSITIVE_KEY_PATTERNS.some((pattern) => pattern.test(key));
+}
+function redactAuditMetadata(value) {
+  if (value === null || value === undefined)
+    return value;
+  if (Array.isArray(value))
+    return value.map((item) => redactAuditMetadata(item));
+  if (typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, entry]) => [
+      key,
+      isSensitiveKey(key) ? "[REDACTED]" : redactAuditMetadata(entry)
+    ]));
+  }
+  if (typeof value === "string" && value.length > 500)
+    return `${value.slice(0, 500)}…`;
+  return value;
+}
+async function writeAuditLog(params) {
+  try {
+    const { error } = await supabaseAdmin.from("audit_logs").insert({
+      user_id: params.user_id ?? null,
+      action: params.action,
+      entity_type: params.entity_type ?? null,
+      entity_id: params.entity_id ?? null,
+      ip_address: params.req ? getRequestIp(params.req) : null,
+      user_agent: params.req ? getUserAgent(params.req) : null,
+      metadata: redactAuditMetadata(params.metadata ?? {})
+    });
+    if (error)
+      console.error("[audit] write failed:", error.message);
+  } catch (error) {
+    console.error("[audit] write failed:", error instanceof Error ? error.message : "unknown error");
+  }
+}
+
+// src/routes/leads/import.ts
+var MAX_IMPORT_ROWS = 5000;
+var IMPORT_STATUSES = ["new", "contacted", "docs_requested", "dead"];
+var clean = (value) => String(value ?? "").trim();
+var cleanNullable = (value) => {
+  const text = clean(value);
+  return text.length > 0 ? text : null;
+};
+var normalizeEmail = (value) => clean(value).toLowerCase();
+var normalizePhone = (value) => clean(value).replace(/\D/g, "");
+var normalizeKey = (value) => clean(value).toLowerCase();
+var businessStateKey = (businessName, state) => `${normalizeKey(businessName)}|${normalizeKey(state)}`;
+function normalizeStatus(value) {
+  const status = clean(value).toLowerCase().replace(/[\s-]+/g, "_");
+  if (!status)
+    return "new";
+  return IMPORT_STATUSES.includes(status) ? status : null;
+}
+async function loadExistingLeads(rows) {
+  const emails = Array.from(new Set(rows.map((row) => normalizeEmail(row.email)).filter(Boolean)));
+  const phones = Array.from(new Set(rows.map((row) => clean(row.phone)).filter(Boolean)));
+  const names = Array.from(new Set(rows.map((row) => clean(row.business_name)).filter(Boolean)));
+  const queries = [];
+  if (emails.length > 0)
+    queries.push(supabaseAdmin.from("leads").select("id,business_name,email,phone,state").in("email", emails).returns());
+  if (phones.length > 0)
+    queries.push(supabaseAdmin.from("leads").select("id,business_name,email,phone,state").in("phone", phones).returns());
+  if (names.length > 0)
+    queries.push(supabaseAdmin.from("leads").select("id,business_name,email,phone,state").in("business_name", names).returns());
+  const results = await Promise.all(queries);
+  const rowsById = new Map;
+  for (const result of results) {
+    if (result.error)
+      throw new Error(result.error.message);
+    for (const lead of result.data ?? [])
+      rowsById.set(lead.id, lead);
+  }
+  return Array.from(rowsById.values());
+}
+async function loadSalesRepsByEmail(rows) {
+  const emails = Array.from(new Set(rows.map((row) => normalizeEmail(row.assigned_rep_email)).filter(Boolean)));
+  if (emails.length === 0)
+    return new Map;
+  const { data, error } = await supabaseAdmin.from("users").select("id,email").eq("role", "sales_rep").in("email", emails).returns();
+  if (error)
+    throw new Error(error.message);
+  return new Map((data ?? []).map((rep) => [normalizeEmail(rep.email), rep]));
+}
+function isDuplicate(row, existing, seen) {
+  const email = normalizeEmail(row.email);
+  const phoneDigits = normalizePhone(row.phone);
+  const businessName = clean(row.business_name);
+  const state = cleanNullable(row.state);
+  const rowKeys = [
+    email ? `email:${email}` : "",
+    phoneDigits ? `phone:${phoneDigits}` : "",
+    businessName && state ? `business_state:${businessStateKey(businessName, state)}` : ""
+  ].filter(Boolean);
+  if (rowKeys.some((key) => seen.has(key)))
+    return true;
+  const duplicate = existing.some((lead) => email && normalizeEmail(lead.email) === email || phoneDigits && normalizePhone(lead.phone) === phoneDigits || businessName && state && businessStateKey(lead.business_name, lead.state) === businessStateKey(businessName, state));
+  if (!duplicate)
+    rowKeys.forEach((key) => seen.add(key));
+  return duplicate;
+}
+async function POST5(req) {
+  const user = await requireAuth(req);
+  const roleError = assertRole(user, ["admin", "sales_rep"]);
+  if (roleError)
+    return roleError;
+  const body = await req.json();
+  const rows = Array.isArray(body.rows) ? body.rows : [];
+  if (rows.length === 0)
+    return badRequest("No rows to import");
+  if (rows.length > MAX_IMPORT_ROWS)
+    return badRequest(`Import is limited to ${MAX_IMPORT_ROWS} rows`);
+  try {
+    const [existingLeads, salesRepsByEmail] = await Promise.all([
+      loadExistingLeads(rows),
+      user.role === "admin" ? loadSalesRepsByEmail(rows) : Promise.resolve(new Map)
+    ]);
+    const seen = new Set;
+    const result = { total_rows: rows.length, imported: 0, skipped_duplicates: 0, skipped_invalid: 0, errors: [] };
+    for (const [index, row] of rows.entries()) {
+      const rowNumber = index + 1;
+      const businessName = clean(row.business_name);
+      if (!businessName) {
+        result.skipped_invalid += 1;
+        result.errors.push({ row: rowNumber, reason: "Missing business name" });
+        continue;
+      }
+      const status = normalizeStatus(row.status);
+      if (!status) {
+        result.skipped_invalid += 1;
+        result.errors.push({ row: rowNumber, reason: "Invalid status" });
+        continue;
+      }
+      if (isDuplicate(row, existingLeads, seen)) {
+        result.skipped_duplicates += 1;
+        continue;
+      }
+      const assignedRepEmail = normalizeEmail(row.assigned_rep_email);
+      const assignedRepId = user.role === "sales_rep" ? user.id : assignedRepEmail ? salesRepsByEmail.get(assignedRepEmail)?.id ?? null : null;
+      if (user.role === "admin" && assignedRepEmail && !assignedRepId) {
+        result.skipped_invalid += 1;
+        result.errors.push({ row: rowNumber, reason: `Assigned rep email not found: ${assignedRepEmail}` });
+        continue;
+      }
+      const { data: lead, error } = await supabaseAdmin.from("leads").insert({
+        created_by: user.id,
+        assigned_rep_id: assignedRepId,
+        business_name: businessName,
+        owner_name: cleanNullable(row.owner_name),
+        phone: cleanNullable(row.phone),
+        email: cleanNullable(row.email)?.toLowerCase() ?? null,
+        state: cleanNullable(row.state)?.toUpperCase() ?? null,
+        status
+      }).select("id,business_name").single();
+      if (error) {
+        result.skipped_invalid += 1;
+        result.errors.push({ row: rowNumber, reason: error.message });
+        continue;
+      }
+      result.imported += 1;
+      existingLeads.push({ id: lead.id, business_name: businessName, email: cleanNullable(row.email)?.toLowerCase() ?? null, phone: cleanNullable(row.phone), state: cleanNullable(row.state)?.toUpperCase() ?? null });
+      const noteBody = clean(row.initial_note);
+      if (noteBody) {
+        const { error: noteError } = await supabaseAdmin.from("lead_notes").insert({ lead_id: lead.id, written_by: user.id, body: noteBody });
+        if (!noteError)
+          recordActivity({ entity_type: "lead", entity_id: lead.id, user_id: user.id, activity_type: "note", body: noteBody });
+      }
+    }
+    recordActivity({
+      entity_type: "lead",
+      entity_id: user.id,
+      user_id: user.id,
+      activity_type: "system",
+      body: `Lead CSV import completed: ${result.imported} imported, ${result.skipped_duplicates} duplicates skipped, ${result.skipped_invalid} invalid skipped`,
+      metadata: { result }
+    });
+    await writeAuditLog({ req, user_id: user.id, action: "leads.import", entity_type: "lead", metadata: { result } });
+    return json(result);
+  } catch (error) {
+    return badRequest(error instanceof Error ? error.message : "Could not import leads");
+  }
+}
+
 // src/routes/leads/[id]/notes.ts
-async function POST5(req, context) {
+async function POST6(req, context) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin", "sales_rep"]);
   if (roleError)
@@ -44899,7 +45109,7 @@ async function POST5(req, context) {
 }
 
 // src/routes/leads/[id]/convert.ts
-async function POST6(req, context) {
+async function POST7(req, context) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin", "sales_rep"]);
   if (roleError)
@@ -44982,69 +45192,6 @@ async function POST6(req, context) {
     metadata: { lead_id: id }
   });
   return json({ merchant_id: merchantId }, { status: 201 });
-}
-
-// src/lib/audit.ts
-var SENSITIVE_KEY_PATTERNS = [
-  /password/i,
-  /new_password/i,
-  /current_password/i,
-  /token/i,
-  /session/i,
-  /secret/i,
-  /api[_-]?key/i,
-  /service[_-]?role/i,
-  /authorization/i,
-  /cookie/i,
-  /^ssn$/i,
-  /dateofbirth/i,
-  /^dob$/i,
-  /taxid/i,
-  /signature/i
-];
-function getRequestIp(req) {
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded)
-    return forwarded.split(",")[0]?.trim() || null;
-  return req.headers.get("x-real-ip") ?? null;
-}
-function getUserAgent(req) {
-  return req.headers.get("user-agent");
-}
-function isSensitiveKey(key) {
-  return SENSITIVE_KEY_PATTERNS.some((pattern) => pattern.test(key));
-}
-function redactAuditMetadata(value) {
-  if (value === null || value === undefined)
-    return value;
-  if (Array.isArray(value))
-    return value.map((item) => redactAuditMetadata(item));
-  if (typeof value === "object") {
-    return Object.fromEntries(Object.entries(value).map(([key, entry]) => [
-      key,
-      isSensitiveKey(key) ? "[REDACTED]" : redactAuditMetadata(entry)
-    ]));
-  }
-  if (typeof value === "string" && value.length > 500)
-    return `${value.slice(0, 500)}…`;
-  return value;
-}
-async function writeAuditLog(params) {
-  try {
-    const { error } = await supabaseAdmin.from("audit_logs").insert({
-      user_id: params.user_id ?? null,
-      action: params.action,
-      entity_type: params.entity_type ?? null,
-      entity_id: params.entity_id ?? null,
-      ip_address: params.req ? getRequestIp(params.req) : null,
-      user_agent: params.req ? getUserAgent(params.req) : null,
-      metadata: redactAuditMetadata(params.metadata ?? {})
-    });
-    if (error)
-      console.error("[audit] write failed:", error.message);
-  } catch (error) {
-    console.error("[audit] write failed:", error instanceof Error ? error.message : "unknown error");
-  }
 }
 
 // src/lib/rate-limit.ts
@@ -45199,7 +45346,7 @@ async function canUploadPayoffLetter(userId, role, merchantId, payoffRequestId) 
   const lenderId = await getLenderIdForUser(userId);
   return Boolean(lenderId && payoffRequest.funding?.lender_id === lenderId);
 }
-async function POST7(req) {
+async function POST8(req) {
   const user = await requireAuth(req);
   const limited = await checkRateLimit({ key: rateLimitKey(req, "documents.upload", user.id), limit: 30, windowMs: 60 * 60 * 1000, req, userId: user.id, action: "documents.upload" });
   if (limited)
@@ -45374,7 +45521,7 @@ async function GET9(req) {
     return badRequest(error.message);
   return json(data ?? []);
 }
-async function POST8(req) {
+async function POST9(req) {
   const user = await requireAuth(req);
   if (user.role !== "admin" && user.role !== "lender")
     return forbidden();
@@ -45470,7 +45617,7 @@ async function verifyPassword(hash, password) {
 function isSelfRegisterRole(value) {
   return value === "merchant" || value === "lender";
 }
-async function POST9(req) {
+async function POST10(req) {
   try {
     const { email, password, role, full_name } = await req.json();
     const normalizedEmail = email?.toLowerCase().trim() ?? "";
@@ -45574,7 +45721,7 @@ async function verifyCsrf(req, pathname) {
 }
 
 // src/routes/auth/login.ts
-async function POST10(req) {
+async function POST11(req) {
   try {
     const { email, password } = await req.json();
     const normalizedEmail = email?.toLowerCase().trim() ?? "";
@@ -45627,7 +45774,7 @@ async function POST10(req) {
 }
 
 // src/routes/auth/logout.ts
-async function POST11(req) {
+async function POST12(req) {
   try {
     const user = await requireAuth(req).catch(() => null);
     const token = getSessionToken(req);
@@ -45708,7 +45855,7 @@ async function GET12(req) {
 }
 
 // src/routes/matching/run.ts
-async function POST12(req) {
+async function POST13(req) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin", "sales_rep"]);
   if (roleError)
@@ -45733,7 +45880,7 @@ async function fetchMatch(merchantId, lenderId) {
     throw new Error(error.message);
   return data ?? null;
 }
-async function POST13(req) {
+async function POST14(req) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin", "sales_rep"]);
   if (roleError)
@@ -45781,7 +45928,7 @@ async function salesRepCanAccessMerchant(userId, merchantId) {
     return badRequest(error.message);
   return Boolean(data);
 }
-async function POST14(req) {
+async function POST15(req) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin", "sales_rep"]);
   if (roleError)
@@ -45860,7 +46007,7 @@ async function GET13(req) {
     return badRequest(error.message);
   return json((data ?? []).map(toActivity));
 }
-async function POST15(req) {
+async function POST16(req) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin", "sales_rep"]);
   if (roleError)
@@ -45997,7 +46144,7 @@ async function GET14(req) {
   const tasks = await mapTasks(data ?? []);
   return shouldPaginate ? paginatedJson(tasks, count, pagination.page, pagination.perPage) : json(tasks);
 }
-async function POST16(req) {
+async function POST17(req) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin", "sales_rep"]);
   if (roleError)
@@ -46315,7 +46462,7 @@ async function GET15(req) {
   const fundings = (data ?? []).map(toFunding);
   return shouldPaginate ? paginatedJson(fundings, count, pagination.page, pagination.perPage) : json(fundings);
 }
-async function POST17(req) {
+async function POST18(req) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin", "sales_rep"]);
   if (roleError)
@@ -46667,7 +46814,7 @@ async function GET17(req) {
   const renewals = (data ?? []).filter((row) => user.role !== "sales_rep" || row.merchant?.assigned_rep_id === user.id).filter((row) => user.role !== "merchant" || row.merchant?.user_id === user.id).map(toRenewal).map((renewal) => user.role === "merchant" ? safeRenewalForMerchant(renewal) : renewal);
   return shouldPaginate ? paginatedJson(renewals, count, pagination.page, pagination.perPage) : json(renewals);
 }
-async function POST18(req) {
+async function POST19(req) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin", "sales_rep"]);
   if (roleError)
@@ -46824,7 +46971,7 @@ async function PATCH7(req, context) {
 }
 
 // src/routes/renewals/[id]/request-review.ts
-async function POST19(req, context) {
+async function POST20(req, context) {
   const user = await requireAuth(req);
   if (user.role !== "merchant")
     return forbidden();
@@ -46948,7 +47095,7 @@ async function GET19(req) {
   const requests = (data ?? []).filter((row) => user.role !== "sales_rep" || row.merchant?.assigned_rep_id === user.id).map(toPayoffRequest).map((request) => user.role === "merchant" || user.role === "lender" ? safePayoffRequest(request) : request);
   return shouldPaginate ? paginatedJson(requests, count, pagination.page, pagination.perPage) : json(requests);
 }
-async function POST20(req) {
+async function POST21(req) {
   const user = await requireAuth(req);
   if (!["admin", "sales_rep", "merchant"].includes(user.role))
     return forbidden();
@@ -47184,7 +47331,7 @@ async function GET21(req) {
     return badRequest(error.message);
   return json((data ?? []).map(toBrokerRevenue));
 }
-async function POST21(req) {
+async function POST22(req) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin"]);
   if (roleError)
@@ -47315,7 +47462,7 @@ async function GET22(req) {
     return badRequest(error.message);
   return json((data ?? []).map(toCommission));
 }
-async function POST22(req) {
+async function POST23(req) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin"]);
   if (roleError)
@@ -47443,7 +47590,7 @@ async function GET23(req) {
     return badRequest(error.message);
   return json((data ?? []).map(toMerchantFileSubmission));
 }
-async function POST23(req) {
+async function POST24(req) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin", "sales_rep"]);
   if (roleError)
@@ -47618,7 +47765,7 @@ async function GET25(req) {
     return badRequest(error.message);
   return json((data ?? []).map(toSavedView));
 }
-async function POST24(req) {
+async function POST25(req) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin", "sales_rep"]);
   if (roleError)
@@ -47716,7 +47863,7 @@ var USER_ROLES = ["admin", "sales_rep", "merchant", "lender"];
 function isUserRole(value) {
   return typeof value === "string" && USER_ROLES.includes(value);
 }
-function normalizeEmail(email) {
+function normalizeEmail2(email) {
   return email.toLowerCase().trim();
 }
 function toUserProfile(row) {
@@ -47739,7 +47886,7 @@ async function getAccountUserById(id) {
   return data ?? null;
 }
 async function emailBelongsToAnotherUser(email, userId) {
-  const { data, error } = await supabaseAdmin.from("users").select("id").eq("email", normalizeEmail(email)).neq("id", userId).maybeSingle();
+  const { data, error } = await supabaseAdmin.from("users").select("id").eq("email", normalizeEmail2(email)).neq("id", userId).maybeSingle();
   if (error)
     throw new Error(error.message);
   return Boolean(data);
@@ -47842,7 +47989,7 @@ async function GET27(req) {
 }
 
 // src/routes/audit/report-export.ts
-async function POST25(req) {
+async function POST26(req) {
   const user = await requireAuth(req);
   if (user.role === "merchant" || user.role === "lender")
     return forbidden();
@@ -47892,7 +48039,7 @@ async function GET28(req) {
     return badRequest(error.message);
   return json((data ?? []).map(toUserProfile));
 }
-async function POST26(req) {
+async function POST27(req) {
   const user = await requireAuth(req);
   if (user.role !== "admin")
     return forbidden();
@@ -47901,7 +48048,7 @@ async function POST26(req) {
     return badRequest("Email and password are required");
   if (body.password.length < 8)
     return badRequest("Password must be at least 8 characters");
-  const email = normalizeEmail(body.email);
+  const email = normalizeEmail2(body.email);
   const { data: existing, error: existingError } = await supabaseAdmin.from("users").select("id").eq("email", email).maybeSingle();
   if (existingError)
     return badRequest(existingError.message);
@@ -47965,7 +48112,7 @@ async function PATCH14(req, context) {
     update.name = fullName;
   }
   if (body.email !== undefined) {
-    const nextEmail = normalizeEmail(body.email);
+    const nextEmail = normalizeEmail2(body.email);
     if (!nextEmail)
       return badRequest("email cannot be blank");
     if (await emailBelongsToAnotherUser(nextEmail, id))
@@ -48004,7 +48151,7 @@ async function PATCH14(req, context) {
 }
 
 // src/routes/admin/users/[id]/reset-password.ts
-async function POST27(req, context) {
+async function POST28(req, context) {
   const currentUser = await requireAuth(req);
   if (currentUser.role !== "admin")
     return forbidden();
@@ -48037,7 +48184,7 @@ async function POST27(req, context) {
 }
 
 // src/routes/admin/users/[id]/disable.ts
-async function POST28(req, context) {
+async function POST29(req, context) {
   const currentUser = await requireAuth(req);
   if (currentUser.role !== "admin")
     return forbidden();
@@ -48068,7 +48215,7 @@ async function POST28(req, context) {
 }
 
 // src/routes/admin/users/[id]/reactivate.ts
-async function POST29(req, context) {
+async function POST30(req, context) {
   const currentUser = await requireAuth(req);
   if (currentUser.role !== "admin")
     return forbidden();
@@ -48096,7 +48243,7 @@ async function POST29(req, context) {
 }
 
 // src/routes/admin/users/[id]/close.ts
-async function POST30(req, context) {
+async function POST31(req, context) {
   const currentUser = await requireAuth(req);
   if (currentUser.role !== "admin")
     return forbidden();
@@ -65685,7 +65832,7 @@ Role-specific guidance:
 Tone: professional, helpful, and concise. Never make up information. If unsure, say so clearly and recommend checking the actual dashboard or asking an admin.
 `.trim();
 var displayName2 = (user) => user.full_name ?? user.email;
-async function POST31(req) {
+async function POST32(req) {
   const user = await requireAuth(req);
   const limited = await checkRateLimit({ key: rateLimitKey(req, "ai.chat", user.id), limit: 50, windowMs: 24 * 60 * 60 * 1000, req, userId: user.id, action: "ai.chat" });
   if (limited)
@@ -65729,11 +65876,11 @@ ${message}`,
 }
 
 // src/lib/communications/suppression.ts
-function normalizeEmail2(email) {
+function normalizeEmail3(email) {
   const value = email?.trim().toLowerCase();
   return value || null;
 }
-function normalizePhone(phone) {
+function normalizePhone2(phone) {
   const value = phone?.replace(/[^0-9+]/g, "").trim();
   return value || null;
 }
@@ -65772,7 +65919,7 @@ async function getOrCreatePreference(params) {
   return created;
 }
 async function isSuppressed(channel, identifier) {
-  const normalized = channel === "email" ? normalizeEmail2(identifier) : normalizePhone(identifier);
+  const normalized = channel === "email" ? normalizeEmail3(identifier) : normalizePhone2(identifier);
   if (!normalized)
     return { suppressed: false, reason: null };
   const { data, error } = await supabaseAdmin.from("global_suppressions").select("reason").eq("channel", channel).ilike("identifier", normalized).maybeSingle();
@@ -65781,7 +65928,7 @@ async function isSuppressed(channel, identifier) {
   return { suppressed: Boolean(data), reason: data?.reason ?? null };
 }
 async function addSuppression(params) {
-  const identifier = params.channel === "email" ? normalizeEmail2(params.identifier) : normalizePhone(params.identifier);
+  const identifier = params.channel === "email" ? normalizeEmail3(params.identifier) : normalizePhone2(params.identifier);
   if (!identifier)
     return;
   const { error } = await supabaseAdmin.from("global_suppressions").upsert({
@@ -65811,7 +65958,7 @@ async function evaluateEmailEligibility(params) {
   return { sendable: true, skip_reason: null, preference };
 }
 async function markEmailUnsubscribed(params) {
-  const email = normalizeEmail2(params.email);
+  const email = normalizeEmail3(params.email);
   if (!email)
     return;
   if (params.entity_type && params.entity_id) {
@@ -66240,7 +66387,7 @@ async function sendSmsDisabled() {
 function isEntityType4(value) {
   return value === "lead" || value === "merchant" || value === "contact" || value === "user";
 }
-async function POST32(req) {
+async function POST33(req) {
   const user = await requireAuth(req);
   if (user.role === "merchant" || user.role === "lender")
     return forbidden();
@@ -66280,7 +66427,7 @@ async function GET42(req) {
     return badRequest(error.message);
   return json(data ?? []);
 }
-async function POST33(req) {
+async function POST34(req) {
   const user = await requireAuth(req);
   const roleError = assertRole(user, ["admin"]);
   if (roleError)
@@ -66364,7 +66511,7 @@ async function GET43(req) {
     return badRequest(error.message);
   return json(data ?? []);
 }
-async function POST34(req) {
+async function POST35(req) {
   const user = await requireAuth(req);
   if (user.role === "merchant" || user.role === "lender")
     return forbidden();
@@ -66457,7 +66604,7 @@ async function loadCampaign2(id, userId, role) {
     throw new Error(error.message);
   return data;
 }
-async function POST35(req, context) {
+async function POST36(req, context) {
   const user = await requireAuth(req);
   if (user.role === "merchant" || user.role === "lender")
     return forbidden();
@@ -66500,7 +66647,7 @@ async function loadCampaign3(id, userId, role) {
     throw new Error(error.message);
   return data;
 }
-async function POST36(req, context) {
+async function POST37(req, context) {
   const user = await requireAuth(req);
   if (user.role === "merchant" || user.role === "lender")
     return forbidden();
@@ -66622,7 +66769,7 @@ async function GET45(req) {
   const token = new URL(req.url).searchParams.get("token");
   return processToken(token);
 }
-async function POST37(req) {
+async function POST38(req) {
   const body = await req.json().catch(() => ({}));
   const response = await processToken(body.token ?? null);
   if (response.headers.get("content-type")?.includes("text/html"))
@@ -66680,9 +66827,9 @@ function emailFrom(data) {
   const candidates = [data.to, data.email, data.recipient, data.rcpt_to];
   for (const candidate of candidates) {
     if (typeof candidate === "string")
-      return normalizeEmail2(candidate);
+      return normalizeEmail3(candidate);
     if (Array.isArray(candidate) && typeof candidate[0] === "string")
-      return normalizeEmail2(candidate[0]);
+      return normalizeEmail3(candidate[0]);
   }
   return null;
 }
@@ -66693,7 +66840,7 @@ function messageIdFrom(data) {
   }
   return null;
 }
-async function POST38(req) {
+async function POST39(req) {
   const rawBody = await req.text();
   if (!verifyResendWebhookSignature(req, rawBody))
     return new Response("Invalid webhook signature", { status: 401 });
@@ -66794,13 +66941,13 @@ function matchRoute(method, pathname) {
   }
   if (pathname === "/api/communications/send-email") {
     if (method === "POST")
-      return { handler: POST32 };
+      return { handler: POST33 };
   }
   if (pathname === "/api/communications/templates") {
     if (method === "GET")
       return { handler: GET42 };
     if (method === "POST")
-      return { handler: POST33 };
+      return { handler: POST34 };
   }
   const communicationTemplateMatch = pathname.match(/^\/api\/communications\/templates\/([^/]+)$/);
   if (communicationTemplateMatch) {
@@ -66814,19 +66961,19 @@ function matchRoute(method, pathname) {
     if (method === "GET")
       return { handler: GET43 };
     if (method === "POST")
-      return { handler: POST34 };
+      return { handler: POST35 };
   }
   const communicationCampaignPreviewMatch = pathname.match(/^\/api\/communications\/campaigns\/([^/]+)\/preview-recipients$/);
   if (communicationCampaignPreviewMatch) {
     const params = { id: decodeURIComponent(communicationCampaignPreviewMatch[1]) };
     if (method === "POST")
-      return { handler: POST35, params };
+      return { handler: POST36, params };
   }
   const communicationCampaignSendMatch = pathname.match(/^\/api\/communications\/campaigns\/([^/]+)\/send$/);
   if (communicationCampaignSendMatch) {
     const params = { id: decodeURIComponent(communicationCampaignSendMatch[1]) };
     if (method === "POST")
-      return { handler: POST36, params };
+      return { handler: POST37, params };
   }
   const communicationCampaignMatch = pathname.match(/^\/api\/communications\/campaigns\/([^/]+)$/);
   if (communicationCampaignMatch) {
@@ -66840,11 +66987,11 @@ function matchRoute(method, pathname) {
     if (method === "GET")
       return { handler: GET45 };
     if (method === "POST")
-      return { handler: POST37 };
+      return { handler: POST38 };
   }
   if (pathname === "/api/webhooks/resend") {
     if (method === "POST")
-      return { handler: POST38 };
+      return { handler: POST39 };
   }
   if (pathname === "/api/lender-dashboard/analytics") {
     if (method === "GET")
@@ -66888,19 +67035,19 @@ function matchRoute(method, pathname) {
   }
   if (pathname === "/api/ai/chat") {
     if (method === "POST")
-      return { handler: POST31 };
+      return { handler: POST32 };
   }
   if (pathname === "/api/auth/register") {
     if (method === "POST")
-      return { handler: POST9 };
+      return { handler: POST10 };
   }
   if (pathname === "/api/auth/login") {
     if (method === "POST")
-      return { handler: POST10 };
+      return { handler: POST11 };
   }
   if (pathname === "/api/auth/logout") {
     if (method === "POST")
-      return { handler: POST11 };
+      return { handler: POST12 };
   }
   if (pathname === "/api/auth/me") {
     if (method === "GET")
@@ -66914,7 +67061,7 @@ function matchRoute(method, pathname) {
     if (method === "GET")
       return { handler: GET13 };
     if (method === "POST")
-      return { handler: POST15 };
+      return { handler: POST16 };
   }
   if (pathname === "/api/search") {
     if (method === "GET")
@@ -66934,25 +67081,25 @@ function matchRoute(method, pathname) {
   }
   if (pathname === "/api/audit/report-export") {
     if (method === "POST")
-      return { handler: POST25 };
+      return { handler: POST26 };
   }
   if (pathname === "/api/admin/users") {
     if (method === "GET")
       return { handler: GET28 };
     if (method === "POST")
-      return { handler: POST26 };
+      return { handler: POST27 };
   }
   const adminUserActionMatch = pathname.match(/^\/api\/admin\/users\/([^/]+)\/(reset-password|disable|reactivate|close)$/);
   if (adminUserActionMatch) {
     const params = { id: decodeURIComponent(adminUserActionMatch[1]) };
     if (method === "POST" && adminUserActionMatch[2] === "reset-password")
-      return { handler: POST27, params };
-    if (method === "POST" && adminUserActionMatch[2] === "disable")
       return { handler: POST28, params };
-    if (method === "POST" && adminUserActionMatch[2] === "reactivate")
+    if (method === "POST" && adminUserActionMatch[2] === "disable")
       return { handler: POST29, params };
-    if (method === "POST" && adminUserActionMatch[2] === "close")
+    if (method === "POST" && adminUserActionMatch[2] === "reactivate")
       return { handler: POST30, params };
+    if (method === "POST" && adminUserActionMatch[2] === "close")
+      return { handler: POST31, params };
   }
   const adminUserMatch = pathname.match(/^\/api\/admin\/users\/([^/]+)$/);
   if (adminUserMatch) {
@@ -66966,7 +67113,7 @@ function matchRoute(method, pathname) {
     if (method === "GET")
       return { handler: GET25 };
     if (method === "POST")
-      return { handler: POST24 };
+      return { handler: POST25 };
   }
   const savedViewMatch = pathname.match(/^\/api\/saved-views\/([^/]+)$/);
   if (savedViewMatch) {
@@ -66980,7 +67127,7 @@ function matchRoute(method, pathname) {
     if (method === "GET")
       return { handler: GET14 };
     if (method === "POST")
-      return { handler: POST16 };
+      return { handler: POST17 };
   }
   const taskMatch = pathname.match(/^\/api\/tasks\/([^/]+)$/);
   if (taskMatch) {
@@ -66994,7 +67141,7 @@ function matchRoute(method, pathname) {
     if (method === "GET")
       return { handler: GET15 };
     if (method === "POST")
-      return { handler: POST17 };
+      return { handler: POST18 };
   }
   const fundingMatch = pathname.match(/^\/api\/fundings\/([^/]+)$/);
   if (fundingMatch) {
@@ -67008,13 +67155,13 @@ function matchRoute(method, pathname) {
     if (method === "GET")
       return { handler: GET17 };
     if (method === "POST")
-      return { handler: POST18 };
+      return { handler: POST19 };
   }
   const renewalReviewMatch = pathname.match(/^\/api\/renewals\/([^/]+)\/request-review$/);
   if (renewalReviewMatch) {
     const params = { id: decodeURIComponent(renewalReviewMatch[1]) };
     if (method === "POST")
-      return { handler: POST19, params };
+      return { handler: POST20, params };
   }
   const renewalMatch = pathname.match(/^\/api\/renewals\/([^/]+)$/);
   if (renewalMatch) {
@@ -67028,7 +67175,7 @@ function matchRoute(method, pathname) {
     if (method === "GET")
       return { handler: GET19 };
     if (method === "POST")
-      return { handler: POST20 };
+      return { handler: POST21 };
   }
   const payoffRequestMatch = pathname.match(/^\/api\/payoff-requests\/([^/]+)$/);
   if (payoffRequestMatch) {
@@ -67042,7 +67189,7 @@ function matchRoute(method, pathname) {
     if (method === "GET")
       return { handler: GET21 };
     if (method === "POST")
-      return { handler: POST21 };
+      return { handler: POST22 };
   }
   const brokerRevenueMatch = pathname.match(/^\/api\/broker-revenue\/([^/]+)$/);
   if (brokerRevenueMatch) {
@@ -67054,7 +67201,7 @@ function matchRoute(method, pathname) {
     if (method === "GET")
       return { handler: GET22 };
     if (method === "POST")
-      return { handler: POST22 };
+      return { handler: POST23 };
   }
   const salesRepCommissionMatch = pathname.match(/^\/api\/sales-rep-commissions\/([^/]+)$/);
   if (salesRepCommissionMatch) {
@@ -67066,7 +67213,7 @@ function matchRoute(method, pathname) {
     if (method === "GET")
       return { handler: GET23 };
     if (method === "POST")
-      return { handler: POST23 };
+      return { handler: POST24 };
   }
   const merchantFileSubmissionMatch = pathname.match(/^\/api\/merchant-file-submissions\/([^/]+)$/);
   if (merchantFileSubmissionMatch) {
@@ -67080,17 +67227,17 @@ function matchRoute(method, pathname) {
   }
   if (pathname === "/api/matching/run") {
     if (method === "POST")
-      return { handler: POST12 };
+      return { handler: POST13 };
   }
   if (pathname === "/api/matching/manual") {
     if (method === "POST")
-      return { handler: POST13 };
+      return { handler: POST14 };
     if (method === "DELETE")
       return { handler: DELETE5 };
   }
   if (pathname === "/api/matching/notify") {
     if (method === "POST")
-      return { handler: POST14 };
+      return { handler: POST15 };
   }
   if (pathname === "/api/merchants") {
     if (method === "GET")
@@ -67138,7 +67285,7 @@ function matchRoute(method, pathname) {
   }
   if (pathname === "/api/documents/upload") {
     if (method === "POST")
-      return { handler: POST7 };
+      return { handler: POST8 };
   }
   if (pathname === "/api/documents") {
     if (method === "GET")
@@ -67154,7 +67301,7 @@ function matchRoute(method, pathname) {
     if (method === "GET")
       return { handler: GET9 };
     if (method === "POST")
-      return { handler: POST8 };
+      return { handler: POST9 };
   }
   if (pathname === "/api/leads") {
     if (method === "GET")
@@ -67162,17 +67309,21 @@ function matchRoute(method, pathname) {
     if (method === "POST")
       return { handler: POST4 };
   }
+  if (pathname === "/api/leads/import") {
+    if (method === "POST")
+      return { handler: POST5 };
+  }
   const leadNotesMatch = pathname.match(/^\/api\/leads\/([^/]+)\/notes$/);
   if (leadNotesMatch) {
     const params = { id: decodeURIComponent(leadNotesMatch[1]) };
     if (method === "POST")
-      return { handler: POST5, params };
+      return { handler: POST6, params };
   }
   const leadConvertMatch = pathname.match(/^\/api\/leads\/([^/]+)\/convert$/);
   if (leadConvertMatch) {
     const params = { id: decodeURIComponent(leadConvertMatch[1]) };
     if (method === "POST")
-      return { handler: POST6, params };
+      return { handler: POST7, params };
   }
   const leadMatch = pathname.match(/^\/api\/leads\/([^/]+)$/);
   if (leadMatch) {

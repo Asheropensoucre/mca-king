@@ -1,4 +1,4 @@
-import type { Activity, ActivityType, EntityType, LenderInfo, FormData, Lead, LeadNote, SalesRepresentative, Document, DocType, Stipulation, LenderMatch, Task, Funding, BrokerRevenue, SalesRepCommission, MerchantFileSubmission, SavedView, SearchResults, PaginatedResponse, SavedViewEntityType, UserProfile, UserRole, Renewal, PayoffRequest, OverviewReport, PipelineReport, FundingReport, LeadReport, LenderReport, RevenueReport, CommissionReport, RenewalReport, TaskReport, LenderDashboardAnalytics, AuditLog, CommunicationPreference, MessageTemplate, Campaign, CommunicationEvent, RecipientPreview, CommunicationEntityType } from '../../types'
+import type { Activity, ActivityType, EntityType, LenderInfo, FormData, Lead, LeadNote, LeadImportResult, LeadImportRow, SalesRepresentative, Document, DocType, Stipulation, LenderMatch, Task, Funding, BrokerRevenue, SalesRepCommission, MerchantFileSubmission, SavedView, SearchResults, PaginatedResponse, SavedViewEntityType, UserProfile, UserRole, Renewal, PayoffRequest, OverviewReport, PipelineReport, FundingReport, LeadReport, LenderReport, RevenueReport, CommissionReport, RenewalReport, TaskReport, LenderDashboardAnalytics, AuditLog, CommunicationPreference, MessageTemplate, Campaign, CommunicationEvent, RecipientPreview, CommunicationEntityType } from '../../types'
 import { csrfHeaders } from './client-security'
 
 function headers(extra?: HeadersInit): HeadersInit {
@@ -138,6 +138,7 @@ export const api = {
       return request<PaginatedResponse<Lead>>(`/api/leads${qs ? `?${qs}` : ''}`)
     },
     create: (lead: Partial<Lead> & { initial_note?: string }) => request<Lead>('/api/leads', { method: 'POST', body: JSON.stringify(lead) }),
+    import: (rows: LeadImportRow[]) => request<LeadImportResult>('/api/leads/import', { method: 'POST', body: JSON.stringify({ rows }) }),
     get: (id: string) => request<Lead>(`/api/leads/${id}`),
     update: (lead: Partial<Lead> & { id: string }) => request<Lead>(`/api/leads/${lead.id}`, { method: 'PATCH', body: JSON.stringify(lead) }),
     addNote: (leadId: string, body: string) => request<LeadNote>(`/api/leads/${leadId}/notes`, { method: 'POST', body: JSON.stringify({ body }) }),

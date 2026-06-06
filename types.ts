@@ -159,6 +159,18 @@ export interface Lead {
   latest_note?: LeadNote | null;
   notes?: LeadNote[];
 }
+
+export type LeadImportField = 'business_name' | 'owner_name' | 'phone' | 'email' | 'state' | 'initial_note' | 'assigned_rep_email' | 'status';
+
+export type LeadImportRow = Partial<Record<LeadImportField, string>>;
+
+export interface LeadImportResult {
+  total_rows: number;
+  imported: number;
+  skipped_duplicates: number;
+  skipped_invalid: number;
+  errors: Array<{ row: number; reason: string }>;
+}
 export type EntityType = 'lead' | 'merchant' | 'lender' | 'offer' | 'document' | 'stipulation' | 'user' | 'funding';
 export type ActivityType = 'note' | 'call' | 'email' | 'status_change' | 'upload' | 'match' | 'offer' | 'task' | 'system';
 export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent';
