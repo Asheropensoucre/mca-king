@@ -22,6 +22,13 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return await res.json() as T
 }
 
+async function requestList<T>(url: string, init?: RequestInit): Promise<T[]> {
+  const data = await request<T[] | PaginatedResponse<T>>(url, init)
+  if (Array.isArray(data)) return data
+  if (data && typeof data === 'object' && Array.isArray(data.data)) return data.data
+  return []
+}
+
 function toQuery(params?: Record<string, string | number | boolean | null | undefined>): string {
   if (!params) return ''
   return new URLSearchParams(
@@ -186,7 +193,7 @@ export const api = {
   renewals: {
     list: (params?: Record<string, string | number | boolean | null | undefined>) => {
       const qs = toQuery(params)
-      return request<Renewal[]>(`/api/renewals${qs ? `?${qs}` : ''}`)
+      return requestList<Renewal>(`/api/renewals${qs ? `?${qs}` : ''}`)
     },
     listFiltered: (params: Record<string, string | number | boolean | null | undefined>) => {
       const qs = toQuery(params)
