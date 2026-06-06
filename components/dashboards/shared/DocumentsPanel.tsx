@@ -62,8 +62,8 @@ export const DocumentsPanel: React.FC<DocumentsPanelProps> = ({ merchantId, canD
           <h3 className="text-lg font-black text-main ">{title}</h3>
           {canUpload && (
             <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-              <select value={docType} onChange={e => setDocType(e.target.value as DocType)} className="rounded-md border-0 py-1.5 pl-3 pr-8 text-sm text-main ring-1 ring-inset ring-line   ring-line">
-                {DOC_TYPES.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}
+              <select value={docType} onChange={e => setDocType(e.target.value as DocType)} className="rounded-md border-0 bg-surface py-1.5 pl-3 pr-8 text-sm text-main ring-1 ring-inset ring-line dark:bg-surface-muted dark:text-main">
+                {DOC_TYPES.map(type => <option key={type.value} value={type.value} className="bg-surface text-main dark:bg-surface-muted dark:text-main">{type.label}</option>)}
               </select>
               {loading ? (
                 <MCAKingLoader label="Uploading..." size="small" />
