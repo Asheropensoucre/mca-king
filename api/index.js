@@ -38080,17 +38080,7 @@ function merchantToUpdate(merchant) {
   };
 }
 function rowToMerchant(row) {
-  const base = row.payload;
-  if (base) {
-    return {
-      ...base,
-      id: row.id,
-      status: row.status,
-      salesRepId: row.assigned_rep_id ?? base.salesRepId,
-      updated_at: row.updated_at
-    };
-  }
-  return {
+  const fallback = {
     id: row.id,
     businessInfo: {
       legalName: row.business_name,
@@ -38112,6 +38102,24 @@ function rowToMerchant(row) {
     requestedAmount: row.requested_amount ? String(row.requested_amount) : "",
     salesRepId: row.assigned_rep_id ?? undefined,
     matchedLenderIds: [],
+    updated_at: row.updated_at
+  };
+  const base = row.payload;
+  if (!base)
+    return fallback;
+  return {
+    ...fallback,
+    ...base,
+    id: row.id,
+    businessInfo: { ...fallback.businessInfo, ...base.businessInfo ?? {} },
+    owners: Array.isArray(base.owners) ? base.owners : fallback.owners,
+    agreements: { ...fallback.agreements, ...base.agreements ?? {} },
+    documents: Array.isArray(base.documents) ? base.documents : fallback.documents,
+    status: row.status,
+    offers: Array.isArray(base.offers) ? base.offers : fallback.offers,
+    requestedAmount: base.requestedAmount ?? fallback.requestedAmount,
+    salesRepId: row.assigned_rep_id ?? base.salesRepId,
+    matchedLenderIds: Array.isArray(base.matchedLenderIds) ? base.matchedLenderIds : fallback.matchedLenderIds,
     updated_at: row.updated_at
   };
 }
